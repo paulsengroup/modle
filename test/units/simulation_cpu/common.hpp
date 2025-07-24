@@ -20,7 +20,7 @@ namespace modle::libmodle::test {
 
 inline constexpr auto DEFAULT_PRNG{random::PRNG(10556020843759504871ULL)};
 
-using CollisionT = Collision<u32f>;
+using CollisionT = Collision<std::uint_fast32_t>;
 constexpr auto NO_COLLISION = CollisionT::NO_COLLISION;
 constexpr auto COLLISION = CollisionT::COLLISION;
 constexpr auto CHROM_BOUNDARY = COLLISION | CollisionT::CHROM_BOUNDARY;
@@ -31,14 +31,14 @@ constexpr auto LEF_LEF_SECONDARY = COLLISION | CollisionT::LEF_LEF_SECONDARY;
 constexpr auto C = COLLISION;
 
 template <class I>
-[[nodiscard]] inline Lef construct_lef(I p1, I p2, usize binding_epoch = 0) {
+[[nodiscard]] inline Lef construct_lef(I p1, I p2, std::size_t binding_epoch = 0) {
   return Lef{binding_epoch, ExtrusionUnit{static_cast<bp_t>(p1)},
              ExtrusionUnit{static_cast<bp_t>(p2)}};
 }
 
 template <class BPCollection, class CollisionCollection>
 [[maybe_unused]] inline void print_debug_info(
-    usize i, const BPCollection& rev_moves, const BPCollection& fwd_moves,
+    std::size_t i, const BPCollection& rev_moves, const BPCollection& fwd_moves,
     const BPCollection& rev_moves_expected, const BPCollection& fwd_moves_expected,
     const CollisionCollection& rev_collisions, const CollisionCollection& rev_collisions_expected,
     const CollisionCollection& fwd_collisions, const CollisionCollection& fwd_collisions_expected) {
@@ -51,7 +51,8 @@ template <class BPCollection, class CollisionCollection>
 }
 
 template <class CollisionCollection>
-[[maybe_unused]] inline void print_debug_info(usize i, const CollisionCollection& rev_collisions,
+[[maybe_unused]] inline void print_debug_info(std::size_t i,
+                                              const CollisionCollection& rev_collisions,
                                               const CollisionCollection& rev_collisions_expected,
                                               const CollisionCollection& fwd_collisions,
                                               const CollisionCollection& fwd_collisions_expected) {
@@ -69,7 +70,7 @@ template <class LefCollection, class BPCollection, class CollisionCollection>
     bool print_debug_info_ = false) {
   static_assert(std::is_same_v<typename LefCollection::value_type, Lef>);
   static_assert(std::is_same_v<typename BPCollection::value_type, bp_t>);
-  for (usize i = 0; i < lefs.size(); ++i) {
+  for (std::size_t i = 0; i < lefs.size(); ++i) {
     CHECK(rev_collisions[i] == rev_collisions_expected[i]);
     CHECK(fwd_collisions[i] == fwd_collisions_expected[i]);
     CHECK(rev_moves[i] == rev_moves_expected[i]);
@@ -91,7 +92,7 @@ template <class LefCollection, class CollisionCollection>
                                               const CollisionCollection& fwd_collisions_expected,
                                               bool print_debug_info_ = false) {
   static_assert(std::is_same_v<typename LefCollection::value_type, Lef>);
-  for (usize i = 0; i < lefs.size(); ++i) {
+  for (std::size_t i = 0; i < lefs.size(); ++i) {
     CHECK(rev_collisions[i] == rev_collisions_expected[i]);
     CHECK(fwd_collisions[i] == fwd_collisions_expected[i]);
 
@@ -107,7 +108,7 @@ inline void check_that_lefs_are_sorted_by_idx(const LefCollection& lefs,
                                               const UsizeCollection& rev_ranks,
                                               const UsizeCollection& fwd_ranks) {
   static_assert(std::is_same_v<typename LefCollection::value_type, Lef>);
-  static_assert(std::is_same_v<typename UsizeCollection::value_type, usize>);
+  static_assert(std::is_same_v<typename UsizeCollection::value_type, std::size_t>);
   CHECK(std::is_sorted(fwd_ranks.begin(), fwd_ranks.end(), [&](const auto r1, const auto r2) {
     return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
   }));
@@ -121,7 +122,7 @@ inline void require_that_lefs_are_sorted_by_idx(const LefCollection& lefs,
                                                 const UsizeCollection& rev_ranks,
                                                 const UsizeCollection& fwd_ranks) {
   static_assert(std::is_same_v<typename LefCollection::value_type, Lef>);
-  static_assert(std::is_same_v<typename UsizeCollection::value_type, usize>);
+  static_assert(std::is_same_v<typename UsizeCollection::value_type, std::size_t>);
   REQUIRE(std::is_sorted(fwd_ranks.begin(), fwd_ranks.end(), [&](const auto r1, const auto r2) {
     return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
   }));
@@ -130,7 +131,8 @@ inline void require_that_lefs_are_sorted_by_idx(const LefCollection& lefs,
   }));
 }
 
-[[nodiscard]] inline modle::Config init_config(usize rev_extrusion_speed, usize fwd_extrusion_speed,
+[[nodiscard]] inline modle::Config init_config(std::size_t rev_extrusion_speed,
+                                               std::size_t fwd_extrusion_speed,
                                                double rev_extrusion_speed_std = 0,
                                                double fwd_extrusion_speed_std = 0) noexcept {
   modle::Config c;

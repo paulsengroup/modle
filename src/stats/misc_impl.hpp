@@ -19,7 +19,7 @@ template <class FP, class>
 void compute_gauss_kernel2d(std::vector<FP>& buff, const FP sigma, const FP truncate) {
   assert(truncate > 0.0);
   assert(sigma >= 0.0);
-  const auto radius = static_cast<usize>(truncate * sigma + FP(0.5));
+  const auto radius = static_cast<std::size_t>(truncate * sigma + FP(0.5));
   compute_gauss_kernel2d(radius, buff, sigma);
 }
 
@@ -32,7 +32,7 @@ std::vector<FP> compute_gauss_kernel2d(const FP sigma, const FP truncate) {
 }
 
 template <class FP, class>
-std::vector<FP> compute_gauss_kernel2d(const usize radius, const FP sigma) {
+std::vector<FP> compute_gauss_kernel2d(const std::size_t radius, const FP sigma) {
   const auto size = 2 * radius + 1;
   std::vector<FP> v(size * size);
   compute_gauss_kernel2d(radius, v, sigma);
@@ -42,14 +42,15 @@ std::vector<FP> compute_gauss_kernel2d(const usize radius, const FP sigma) {
 namespace internal {
 
 template <class FP>
-[[nodiscard]] inline std::vector<FP> compute_gauss_kernel1d(const usize size, const FP sigma) {
+[[nodiscard]] inline std::vector<FP> compute_gauss_kernel1d(const std::size_t size,
+                                                            const FP sigma) {
   // Inspired by https://codereview.stackexchange.com/a/169675
   std::vector<FP> buff(size);
 
   const auto spread = FP(1) / (2 * sigma * sigma);
   const auto mid = FP(size - 1) / FP(2);
 
-  for (usize i = 0; i < size; ++i) {
+  for (std::size_t i = 0; i < size; ++i) {
     const auto n = FP(i) - mid;
     buff[i] = std::exp(-n * n * spread);
   }
@@ -59,7 +60,7 @@ template <class FP>
 }  // namespace internal
 
 template <class FP, class>
-void compute_gauss_kernel2d(const usize radius, std::vector<FP>& buff, const FP sigma) {
+void compute_gauss_kernel2d(const std::size_t radius, std::vector<FP>& buff, const FP sigma) {
   // Inspired by https://codereview.stackexchange.com/a/169675
   const auto size = 2 * radius + 1;
   const auto gauss_kernel1d = internal::compute_gauss_kernel1d<FP>(size, sigma);
@@ -67,8 +68,8 @@ void compute_gauss_kernel2d(const usize radius, std::vector<FP>& buff, const FP 
   buff.resize(size * size);
 
   FP sum = 0;
-  for (usize i = 0; i < size; ++i) {
-    for (usize j = 0; j < size; ++j) {
+  for (std::size_t i = 0; i < size; ++i) {
+    for (std::size_t j = 0; j < size; ++j) {
       const auto k = (i * size) + j;
       buff[k] = gauss_kernel1d[i] * gauss_kernel1d[j];
       sum += buff[k];

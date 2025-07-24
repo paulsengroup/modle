@@ -41,25 +41,25 @@ class ContactMatrixDense {
 
  private:
   using mutex_t = std::mutex;
-  using SumT = typename std::conditional<std::is_floating_point_v<N>, double, i64>::type;
-  u64 _nrows{0};
-  u64 _ncols{0};
+  using SumT = typename std::conditional<std::is_floating_point_v<N>, double, std::int64_t>::type;
+  std::uint64_t _nrows{0};
+  std::uint64_t _ncols{0};
   std::vector<N> _contacts{};
   mutable std::vector<mutex_t> _mtxes{};
   mutable std::atomic<SumT> _tot_contacts{0};
-  mutable std::atomic<usize> _nnz{0};
+  mutable std::atomic<std::size_t> _nnz{0};
   mutable std::atomic<bool> _global_stats_outdated{false};
-  std::atomic<usize> _updates_missed{0};
+  std::atomic<std::size_t> _updates_missed{0};
 
  public:
   // Constructors
   ContactMatrixDense() = default;
   ContactMatrixDense(ContactMatrixDense<N>&& other) noexcept = default;
   inline ContactMatrixDense(const ContactMatrixDense<N>& other);
-  inline ContactMatrixDense(usize nrows_, usize ncols_);
+  inline ContactMatrixDense(std::size_t nrows_, std::size_t ncols_);
   inline ContactMatrixDense(bp_t length, bp_t diagonal_width, bp_t bin_size);
-  inline ContactMatrixDense(absl::Span<const N> contacts, usize nrows_, usize ncols_,
-                            usize tot_contacts = 0, usize updates_missed = 0);
+  inline ContactMatrixDense(absl::Span<const N> contacts, std::size_t nrows_, std::size_t ncols_,
+                            std::size_t tot_contacts = 0, std::size_t updates_missed = 0);
   ~ContactMatrixDense() = default;
 
   // Operators
@@ -67,43 +67,47 @@ class ContactMatrixDense {
   ContactMatrixDense<N>& operator=(ContactMatrixDense<N>&& other) noexcept = default;
 
   // Thread-safe count getters and setters
-  [[nodiscard]] inline N get(usize row, usize col) const;
-  inline void set(usize row, usize col, N n);
-  inline void add(usize row, usize col, N n);
-  inline void subtract(usize row, usize col, N n);
-  inline void increment(usize row, usize col);
-  inline void decrement(usize row, usize col);
+  [[nodiscard]] inline N get(std::size_t row, std::size_t col) const;
+  inline void set(std::size_t row, std::size_t col, N n);
+  inline void add(std::size_t row, std::size_t col, N n);
+  inline void subtract(std::size_t row, std::size_t col, N n);
+  inline void increment(std::size_t row, std::size_t col);
+  inline void decrement(std::size_t row, std::size_t col);
 
   // Thread-UNsafe count getters and setters
-  [[nodiscard]] inline N unsafe_get(usize row, usize col) const;
-  inline void unsafe_set(usize row, usize col, N n);
-  inline void unsafe_add(usize row, usize col, N n);
-  inline void unsafe_subtract(usize row, usize col, N n);
-  inline void unsafe_increment(usize row, usize col);
-  inline void unsafe_decrement(usize row, usize col);
+  [[nodiscard]] inline N unsafe_get(std::size_t row, std::size_t col) const;
+  inline void unsafe_set(std::size_t row, std::size_t col, N n);
+  inline void unsafe_add(std::size_t row, std::size_t col, N n);
+  inline void unsafe_subtract(std::size_t row, std::size_t col, N n);
+  inline void unsafe_increment(std::size_t row, std::size_t col);
+  inline void unsafe_decrement(std::size_t row, std::size_t col);
 
-  inline void unsafe_get_column(usize col, std::vector<N>& buff, usize row_offset = 0) const;
-  inline void unsafe_get_row(usize row, std::vector<N>& buff, usize col_offset = 0) const;
+  inline void unsafe_get_column(std::size_t col, std::vector<N>& buff,
+                                std::size_t row_offset = 0) const;
+  inline void unsafe_get_row(std::size_t row, std::vector<N>& buff,
+                             std::size_t col_offset = 0) const;
   // block_size is required to be an odd number at the moment
-  inline void unsafe_get_block(usize row, usize col, usize block_size, std::vector<N>& buff) const;
-  [[nodiscard]] inline N unsafe_get_block(usize row, usize col, usize block_size) const;
+  inline void unsafe_get_block(std::size_t row, std::size_t col, std::size_t block_size,
+                               std::vector<N>& buff) const;
+  [[nodiscard]] inline N unsafe_get_block(std::size_t row, std::size_t col,
+                                          std::size_t block_size) const;
 
   // Shape/statistics getters
-  [[nodiscard]] constexpr usize ncols() const;
-  [[nodiscard]] constexpr usize nrows() const;
-  [[nodiscard]] constexpr usize npixels() const;
-  [[nodiscard]] constexpr usize get_n_of_missed_updates() const noexcept;
+  [[nodiscard]] constexpr std::size_t ncols() const;
+  [[nodiscard]] constexpr std::size_t nrows() const;
+  [[nodiscard]] constexpr std::size_t npixels() const;
+  [[nodiscard]] constexpr std::size_t get_n_of_missed_updates() const noexcept;
   [[nodiscard]] inline double get_fraction_of_missed_updates() const;
   [[nodiscard]] inline SumT get_tot_contacts() const;
-  [[nodiscard]] inline usize get_nnz() const;
+  [[nodiscard]] inline std::size_t get_nnz() const;
   [[nodiscard]] inline double get_avg_contact_density() const;
-  [[nodiscard]] constexpr usize get_matrix_size_in_bytes() const;
+  [[nodiscard]] constexpr std::size_t get_matrix_size_in_bytes() const;
   [[nodiscard]] inline N get_min_count() const noexcept;
   [[nodiscard]] inline N get_max_count() const noexcept;
 
   [[nodiscard]] constexpr double unsafe_get_fraction_of_missed_updates() const noexcept;
   [[nodiscard]] inline SumT unsafe_get_tot_contacts() const noexcept;
-  [[nodiscard]] inline usize unsafe_get_nnz() const noexcept;
+  [[nodiscard]] inline std::size_t unsafe_get_nnz() const noexcept;
   [[nodiscard]] inline double unsafe_get_avg_contact_density() const;
   [[nodiscard]] inline N unsafe_get_min_count() const noexcept;
   [[nodiscard]] inline N unsafe_get_max_count() const noexcept;
@@ -119,7 +123,7 @@ class ContactMatrixDense {
   inline void clear_missed_updates_counter();
   inline void unsafe_reset();
   // Note: upon resizing the content of a ContactMatrixDense is invalidated
-  inline void unsafe_resize(usize nrows, usize ncols);
+  inline void unsafe_resize(std::size_t nrows, std::size_t ncols);
   inline void unsafe_resize(bp_t length, bp_t diagonal_width, bp_t bin_size);
   [[nodiscard]] inline bool empty() const;
   [[nodiscard]] inline bool unsafe_empty() const;
@@ -164,16 +168,18 @@ class ContactMatrixDense {
   inline void unsafe_discretize_inplace(const IITree<M, N>& mappings) noexcept;
 
  private:
-  [[nodiscard]] inline N& unsafe_at(usize i, usize j);
-  [[nodiscard]] inline const N& unsafe_at(usize i, usize j) const;
+  [[nodiscard]] inline N& unsafe_at(std::size_t i, std::size_t j);
+  [[nodiscard]] inline const N& unsafe_at(std::size_t i, std::size_t j) const;
 
-  inline void bound_check_coords(usize row, usize col) const;
+  inline void bound_check_coords(std::size_t row, std::size_t col) const;
 
   [[nodiscard]] inline utils::LockRangeExclusive<mutex_t> lock() const;
-  [[nodiscard]] inline std::unique_lock<mutex_t> lock_pixel(usize row, usize col) const;
-  [[nodiscard]] static inline usize hash_coordinates(usize i, usize j) noexcept;
-  [[nodiscard]] static constexpr usize compute_number_of_mutexes(usize rows, usize cols) noexcept;
-  [[nodiscard]] inline usize get_pixel_mutex_idx(usize row, usize col) const noexcept;
+  [[nodiscard]] inline std::unique_lock<mutex_t> lock_pixel(std::size_t row, std::size_t col) const;
+  [[nodiscard]] static inline std::size_t hash_coordinates(std::size_t i, std::size_t j) noexcept;
+  [[nodiscard]] static constexpr std::size_t compute_number_of_mutexes(std::size_t rows,
+                                                                       std::size_t cols) noexcept;
+  [[nodiscard]] inline std::size_t get_pixel_mutex_idx(std::size_t row,
+                                                       std::size_t col) const noexcept;
 
   template <class M, class = std::enable_if_t<std::is_floating_point_v<M>>>
   static inline void unsafe_normalize(const ContactMatrixDense<N>& input_matrix,

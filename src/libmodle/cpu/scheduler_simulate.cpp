@@ -27,10 +27,10 @@
 
 namespace modle {
 
-void Simulation::spawn_worker_threads(const usize batch_size) {
+void Simulation::spawn_worker_threads(const std::size_t batch_size) {
   assert(_ctx.num_worker_threads() != 0);
   assert(batch_size != 0);
-  for (usize tid = 0; tid < _ctx.num_worker_threads(); ++tid) {
+  for (std::size_t tid = 0; tid < _ctx.num_worker_threads(); ++tid) {
     _ctx.spawn_worker_thread([this, batch_size, tid]() { simulate_worker(tid, batch_size); });
   }
 }
@@ -70,11 +70,11 @@ void Simulation::run_simulate() {
   // efficiently. Most of the time, the only data moved are tasks, which are implemented as
   // light-weight structs
 
-  const auto task_batch_size = [this]() -> usize {
+  const auto task_batch_size = [this]() -> std::size_t {
     if (c().num_cells <= c().nthreads) {
       return 1;
     }
-    return std::min(usize(16), c().num_cells / c().nthreads);
+    return std::min(std::size_t(16), c().num_cells / c().nthreads);
   }();
 
   // Queue used to submit simulation tasks to the thread pool
@@ -94,7 +94,7 @@ void Simulation::run_simulate() {
     // The remaining code submits simulation tasks to the queue. Then it waits until all the tasks
     // have been completed and contacts have been written to disk
 
-    usize taskid = 0;
+    std::size_t taskid = 0;
     const auto max_sleep_time =
         std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::milliseconds(250));
 
@@ -112,7 +112,7 @@ void Simulation::run_simulate() {
         SPDLOG_INFO("{} has 0 barriers... SKIPPING!", interval);
         Task t{};
         t.interval = &interval;
-        for (usize cellid = 0; cellid < c().num_cells; ++cellid) {
+        for (std::size_t cellid = 0; cellid < c().num_cells; ++cellid) {
           while (!_ctx.try_enqueue_task<Task::Status::COMPLETED>(t, ptok_finished)) {
             _ctx.check_exceptions();
             sleep_time = std::min(max_sleep_time, sleep_time * 2);
@@ -127,14 +127,14 @@ void Simulation::run_simulate() {
       const auto nlefs = compute_num_lefs(interval.size());
 
       const auto npixels = interval.npixels();
-      const auto tot_target_contacts =
-          static_cast<usize>(std::round(static_cast<double>(npixels) * c().target_contact_density));
+      const auto tot_target_contacts = static_cast<std::size_t>(
+          std::round(static_cast<double>(npixels) * c().target_contact_density));
 
       const auto target_contacts_per_cell =
           (tot_target_contacts + c().num_cells - 1) / c().num_cells;
 
-      usize tot_target_contacts_rolling_count = 0;
-      for (usize cellid = 0; cellid < c().num_cells; ++cellid) {
+      std::size_t tot_target_contacts_rolling_count = 0;
+      for (std::size_t cellid = 0; cellid < c().num_cells; ++cellid) {
         // This is needed to not overshoot the target contact density
         const auto num_target_contacts = std::min(
             target_contacts_per_cell, tot_target_contacts - tot_target_contacts_rolling_count);
@@ -172,12 +172,12 @@ void Simulation::run_simulate() {
 [[maybe_unused]] static std::string format_rand_eng(const random::PRNG_t& rand_eng) {
   const auto state = rand_eng.serialize();
   static_assert(state.size() == 4);
-  static_assert(sizeof(state[0]) == sizeof(u64));
+  static_assert(sizeof(state[0]) == sizeof(std::uint64_t));
   return fmt::format("0x{:016x}{:016x}{:016x}{:016x}", state[0], state[1], state[2], state[3]);
 }
 
 [[nodiscard]] static std::unique_ptr<compressed_io::Writer> init_local_model_state_logger(
-    const Config& c, const u64 task_id) {
+    const Config& c, const std::uint64_t task_id) {
   if (!c.log_model_internal_state) {
     return nullptr;
   }
@@ -187,7 +187,7 @@ void Simulation::run_simulate() {
   return std::make_unique<compressed_io::Writer>(path);
 }
 
-void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
+void Simulation::simulate_worker(const std::uint64_t tid, const std::size_t task_batch_size) {
   SPDLOG_INFO("spawning worker thread W{}...", tid);
   // This state object owns all the buffers and PRNG + seed required in order to simulate loop
   // extrusion for a single cell. Buffers are allocated once and resized, cleared and reused
@@ -231,7 +231,7 @@ void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
         // some of the tasks may have num_target_contacts = 0.
         // These tasks can be safely skipped as they won't have any effect on the output contact
         // matrix.
-        if (task.num_target_epochs != (std::numeric_limits<usize>::max)() ||
+        if (task.num_target_epochs != (std::numeric_limits<std::size_t>::max)() ||
             task.num_target_contacts != 0) [[likely]] {
           local_state.status = State::Status::RUNNING;
           SPDLOG_DEBUG("[W{}]: begin processing task {} ({} cell #{}, {})...", tid, task.id,

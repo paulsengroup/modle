@@ -61,7 +61,7 @@ constexpr const T &RepeatIterator<T>::operator*() const {
 }
 
 template <class T>
-constexpr const T &RepeatIterator<T>::operator[]([[maybe_unused]] usize i) const {
+constexpr const T &RepeatIterator<T>::operator[]([[maybe_unused]] std::size_t i) const {
   return *this;
 }
 
@@ -142,7 +142,8 @@ constexpr I next_pow2(const I n) noexcept {
     // https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html
 
     return utils::conditional_static_cast<I>(
-        m <= 1 ? m : u64(1) << (u64(64) - u64(__builtin_clzll(m - 1))));
+        m <= 1 ? m
+               : std::uint64_t(1) << (std::uint64_t(64) - std::uint64_t(__builtin_clzll(m - 1))));
 #endif
   }
 }
@@ -156,7 +157,7 @@ constexpr std::future<T> make_ready_future(T &&v) {
 
 template <class MutexT>
 LockRangeExclusive<MutexT>::LockRangeExclusive(const absl::Span<MutexT> mutexes) {
-  usize i = 0;
+  std::size_t i = 0;
   try {
     for (; i < mutexes.size(); ++i) {
       mutexes[i].lock();
@@ -181,7 +182,7 @@ LockRangeExclusive<MutexT>::~LockRangeExclusive() noexcept {
 
 template <class MutexT>
 LockRangeShared<MutexT>::LockRangeShared(const absl::Span<MutexT> mutexes) {
-  usize i = 0;
+  std::size_t i = 0;
   try {
     for (; i < mutexes.size(); ++i) {
       mutexes[i].lock();

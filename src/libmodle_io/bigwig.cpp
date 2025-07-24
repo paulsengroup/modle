@@ -32,13 +32,13 @@ Reader::Reader(Reader&& other) noexcept
 
 [[nodiscard]] static Reader::Chromosomes read_chromosomes(bigWigFile_t* fp) {
   assert(fp);
-  const auto num_chroms = static_cast<usize>(fp->cl->nKeys);
+  const auto num_chroms = static_cast<std::size_t>(fp->cl->nKeys);
   Reader::Chromosomes chroms;
 
   const auto chrom_names = absl::MakeConstSpan(fp->cl->chrom, num_chroms);
   const auto chrom_sizes = absl::MakeConstSpan(fp->cl->len, num_chroms);
 
-  for (usize i = 0; i < num_chroms; ++i) {
+  for (std::size_t i = 0; i < num_chroms; ++i) {
     chroms.emplace(chrom_names[i], utils::conditional_static_cast<bp_t>(chrom_sizes[i]));
   }
   return chroms;
@@ -82,15 +82,15 @@ std::vector<float> Reader::read_values(const std::string& chrom, bp_t start, bp_
   validate_query(chrom, start, end);
 
   const Intervals intervals{
-      bwGetValues(_fp, chrom.c_str(), utils::conditional_static_cast<u32>(start),
-                  utils::conditional_static_cast<u32>(end), 1),
+      bwGetValues(_fp, chrom.c_str(), utils::conditional_static_cast<std::uint32_t>(start),
+                  utils::conditional_static_cast<std::uint32_t>(end), 1),
       &bwDestroyOverlappingIntervals};
 
   if (!intervals) {
     return {};
   }
 
-  std::vector<float> values(utils::conditional_static_cast<usize>(intervals->l));
+  std::vector<float> values(utils::conditional_static_cast<std::size_t>(intervals->l));
   std::copy_n(intervals->value, values.size(), values.begin());
   return values;
 }
@@ -99,10 +99,10 @@ auto Reader::get_intervals(const std::string& chrom, bp_t start, bp_t end) -> In
   assert(!!*this);
   validate_query(chrom, start, end);
 
-  return Intervals{
-      bwGetOverlappingIntervals(_fp, chrom.c_str(), utils::conditional_static_cast<u32>(start),
-                                utils::conditional_static_cast<u32>(end)),
-      &bwDestroyOverlappingIntervals};
+  return Intervals{bwGetOverlappingIntervals(_fp, chrom.c_str(),
+                                             utils::conditional_static_cast<std::uint32_t>(start),
+                                             utils::conditional_static_cast<std::uint32_t>(end)),
+                   &bwDestroyOverlappingIntervals};
 }
 
 void Reader::validate_query(const std::string& chrom, bp_t start, bp_t end) {
@@ -165,7 +165,7 @@ Writer& Writer::operator=(Writer&& other) noexcept {
 }
 
 void Writer::write_chromosomes(const std::vector<std::string>& chrom_names,
-                               const std::vector<u32>& chrom_sizes) {
+                               const std::vector<std::uint32_t>& chrom_sizes) {
   assert(chrom_names.size() == chrom_sizes.size());
   std::vector<const char*> chrom_names_ptr(chrom_names.size());
   std::transform(chrom_names.begin(), chrom_names.end(), chrom_names_ptr.begin(),
@@ -174,8 +174,8 @@ void Writer::write_chromosomes(const std::vector<std::string>& chrom_names,
   write_chromosomes(chrom_names_ptr.data(), chrom_sizes.data(), chrom_names.size());
 }
 
-void Writer::write_chromosomes(const char* const* chrom_names, const u32* chrom_sizes,
-                               const usize num_chroms) {
+void Writer::write_chromosomes(const char* const* chrom_names, const std::uint32_t* chrom_sizes,
+                               const std::size_t num_chroms) {
   assert(_fp);  // NOLINT(hicpp-no-array-decay)
   // GCC 8 and older fails to parse this if constexpr
 #if defined(__GNUC__) && !defined(__clang__) && __GNUC__ < 9
@@ -195,8 +195,9 @@ void Writer::write_chromosomes(const char* const* chrom_names, const u32* chrom_
   }
 
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
-  _fp->cl = bwCreateChromList(const_cast<char**>(chrom_names), const_cast<u32*>(chrom_sizes),
-                              static_cast<i64>(num_chroms));
+  _fp->cl =
+      bwCreateChromList(const_cast<char**>(chrom_names), const_cast<std::uint32_t*>(chrom_sizes),
+                        static_cast<std::int64_t>(num_chroms));
   if (!_fp->cl) {
     throw std::runtime_error(
         fmt::format("failed to create the chromosome list for file {}", _fname));

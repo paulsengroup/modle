@@ -16,7 +16,7 @@
 
 namespace modle::internal {
 
-constexpr PixelCoordinates transpose_coords(const usize row, const usize col) noexcept {
+constexpr PixelCoordinates transpose_coords(const std::size_t row, const std::size_t col) noexcept {
   if (row > col) {
     return {row - col, row};
   }
@@ -27,7 +27,7 @@ constexpr PixelCoordinates transpose_coords(const PixelCoordinates& coords) noex
   return transpose_coords(coords.row, coords.col);
 }
 
-constexpr PixelCoordinates decode_idx(usize i, usize nrows) noexcept {
+constexpr PixelCoordinates decode_idx(std::size_t i, std::size_t nrows) noexcept {
   assert(nrows != 0);
   const auto col = i / nrows;
   const auto row = i - (col * nrows);
@@ -37,16 +37,16 @@ constexpr PixelCoordinates decode_idx(usize i, usize nrows) noexcept {
   return {row, col};
 }
 
-constexpr usize encode_idx(usize row, usize col, usize nrows) noexcept {
+constexpr std::size_t encode_idx(std::size_t row, std::size_t col, std::size_t nrows) noexcept {
   return (col * nrows) + row;
 }
 
-constexpr usize encode_idx(const PixelCoordinates& coords, usize nrows) noexcept {
+constexpr std::size_t encode_idx(const PixelCoordinates& coords, std::size_t nrows) noexcept {
   return encode_idx(coords.row, coords.col, nrows);
 }
 
 template <class ContactMatrix>
-void bound_check_coords(const ContactMatrix& m, const usize row, const usize col) {
+void bound_check_coords(const ContactMatrix& m, const std::size_t row, const std::size_t col) {
   if (row >= m.ncols() || col >= m.ncols()) [[unlikely]] {
     throw std::logic_error(
         fmt::format("detected an out-of-bound read: attempt to access "
@@ -56,9 +56,10 @@ void bound_check_coords(const ContactMatrix& m, const usize row, const usize col
 }
 
 template <class T>
-constexpr usize compute_num_cols_per_chunk(usize nrows, usize max_chunk_size_bytes) {
+constexpr std::size_t compute_num_cols_per_chunk(std::size_t nrows,
+                                                 std::size_t max_chunk_size_bytes) {
   const auto row_size_bytes = nrows * sizeof(T);
-  return std::max(usize(1), max_chunk_size_bytes / row_size_bytes);
+  return std::max(std::size_t(1), max_chunk_size_bytes / row_size_bytes);
 }
 
 }  // namespace modle::internal

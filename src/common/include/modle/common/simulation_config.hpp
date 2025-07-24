@@ -25,7 +25,7 @@ struct Config {
   friend Cli;
   friend Simulation;
 
-  enum class StoppingCriterion : u8f { contact_density, simulation_epochs };
+  enum class StoppingCriterion : std::uint_fast8_t { contact_density, simulation_epochs };
 
   // Even though we don't have any use for a none flag, it is required in order
   // for the automatically generated enum values make sense.
@@ -46,13 +46,13 @@ struct Config {
   std::filesystem::path path_to_lef_1d_occupancy_bw_file;
   std::filesystem::path path_to_extr_barriers;
   bool force{false};
-  u8 verbosity{2};  // SPDLOG_LEVEL_INFO
+  std::uint8_t verbosity{2};  // SPDLOG_LEVEL_INFO
   bool write_header{true};
   bool skip_output{false};
   bool log_model_internal_state{false};
 
   // Stopping criteria
-  usize target_simulation_epochs{2000};
+  std::size_t target_simulation_epochs{2000};
   double target_contact_density{1.0};
   StoppingCriterion stopping_criterion{StoppingCriterion::contact_density};
 
@@ -96,19 +96,19 @@ struct Config {
   // Miscellaneous
   std::string assembly_name{"unknown"};
   bool simulate_chromosomes_wo_barriers{false};
-  usize num_cells{512};
-  usize nthreads{std::thread::hardware_concurrency()};
-  u64 seed{0};
+  std::size_t num_cells{512};
+  std::size_t nthreads{std::thread::hardware_concurrency()};
+  std::uint64_t seed{0};
   bp_t probability_normalization_factor{rev_extrusion_speed + fwd_extrusion_speed};
   bool normalize_probabilities{true};
 
   // Burn-in
   bool skip_burnin{false};
-  usize burnin_history_length{100};
-  usize burnin_smoothing_window_size{5};
-  usize min_burnin_epochs{0};
-  usize max_burnin_epochs{(std::numeric_limits<usize>::max)()};
-  usize burnin_target_epochs_for_lef_activation{320};
+  std::size_t burnin_history_length{100};
+  std::size_t burnin_smoothing_window_size{5};
+  std::size_t min_burnin_epochs{0};
+  std::size_t max_burnin_epochs{(std::numeric_limits<std::size_t>::max)()};
+  std::size_t burnin_target_epochs_for_lef_activation{320};
   double burnin_speed_coefficient{1.0};
   bp_t fwd_extrusion_speed_burnin{bp_t(double(fwd_extrusion_speed) * burnin_speed_coefficient)};
   bp_t rev_extrusion_speed_burnin{fwd_extrusion_speed_burnin};

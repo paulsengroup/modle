@@ -29,11 +29,11 @@ constexpr const Config& Simulation::c() const noexcept { return config(); }
 
 template <typename MaskT>
 void Simulation::bind_lefs(const bp_t start_pos, const bp_t end_pos, const absl::Span<Lef> lefs,
-                           const absl::Span<usize> rev_lef_ranks,
-                           const absl::Span<usize> fwd_lef_ranks, const MaskT& mask,
+                           const absl::Span<std::size_t> rev_lef_ranks,
+                           const absl::Span<std::size_t> fwd_lef_ranks, const MaskT& mask,
                            random::PRNG_t& rand_eng,
-                           usize current_epoch) noexcept(utils::ndebug_defined()) {
-  using T = std::decay_t<decltype(std::declval<MaskT&>().operator[](std::declval<usize>()))>;
+                           std::size_t current_epoch) noexcept(utils::ndebug_defined()) {
+  using T = std::decay_t<decltype(std::declval<MaskT&>().operator[](std::declval<std::size_t>()))>;
   static_assert(std::is_integral_v<T> || std::is_same_v<MaskT, boost::dynamic_bitset<>>,
                 "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
   {
@@ -45,14 +45,14 @@ void Simulation::bind_lefs(const bp_t start_pos, const bp_t end_pos, const absl:
   }
 
   chrom_pos_generator_t pos_generator{start_pos, end_pos - 1};
-  for (usize i = 0; i < lefs.size(); ++i) {
+  for (std::size_t i = 0; i < lefs.size(); ++i) {
     if (mask.empty() || mask[i]) {  // Bind all LEFs when mask is empty
       lefs[i].bind_at_pos(current_epoch, pos_generator(rand_eng));
     }
   }
 
   if constexpr (utils::ndebug_not_defined()) {
-    for (usize i = 0; i < lefs.size(); ++i) {
+    for (std::size_t i = 0; i < lefs.size(); ++i) {
       if (mask.empty() || mask[i]) {
         assert(lefs[i].rev_unit >= start_pos && lefs[i].rev_unit < end_pos);
         assert(lefs[i].fwd_unit >= start_pos && lefs[i].fwd_unit < end_pos);
@@ -70,10 +70,10 @@ void Simulation::bind_lefs(const bp_t start_pos, const bp_t end_pos, const absl:
 
 template <typename MaskT>
 void Simulation::bind_lefs(const GenomicInterval& interval, const absl::Span<Lef> lefs,
-                           const absl::Span<usize> rev_lef_ranks,
-                           const absl::Span<usize> fwd_lef_ranks, const MaskT& mask,
+                           const absl::Span<std::size_t> rev_lef_ranks,
+                           const absl::Span<std::size_t> fwd_lef_ranks, const MaskT& mask,
                            random::PRNG_t& rand_eng,
-                           usize current_epoch) noexcept(utils::ndebug_defined()) {
+                           std::size_t current_epoch) noexcept(utils::ndebug_defined()) {
   Simulation::bind_lefs(interval.start(), interval.end(), lefs, rev_lef_ranks, fwd_lef_ranks, mask,
                         rand_eng, current_epoch);
 }
@@ -81,11 +81,11 @@ void Simulation::bind_lefs(const GenomicInterval& interval, const absl::Span<Lef
 template <typename MaskT>
 void Simulation::select_lefs_to_bind(const absl::Span<const Lef> lefs,
                                      MaskT& mask) noexcept(utils::ndebug_defined()) {
-  using T = std::decay_t<decltype(std::declval<MaskT&>().operator[](std::declval<usize>()))>;
+  using T = std::decay_t<decltype(std::declval<MaskT&>().operator[](std::declval<std::size_t>()))>;
   static_assert(std::is_integral_v<T> || std::is_same_v<MaskT, boost::dynamic_bitset<>>,
                 "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
   assert(lefs.size() == mask.size());
-  for (usize i = 0; i < lefs.size(); ++i) {
+  for (std::size_t i = 0; i < lefs.size(); ++i) {
     mask[i] = !lefs[i].is_bound();
   }
 }

@@ -68,7 +68,7 @@ namespace modle::tools {
 [[nodiscard]] static hictk::Reference import_chroms_from_chrom_sizes_file(
     const std::filesystem::path &path_to_chrom_sizes) {
   std::vector<std::string> chrom_names{};
-  std::vector<u32> chrom_sizes{};
+  std::vector<std::uint32_t> chrom_sizes{};
   for (auto &&bed : chrom_sizes::Parser(path_to_chrom_sizes).parse_all()) {
     chrom_names.emplace_back(std::move(bed.chrom));
     chrom_sizes.emplace_back(bed.chrom_end - bed.chrom_start);
@@ -110,8 +110,8 @@ namespace modle::tools {
 
 static void validate_regions_of_interest(const hictk::Reference &chroms,
                                          const std::vector<bed::BED> &regions_of_interest) {
-  usize invalid_chrom = 0;
-  usize invalid_range = 0;
+  std::size_t invalid_chrom = 0;
+  std::size_t invalid_range = 0;
   std::vector<bed::BED> invalid_intervals{};
   invalid_intervals.reserve(10);
   for (const auto &interval : regions_of_interest) {
@@ -212,8 +212,9 @@ static void validate_chrom_sizes(const hictk::Reference &chrom_sizes_cooler,
   return regions_of_interest;
 }
 
-[[nodiscard]] static isize find_col_idx(const std::filesystem::path &path_to_weights,
-                                        std::string_view header, std::string_view col_name) {
+[[nodiscard]] static std::ptrdiff_t find_col_idx(const std::filesystem::path &path_to_weights,
+                                                 std::string_view header,
+                                                 std::string_view col_name) {
   const auto toks = str_split(header, '\t');
   const auto it = std::find(toks.begin(), toks.end(), col_name);
   if (it == toks.end()) {
@@ -225,8 +226,8 @@ static void validate_chrom_sizes(const hictk::Reference &chrom_sizes_cooler,
 }
 
 template <class Range>
-[[nodiscard]] static isize find_col_idx(const std::filesystem::path &path_to_weights,
-                                        std::string_view header, const Range &col_names) {
+[[nodiscard]] static std::ptrdiff_t find_col_idx(const std::filesystem::path &path_to_weights,
+                                                 std::string_view header, const Range &col_names) {
   assert(col_names.size() > 1);
   for (const auto &name : col_names) {
     try {
@@ -245,7 +246,7 @@ template <class Range>
 
 [[nodiscard]] static phmap::flat_hash_map<std::string, std::vector<double>> import_weights(
     const std::filesystem::path &path_to_weights, const std::string_view weight_column_name,
-    const usize nbins, const bool reciprocal_weights) {
+    const std::size_t nbins, const bool reciprocal_weights) {
   assert(nbins != 0);
   phmap::flat_hash_map<std::string, std::vector<double>> weights;
 
@@ -268,7 +269,7 @@ template <class Range>
   const auto col_diag_idx = find_col_idx(path_to_weights, buff, "diag"sv);
   const auto col_weight_idx = find_col_idx(path_to_weights, buff, weight_column_name);
 
-  for (usize i = 1; r.getline(buff); ++i) {
+  for (std::size_t i = 1; r.getline(buff); ++i) {
     const auto toks = str_split(buff, '\t');
     if (const auto ntoks = std::distance(toks.begin(), toks.end()); ntoks < col_weight_idx) {
       throw std::runtime_error(fmt::format(
@@ -277,7 +278,8 @@ template <class Range>
     }
     const std::string_view chrom = *std::next(toks.begin(), col_chrom_idx);
     weights.try_emplace(chrom, nbins, 0);  // try_emplace a vector of doubles
-    const auto diag = utils::parse_numeric_or_throw<usize>(*std::next(toks.begin(), col_diag_idx));
+    const auto diag =
+        utils::parse_numeric_or_throw<std::size_t>(*std::next(toks.begin(), col_diag_idx));
     if (diag >= nbins) {
       continue;
     }
@@ -313,7 +315,7 @@ static void validate_weights(
 }
 
 [[nodiscard]] static io::bigwig::Writer create_bwig_file(
-    const std::vector<std::string> &chrom_names, const std::vector<u32> &chrom_sizes,
+    const std::vector<std::string> &chrom_names, const std::vector<std::uint32_t> &chrom_sizes,
     std::string_view base_name, std::string_view suffix) {
   if (suffix.starts_with('_')) {
     suffix.remove_prefix(1);
@@ -323,7 +325,7 @@ static void validate_weights(
   return bw;
 }
 
-enum class StripeDirection : u8f { vertical, horizontal };
+enum class StripeDirection : std::uint_fast8_t { vertical, horizontal };
 
 template <class N, class = std::enable_if_t<std::is_arithmetic_v<N>>>
 static size_t mask_zero_pixels(const std::vector<N> &v1, const std::vector<N> &v2,
@@ -331,8 +333,8 @@ static size_t mask_zero_pixels(const std::vector<N> &v1, const std::vector<N> &v
   assert(v1.size() == v2.size());
   assert(v1.size() == weights.size());
 
-  usize masked_pixels = 0;
-  for (usize i = 0; i < v1.size(); ++i) {
+  std::size_t masked_pixels = 0;
+  for (std::size_t i = 0; i < v1.size(); ++i) {
     if (v1[i] == N(0) || v2[i] == N(0)) {
       ++masked_pixels;
       weights[i] = 0;
@@ -351,12 +353,12 @@ template <class N>
   //                    [&](const auto n) { return n == 0 || n == 1; }));
 
   // Do a backward search for the first non-zero pixel
-  auto non_zero_backward_search = [](const auto &vect) -> usize {
+  auto non_zero_backward_search = [](const auto &vect) -> std::size_t {
     const auto it = std::find_if(vect.rbegin(), vect.rend(), [](const auto n) { return n != 0; });
     if (it == vect.rend()) [[unlikely]] {
       return 0;
     }
-    return static_cast<usize>(vect.rend() - 1 - it);
+    return static_cast<std::size_t>(vect.rend() - 1 - it);
   };
 
   // the two backward searches find the index of the last non-zero pixel in the reference and
@@ -367,7 +369,7 @@ template <class N>
   const auto [i0, i1] =
       std::minmax({non_zero_backward_search(ref_pixels), non_zero_backward_search(tgt_pixels)});
 
-  usize score = 0;
+  std::size_t score = 0;
   for (auto i = i0; i != i1; ++i) {  // Count mismatches of pixels between i0 and i1
     score += ref_pixels[i] != tgt_pixels[i];
   }
@@ -456,7 +458,7 @@ template <StripeDirection stripe_direction, class N, class WeightIt = utils::Rep
     utils::unreachable_code();
   };
 
-  for (usize i = 0; i < ncols; ++i) {
+  for (std::size_t i = 0; i < ncols; ++i) {
     using d = StripeDirection;
     if constexpr (stripe_direction == d::vertical) {
       ref_contacts.unsafe_get_column(i, ref_pixel_buff);
@@ -528,14 +530,15 @@ template <StripeDirection stripe_direction, class N>
 
 [[nodiscard]] static auto init_writers(const modle::tools::eval_config &c,
                                        const hictk::Reference &chroms, const bool weighted) {
-  std::vector<std::string> chrom_names(utils::conditional_static_cast<usize>(chroms.size()));
-  std::vector<u32> chrom_sizes(utils::conditional_static_cast<usize>(chroms.size()));
+  std::vector<std::string> chrom_names(utils::conditional_static_cast<std::size_t>(chroms.size()));
+  std::vector<std::uint32_t> chrom_sizes(
+      utils::conditional_static_cast<std::size_t>(chroms.size()));
 
   std::transform(chroms.begin(), chroms.end(), chrom_names.begin(),
                  [](const auto &chrom) { return chrom.name(); });
 
   std::transform(chroms.begin(), chroms.end(), chrom_sizes.begin(),
-                 [](const auto &chrom) { return static_cast<u32>(chrom.size()); });
+                 [](const auto &chrom) { return static_cast<std::uint32_t>(chrom.size()); });
 
   const auto name = corr_method_to_str(c.metric);
   const auto bname1 = fmt::format("{}{}_vertical", name, weighted ? "_weighted" : "");
@@ -610,7 +613,7 @@ template <StripeDirection stripe_direction, class Writers, class N>
 static void run_task(const enum eval_config::Metric metric, const bed::BED &interval,
                      Writers &writers, const ContactMatrixDense<N> &ref_contacts,
                      const ContactMatrixDense<N> &tgt_contacts, const bool exclude_zero_pixels,
-                     const usize bin_size,
+                     const std::size_t bin_size,
                      const phmap::flat_hash_map<std::string, std::vector<double>> &weights) {
   try {
     auto t0 = absl::Now();
@@ -632,7 +635,7 @@ static void run_task(const enum eval_config::Metric metric, const bed::BED &inte
                              interval.chrom_start);
 
     std::string buff;
-    for (usize i = 0; i < metrics.metric1.size(); ++i) {
+    for (std::size_t i = 0; i < metrics.metric1.size(); ++i) {
       const auto start_pos = interval.chrom_start + (bin_size * i);
       const auto end_pos = std::min(start_pos + bin_size, interval.chrom_end);
       buff = format_tsv_record(metric, interval.chrom, start_pos, end_pos, metrics.metric1[i],
@@ -659,7 +662,7 @@ static void log_regions_for_evaluation(const std::vector<bed::BED> &intervals) {
   }
 
   std::vector<std::string> printable_intervals(
-      utils::conditional_static_cast<usize>(intervals.size()));
+      utils::conditional_static_cast<std::size_t>(intervals.size()));
 
   std::transform(
       intervals.begin(), intervals.end(), printable_intervals.begin(), [](const auto &interval) {

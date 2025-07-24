@@ -16,7 +16,7 @@ namespace modle {
 template <class BarrierIt, class StateIt>
 ExtrusionBarriers::ExtrusionBarriers(BarrierIt first_barrier, BarrierIt last_barrier,
                                      StateIt first_state, bool sort_barriers)
-    : ExtrusionBarriers(static_cast<usize>(std::distance(first_barrier, last_barrier))) {
+    : ExtrusionBarriers(static_cast<std::size_t>(std::distance(first_barrier, last_barrier))) {
   clear();
 
   auto it1 = first_barrier;
@@ -34,7 +34,7 @@ ExtrusionBarriers::ExtrusionBarriers(BarrierIt first_barrier, BarrierIt last_bar
 template <class BarrierIt>
 ExtrusionBarriers::ExtrusionBarriers(BarrierIt first_barrier, BarrierIt last_barrier, State state,
                                      bool sort_barriers)
-    : ExtrusionBarriers(static_cast<usize>(std::distance(first_barrier, last_barrier))) {
+    : ExtrusionBarriers(static_cast<std::size_t>(std::distance(first_barrier, last_barrier))) {
   clear();
 
   std::for_each(first_barrier, last_barrier,

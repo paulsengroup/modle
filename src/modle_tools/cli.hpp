@@ -12,7 +12,7 @@ namespace modle::tools {
 
 class Cli {
  public:
-  enum subcommand : u8f {
+  enum subcommand : std::uint_fast8_t {
     help,
     annotate_barriers,
     eval,

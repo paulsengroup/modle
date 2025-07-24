@@ -14,7 +14,7 @@ namespace modle::dna {
 
 /// Class to represent DNA direction or strandness
 class Direction {
-  u8f _direction;
+  std::uint_fast8_t _direction;
   // 0 = none
   // 1 = rev
   // 2 = fwd
@@ -22,11 +22,13 @@ class Direction {
 
  public:
   constexpr Direction() = delete;
-  template <u8f direction>
+  template <std::uint_fast8_t direction>
   constexpr Direction() : _direction(direction) {
     static_assert(direction <= 3);
   }
-  explicit constexpr Direction(u8f direction) : _direction(direction) { assert(direction <= 3); }
+  explicit constexpr Direction(std::uint_fast8_t direction) : _direction(direction) {
+    assert(direction <= 3);
+  }
   [[nodiscard]] static Direction from_char(char d) {
     switch (d) {
       case '.':

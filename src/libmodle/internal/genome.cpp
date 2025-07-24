@@ -161,13 +161,13 @@ void Occupancy1DLazy::deallocate() noexcept {
 
 }  // namespace internal
 
-Chromosome::Chromosome(usize id, std::string name, bp_t size) noexcept
+Chromosome::Chromosome(std::size_t id, std::string name, bp_t size) noexcept
     : _name(std::move(name)), _id(id), _size(size) {}
 
 std::string_view Chromosome::name() const noexcept { return _name; }
 const char* Chromosome::name_cstr() const noexcept { return _name.c_str(); }
 
-u64 Chromosome::hash(XXH3_state_t& state) const {
+std::uint64_t Chromosome::hash(XXH3_state_t& state) const {
   auto handle_errors = [&](const auto& status) {
     if (status == XXH_ERROR) [[unlikely]] {
       throw std::runtime_error(fmt::format("failed to hash {}", *this));
@@ -176,10 +176,10 @@ u64 Chromosome::hash(XXH3_state_t& state) const {
 
   handle_errors(XXH3_64bits_update(&state, _name.data(), _name.size() * sizeof(char)));
   handle_errors(XXH3_64bits_update(&state, &_size, sizeof(decltype(_size))));
-  return utils::conditional_static_cast<u64>(XXH3_64bits_digest(&state));
+  return utils::conditional_static_cast<std::uint64_t>(XXH3_64bits_digest(&state));
 }
 
-u64 Chromosome::hash(XXH3_state_t& state, u64 seed) const {
+std::uint64_t Chromosome::hash(XXH3_state_t& state, std::uint64_t seed) const {
   const auto status = XXH3_64bits_reset_withSeed(&state, seed);
   if (status == XXH_ERROR) [[unlikely]] {
     throw std::runtime_error(fmt::format("failed to hash {}", *this));
@@ -187,17 +187,18 @@ u64 Chromosome::hash(XXH3_state_t& state, u64 seed) const {
   return hash(state);
 }
 
-GenomicInterval::GenomicInterval(usize id, const std::shared_ptr<const Chromosome>& chrom,
+GenomicInterval::GenomicInterval(std::size_t id, const std::shared_ptr<const Chromosome>& chrom,
                                  bp_t contact_matrix_resolution, bp_t diagonal_width)
     : GenomicInterval(id, chrom, 0, chrom->size(), contact_matrix_resolution, diagonal_width) {}
 
-GenomicInterval::GenomicInterval(usize id, std::shared_ptr<const Chromosome> chrom, bp_t start,
-                                 bp_t end, bp_t contact_matrix_resolution, bp_t diagonal_width)
+GenomicInterval::GenomicInterval(std::size_t id, std::shared_ptr<const Chromosome> chrom,
+                                 bp_t start, bp_t end, bp_t contact_matrix_resolution,
+                                 bp_t diagonal_width)
     : GenomicInterval(id, std::move(chrom), start, end, contact_matrix_resolution, diagonal_width,
                       static_cast<const ExtrusionBarrier*>(nullptr),
                       static_cast<const ExtrusionBarrier*>(nullptr)) {}
 
-u64 GenomicInterval::hash(XXH3_state_t& state) const {
+std::uint64_t GenomicInterval::hash(XXH3_state_t& state) const {
   auto handle_errors = [&](const auto& status) {
     if (status == XXH_ERROR) [[unlikely]] {
       throw std::runtime_error(fmt::format("failed to hash {}", *this));
@@ -211,10 +212,10 @@ u64 GenomicInterval::hash(XXH3_state_t& state) const {
   handle_errors(XXH3_64bits_update(&state, &chrom_size, sizeof(decltype(chrom_size))));
   handle_errors(XXH3_64bits_update(&state, &_start, sizeof(decltype(_start))));
   handle_errors(XXH3_64bits_update(&state, &_end, sizeof(decltype(_end))));
-  return utils::conditional_static_cast<u64>(XXH3_64bits_digest(&state));
+  return utils::conditional_static_cast<std::uint64_t>(XXH3_64bits_digest(&state));
 }
 
-u64 GenomicInterval::hash(XXH3_state_t& state, u64 seed) const {
+std::uint64_t GenomicInterval::hash(XXH3_state_t& state, std::uint64_t seed) const {
   const auto status = XXH3_64bits_reset_withSeed(&state, seed);
   if (status == XXH_ERROR) [[unlikely]] {
     throw std::runtime_error(fmt::format("Failed to hash {}", *this));
@@ -227,7 +228,7 @@ const Chromosome& GenomicInterval::chrom() const noexcept {
   return *_chrom;
 }
 
-usize GenomicInterval::num_barriers() const { return _barriers.size(); }
+std::size_t GenomicInterval::num_barriers() const { return _barriers.size(); }
 
 auto GenomicInterval::barriers() const noexcept -> const std::vector<ExtrusionBarrier>& {
   return _barriers;
@@ -237,11 +238,12 @@ auto GenomicInterval::barriers() noexcept -> std::vector<ExtrusionBarrier>& { re
 auto GenomicInterval::contacts() const noexcept -> const ContactMatrix& { return _contacts(); }
 auto GenomicInterval::contacts() noexcept -> ContactMatrix& { return _contacts(); }
 
-auto GenomicInterval::lef_1d_occupancy() const noexcept -> const std::vector<std::atomic<u64>>& {
+auto GenomicInterval::lef_1d_occupancy() const noexcept
+    -> const std::vector<std::atomic<std::uint64_t>>& {
   return _lef_1d_occupancy();
 }
 
-auto GenomicInterval::lef_1d_occupancy() noexcept -> std::vector<std::atomic<u64>>& {
+auto GenomicInterval::lef_1d_occupancy() noexcept -> std::vector<std::atomic<std::uint64_t>>& {
   return _lef_1d_occupancy();
 }
 
@@ -304,12 +306,12 @@ Genome::Genome(const std::filesystem::path& path_to_chrom_sizes,
       _intervals(import_genomic_intervals(path_to_genomic_intervals, _chroms,
                                           contact_matrix_resolution,
                                           contact_matrix_diagonal_witdh)),
-      _size(std::accumulate(_chroms.begin(), _chroms.end(), usize(0),
+      _size(std::accumulate(_chroms.begin(), _chroms.end(), std::size_t(0),
                             [&](auto accumulator, const auto& chrom_ptr) {
                               return accumulator + chrom_ptr->size();
                             })),
       _simulated_size(std::accumulate(
-          _intervals.begin(), _intervals.end(), usize(0),
+          _intervals.begin(), _intervals.end(), std::size_t(0),
           [&](auto accumulator, const GenomicInterval& gi) { return accumulator + gi.size(); })) {
   assert(!path_to_extr_barriers.empty());
   const auto t0 = absl::Now();
@@ -334,9 +336,9 @@ std::vector<std::shared_ptr<const Chromosome>> Genome::import_chromosomes(
   const auto t0 = absl::Now();
   SPDLOG_INFO("importing chromosomes from {}...", path_to_chrom_sizes);
 
-  phmap::btree_map<std::string, usize> chrom_names;
+  phmap::btree_map<std::string, std::size_t> chrom_names;
 
-  usize id = 0;
+  std::size_t id = 0;
   std::vector<std::shared_ptr<const Chromosome>> buffer{};
   for (auto&& record : chrom_sizes::Parser(path_to_chrom_sizes).parse_all()) {
     if (auto it = chrom_names.find(record.chrom); it != chrom_names.end()) {
@@ -389,10 +391,11 @@ phmap::btree_set<GenomicInterval> Genome::import_genomic_intervals(
   // Parse all the records from the BED file. The parser will throw in case of duplicates.
   const auto intervals = bed::Parser(path_to_bed, bed::BED::BED3).parse_all_in_interval_tree();
 
-  usize id = 0;
+  std::size_t id = 0;
   for (const auto& chrom : chromosomes) {
-    auto overlaps = intervals.find_overlaps(std::string{chrom->name()}, u64(0),
-                                            utils::conditional_static_cast<u64>(chrom->size()));
+    auto overlaps =
+        intervals.find_overlaps(std::string{chrom->name()}, std::uint64_t(0),
+                                utils::conditional_static_cast<std::uint64_t>(chrom->size()));
     if (overlaps.empty()) {
       SPDLOG_WARN("found no intervals overlapping chromosome {}!", chrom->name());
     }
@@ -465,17 +468,18 @@ phmap::btree_set<GenomicInterval> Genome::import_genomic_intervals(
   return buff;
 }
 
-usize Genome::map_barriers_to_intervals(phmap::btree_set<GenomicInterval>& intervals,
-                                        const bed::BED_tree<>& barriers_bed,
-                                        double default_barrier_pbb, double default_barrier_puu,
-                                        bool interpret_name_field_as_puu) {
+std::size_t Genome::map_barriers_to_intervals(phmap::btree_set<GenomicInterval>& intervals,
+                                              const bed::BED_tree<>& barriers_bed,
+                                              double default_barrier_pbb,
+                                              double default_barrier_puu,
+                                              bool interpret_name_field_as_puu) {
   assert(!intervals.empty());
-  usize tot_num_barriers = 0;
+  std::size_t tot_num_barriers = 0;
   for (auto& interval : intervals) {
     auto barriers = generate_barriers_from_bed_records(
         barriers_bed.find_overlaps(std::string{interval.chrom().name()},
-                                   utils::conditional_static_cast<u64>(interval.start()),
-                                   utils::conditional_static_cast<u64>(interval.end())),
+                                   utils::conditional_static_cast<std::uint64_t>(interval.start()),
+                                   utils::conditional_static_cast<std::uint64_t>(interval.end())),
         default_barrier_pbb, default_barrier_puu, interpret_name_field_as_puu);
 
     tot_num_barriers += barriers.size();
@@ -483,7 +487,7 @@ usize Genome::map_barriers_to_intervals(phmap::btree_set<GenomicInterval>& inter
   }
   return tot_num_barriers;
 }
-usize Genome::num_intervals() const noexcept { return _intervals.size(); }
+std::size_t Genome::num_intervals() const noexcept { return _intervals.size(); }
 
 auto Genome::begin() -> iterator { return _intervals.begin(); }
 auto Genome::end() -> iterator { return _intervals.end(); }
@@ -499,11 +503,11 @@ auto Genome::find(const GenomicInterval& query) const -> const_iterator {
   return _intervals.find(query);
 }
 
-auto Genome::find(usize query) -> iterator {
+auto Genome::find(std::size_t query) -> iterator {
   return std::find_if(_intervals.begin(), _intervals.end(),
                       [&](const auto& gi) { return gi.id() == query; });
 }
-auto Genome::find(usize query) const -> const_iterator {
+auto Genome::find(std::size_t query) const -> const_iterator {
   return std::find_if(_intervals.begin(), _intervals.end(),
                       [&](const auto& gi) { return gi.id() == query; });
 }
@@ -527,7 +531,7 @@ auto Genome::find(std::string_view query) const -> const_iterator {
 }
 
 bool Genome::contains(const GenomicInterval& query) const { return _intervals.contains(query); }
-bool Genome::contains(usize query) const { return query < _chroms.size(); }
+bool Genome::contains(std::size_t query) const { return query < _chroms.size(); }
 bool Genome::contains(const Chromosome& query) const { return contains(query.id()); }
 bool Genome::contains(std::string_view query) const {
   return std::find_if(_chroms.begin(), _chroms.end(), [&](const auto& chrom_ptr) {
@@ -535,8 +539,8 @@ bool Genome::contains(std::string_view query) const {
          }) != _chroms.end();
 }
 
-usize Genome::num_chromosomes() const noexcept {
-  return utils::conditional_static_cast<usize>(_chroms.size());
+std::size_t Genome::num_chromosomes() const noexcept {
+  return utils::conditional_static_cast<std::size_t>(_chroms.size());
 }
 
 const Chromosome& Genome::chromosome_with_longest_name() const noexcept {
@@ -570,15 +574,16 @@ const GenomicInterval& Genome::interval_with_most_barriers() const noexcept {
                            });
 }
 
-usize Genome::max_target_contacts(usize bin_size, usize diagonal_width,
-                                  double target_contact_density, usize simulation_iterations,
-                                  double lef_fraction_contact_sampling, double nlefs_per_mbp,
-                                  usize ncells) const {
+std::size_t Genome::max_target_contacts(std::size_t bin_size, std::size_t diagonal_width,
+                                        double target_contact_density,
+                                        std::size_t simulation_iterations,
+                                        double lef_fraction_contact_sampling, double nlefs_per_mbp,
+                                        std::size_t ncells) const {
   const auto& interval = longest_interval();
   if (target_contact_density == 0.0) {
-    const auto nlefs = static_cast<usize>(
+    const auto nlefs = static_cast<std::size_t>(
         std::round(nlefs_per_mbp * (static_cast<double>(interval.size()) / 1.0e6)));
-    return static_cast<usize>(
+    return static_cast<std::size_t>(
         (static_cast<double>(simulation_iterations * nlefs) * lef_fraction_contact_sampling) /
         static_cast<double>(ncells));
   }
@@ -586,8 +591,8 @@ usize Genome::max_target_contacts(usize bin_size, usize diagonal_width,
   const auto npixels =
       ((interval.size() + bin_size - 1) / bin_size) * ((diagonal_width + bin_size - 1) / bin_size);
 
-  return static_cast<usize>(std::round((static_cast<double>(npixels) * target_contact_density) /
-                                       static_cast<double>(ncells)));
+  return static_cast<std::size_t>(std::round(
+      (static_cast<double>(npixels) * target_contact_density) / static_cast<double>(ncells)));
 }
 
 }  // namespace modle

@@ -106,15 +106,15 @@ FP Pearson<FP>::compute_significance(const FP pcc, const I n) {
 }
 
 template <class FP>
-Spearman<FP>::Spearman(const usize n) : _rank_buff1(n), _rank_buff2(n), _idx_buff(n) {}
+Spearman<FP>::Spearman(const std::size_t n) : _rank_buff1(n), _rank_buff2(n), _idx_buff(n) {}
 
 template <class FP>
 template <class It1, class It2>
 FP Spearman<FP>::compute_rho(It1 first1, It1 last1, It2 first2) {
   assert(std::distance(first1, last1) >= 0);
 
-  const auto size = static_cast<usize>(std::distance(first1, last1));
-  auto last2 = first2 + static_cast<isize>(size);
+  const auto size = static_cast<std::size_t>(std::distance(first1, last1));
+  auto last2 = first2 + static_cast<std::ptrdiff_t>(size);
   if (std::all_of(first1, last1, [](const auto n) { return n == FP(0); }) ||
       std::all_of(first2, last2, [](const auto n) { return n == FP(0); })) [[unlikely]] {
     return FP(1);
@@ -132,8 +132,8 @@ template <class It1, class It2, class It3>
 FP Spearman<FP>::compute_weighted_rho(It1 first1, It1 last1, It2 first2, It3 weight_first) {
   assert(std::distance(first1, last1) >= 0);
 
-  const auto size = static_cast<usize>(std::distance(first1, last1));
-  auto last2 = first2 + static_cast<isize>(size);
+  const auto size = static_cast<std::size_t>(std::distance(first1, last1));
+  auto last2 = first2 + static_cast<std::ptrdiff_t>(size);
   if (std::all_of(first1, last1, [](const auto n) { return n == FP(0); }) ||
       std::all_of(first2, last2, [](const auto n) { return n == FP(0); })) [[unlikely]] {
     return FP(1);
@@ -200,9 +200,9 @@ typename Spearman<FP>::Result Spearman<FP>::operator()(const Range1& r1, const R
 namespace internal {
 
 template <class It>
-void sort_by_index(It first, It last, std::vector<usize>& idx_buff) {
+void sort_by_index(It first, It last, std::vector<std::size_t>& idx_buff) {
   assert(std::distance(first, last) >= 0);
-  idx_buff.resize(static_cast<usize>(std::distance(first, last)));
+  idx_buff.resize(static_cast<std::size_t>(std::distance(first, last)));
   std::iota(idx_buff.begin(), idx_buff.end(), 0);
 
   cppsort::pdq_sort(idx_buff.begin(), idx_buff.end(), [&](auto i1, auto i2) {
@@ -215,26 +215,26 @@ void sort_by_index(It first, It last, std::vector<usize>& idx_buff) {
 
 template <class It, class FP, class>
 void compute_element_ranks(It first, It last, std::vector<FP>& rank_buff,
-                           std::vector<usize>& idx_buff) {
+                           std::vector<std::size_t>& idx_buff) {
   assert(std::distance(first, last) >= 0);
-  const auto size = static_cast<usize>(std::distance(first, last));
+  const auto size = static_cast<std::size_t>(std::distance(first, last));
   rank_buff.resize(size);
   idx_buff.resize(size);
   sort_by_index(first, last, idx_buff);
 
   rank_buff[idx_buff.front()] = FP(0);
-  for (usize i = 1; i < size; ++i) {
+  for (std::size_t i = 1; i < size; ++i) {
     DISABLE_WARNING_PUSH
     DISABLE_WARNING_SIGN_CONVERSION
     const auto& prev = *(first + idx_buff[i - 1]);
     const auto& current = *(first + idx_buff[i]);
     DISABLE_WARNING_POP
 
-    if (prev == current) [[unlikely]] {      // Process ties
-      const usize lower_bound_idx = i - 1;   // first tied-element
-      const usize upper_bound_idx = [&]() {  // last tied-element
+    if (prev == current) [[unlikely]] {            // Process ties
+      const std::size_t lower_bound_idx = i - 1;   // first tied-element
+      const std::size_t upper_bound_idx = [&]() {  // last tied-element
         for (auto j = lower_bound_idx + 1; j < size; ++j) {
-          const auto& next = *(first + static_cast<isize>(idx_buff[j]));
+          const auto& next = *(first + static_cast<std::ptrdiff_t>(idx_buff[j]));
           if (current != next) {
             return j;
           }
@@ -258,16 +258,17 @@ void compute_element_ranks(It first, It last, std::vector<FP>& rank_buff,
 // https://rdrr.io/cran/wCorr/f/inst/doc/wCorrFormulas.pdf
 template <class It1, class It2, class FP, class>
 void compute_weighted_element_ranks(It1 first, It1 last, It2 weight_first,
-                                    std::vector<FP>& rank_buff, std::vector<usize>& idx_buff) {
+                                    std::vector<FP>& rank_buff,
+                                    std::vector<std::size_t>& idx_buff) {
   assert(std::distance(first, last) >= 0);
-  const auto size = static_cast<usize>(std::distance(first, last));
+  const auto size = static_cast<std::size_t>(std::distance(first, last));
   rank_buff.resize(size);
   idx_buff.resize(size);
   sort_by_index(first, last, idx_buff);
 
   double weight_sum = *weight_first;
   rank_buff[idx_buff.front()] = FP(weight_sum);
-  for (usize i = 1; i < size; ++i) {
+  for (std::size_t i = 1; i < size; ++i) {
     DISABLE_WARNING_PUSH
     DISABLE_WARNING_SIGN_CONVERSION
     const auto& prev = *(first + idx_buff[i - 1]);
@@ -275,11 +276,11 @@ void compute_weighted_element_ranks(It1 first, It1 last, It2 weight_first,
     const auto& prev_weight = *(weight_first + idx_buff[i - 1]);
     DISABLE_WARNING_POP
 
-    if (prev == current) [[unlikely]] {      // Process ties
-      const usize lower_bound_idx = i - 1;   // first tied-element
-      const usize upper_bound_idx = [&]() {  // last tied-element
+    if (prev == current) [[unlikely]] {            // Process ties
+      const std::size_t lower_bound_idx = i - 1;   // first tied-element
+      const std::size_t upper_bound_idx = [&]() {  // last tied-element
         for (auto j = lower_bound_idx + 1; j < size; ++j) {
-          const auto& next = *(first + static_cast<isize>(idx_buff[j]));
+          const auto& next = *(first + static_cast<std::ptrdiff_t>(idx_buff[j]));
           if (current != next) {
             return j;
           }
@@ -314,7 +315,7 @@ void compute_weighted_element_ranks(It1 first, It1 last, It2 weight_first,
       }
     }
     // Here aj = weight_sum + current_weight; bj = 0;
-    const auto& current_weight = *(weight_first + static_cast<isize>(idx_buff[i]));
+    const auto& current_weight = *(weight_first + static_cast<std::ptrdiff_t>(idx_buff[i]));
     rank_buff[idx_buff[i]] = (weight_sum += current_weight);
   }
 }

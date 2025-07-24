@@ -40,12 +40,14 @@ class ExtrusionUnit {
       noexcept(utils::ndebug_defined());
   template <typename I>
   [[nodiscard]] constexpr bool operator==(I other_pos) const noexcept(utils::ndebug_defined());
-  [[nodiscard]] constexpr i64 operator-(const ExtrusionUnit& other) const
+  [[nodiscard]] constexpr std::int64_t operator-(const ExtrusionUnit& other) const
       noexcept(utils::ndebug_defined());
   template <typename I>
-  [[nodiscard]] constexpr i64 operator-(I other_pos) const noexcept(utils::ndebug_defined());
+  [[nodiscard]] constexpr std::int64_t operator-(I other_pos) const
+      noexcept(utils::ndebug_defined());
   template <typename I>
-  [[nodiscard]] constexpr i64 operator+(I other_pos) const noexcept(utils::ndebug_defined());
+  [[nodiscard]] constexpr std::int64_t operator+(I other_pos) const
+      noexcept(utils::ndebug_defined());
   constexpr void release() noexcept(utils::ndebug_defined());
 
  private:
@@ -54,14 +56,14 @@ class ExtrusionUnit {
 
 struct Lef {
   constexpr Lef() = default;
-  inline Lef(usize binding_epoch_, ExtrusionUnit rev_unit_, ExtrusionUnit fwd_unit_) noexcept;
+  inline Lef(std::size_t binding_epoch_, ExtrusionUnit rev_unit_, ExtrusionUnit fwd_unit_) noexcept;
   [[nodiscard]] constexpr bool is_bound() const noexcept(utils::ndebug_defined());
-  constexpr void bind_at_pos(usize current_epoch, bp_t pos) noexcept(utils::ndebug_defined());
+  constexpr void bind_at_pos(std::size_t current_epoch, bp_t pos) noexcept(utils::ndebug_defined());
   constexpr void release() noexcept(utils::ndebug_defined());
   constexpr void reset() noexcept(utils::ndebug_defined());
   [[nodiscard]] constexpr bp_t loop_size() const noexcept;
 
-  usize binding_epoch{(std::numeric_limits<usize>::max)()};
+  std::size_t binding_epoch{(std::numeric_limits<std::size_t>::max)()};
   ExtrusionUnit rev_unit{};
   ExtrusionUnit fwd_unit{};
 };

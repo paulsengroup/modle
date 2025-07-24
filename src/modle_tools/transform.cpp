@@ -58,7 +58,7 @@ static modle::IITree<double, double> import_discretization_ranges(const std::fil
 
   std::string buff;
   std::vector<std::string_view> toks(3);
-  usize i;  // NOLINT(cppcoreguidelines-init-variables)
+  std::size_t i;  // NOLINT(cppcoreguidelines-init-variables)
   for (i = 1; r.getline(buff); ++i) {
     toks = str_split(buff, sep);
     try {
@@ -171,8 +171,9 @@ template <class N>
 [[nodiscard]] static hictk::cooler::File init_output_cooler(
     const std::filesystem::path& output_cooler_uri, const hictk::cooler::File& input_cooler,
     bool floating_point, std::string_view args_json, bool force) {
-  auto attrs = floating_point ? hictk::cooler::Attributes::init<double>(input_cooler.resolution())
-                              : hictk::cooler::Attributes::init<i32>(input_cooler.resolution());
+  auto attrs = floating_point
+                   ? hictk::cooler::Attributes::init<double>(input_cooler.resolution())
+                   : hictk::cooler::Attributes::init<std::int32_t>(input_cooler.resolution());
   attrs.metadata = args_json;
   attrs.generated_by = config::version::str_long("MoDLE-tools");
   if (const auto& assembly = input_cooler.attributes().assembly; assembly) {
@@ -183,8 +184,8 @@ template <class N>
     return io::init_cooler_file<double>(output_cooler_uri.string(), force,
                                         input_cooler.chromosomes(), std::move(attrs));
   }
-  return io::init_cooler_file<i32>(output_cooler_uri.string(), force, input_cooler.chromosomes(),
-                                   std::move(attrs));
+  return io::init_cooler_file<std::int32_t>(output_cooler_uri.string(), force,
+                                            input_cooler.chromosomes(), std::move(attrs));
 }
 
 void transform_subcmd(const modle::tools::transform_config& c) {
@@ -221,7 +222,7 @@ void transform_subcmd(const modle::tools::transform_config& c) {
       io::append_contact_matrix_to_cooler(output_cooler, chrom.name(), transformed_matrix);
     } else {
       io::append_contact_matrix_to_cooler(output_cooler, chrom.name(),
-                                          transformed_matrix.as<i32>());
+                                          transformed_matrix.as<std::int32_t>());
     }
   }
 

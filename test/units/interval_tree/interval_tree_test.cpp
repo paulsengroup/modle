@@ -22,8 +22,8 @@ namespace modle::interval_tree::test {
 }
 
 struct Record {
-  usize start{};
-  usize end{};
+  std::size_t start{};
+  std::size_t end{};
   std::string data{};
 
   Record() = default;
@@ -38,15 +38,15 @@ struct Record {
 };
 
 template <class IITreeT>
-static void test_find_overlaps(const IITreeT& tree, usize start, usize end,
-                               usize num_expected_overlaps) {
+static void test_find_overlaps(const IITreeT& tree, std::size_t start, std::size_t end,
+                               std::size_t num_expected_overlaps) {
   const auto [overlap_begin, overlap_end] = tree.find_overlaps(start, end);
-  CHECK(static_cast<usize>(overlap_end - overlap_begin) == num_expected_overlaps);
+  CHECK(static_cast<std::size_t>(overlap_end - overlap_begin) == num_expected_overlaps);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Interval tree simple", "[interval-tree][short]") {
-  IITree<usize, Record> tree{};
+  IITree<std::size_t, Record> tree{};
 
   tree.insert(0, 10, Record{});
   tree.insert(5, 15, Record{});
@@ -81,7 +81,7 @@ TEST_CASE("Interval tree chrX", "[interval-tree][short]") {
 
   // Construct interval tree
   const auto tree = [&]() {
-    IITree<usize, Record> tree_{};
+    IITree<std::size_t, Record> tree_{};
 
     compressed_io::Reader r(all_intervals);
     REQUIRE(r.is_open());

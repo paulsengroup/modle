@@ -12,7 +12,7 @@
 
 namespace modle::utils {
 // Source: https://www.youtube.com/watch?v=INn3xa4pMfg
-template <class Key, class Value, usize Size>
+template <class Key, class Value, std::size_t Size>
 class ConstMap {
   // std::array<std::pair<Key, Value>, Size> _buff{};
   std::array<Key, Size> _keys{};
@@ -34,7 +34,7 @@ class ConstMap {
   using second_type = Value;
 
   [[nodiscard]] constexpr bool empty() const noexcept;
-  [[nodiscard]] constexpr usize size() const noexcept;
+  [[nodiscard]] constexpr std::size_t size() const noexcept;
 
   [[nodiscard]] constexpr const Value& at(const Key& key) const;
   [[nodiscard]] constexpr const Value& operator[](const Key& key) const;
@@ -51,12 +51,12 @@ class ConstMap {
     friend ConstMap;
 
     // NOLINTNEXTLINE(hicpp-explicit-conversions)
-    constexpr iterator(const ConstMap& map, usize i = 0) noexcept;
+    constexpr iterator(const ConstMap& map, std::size_t i = 0) noexcept;
 
    public:
     constexpr iterator() = delete;
     using value_type = std::pair<const Key, Value>;
-    using difference_type = isize;
+    using difference_type = std::ptrdiff_t;
     using pointer = value_type*;
     using reference = value_type&;
     using iterator_category = std::input_iterator_tag;

@@ -23,11 +23,11 @@ namespace modle::utils {
 
 namespace detail {
 template <class N>
-void throw_except_from_errc(std::string_view tok, usize idx, [[maybe_unused]] const N &field,
+void throw_except_from_errc(std::string_view tok, std::size_t idx, [[maybe_unused]] const N &field,
                             const char *c, std::errc e) {
   static_assert(std::is_arithmetic<N>());
   std::string base_error;
-  if (idx != (std::numeric_limits<usize>::max)()) {
+  if (idx != (std::numeric_limits<std::size_t>::max)()) {
     base_error = fmt::format("unable to convert field {} (\"{}\") to a ", idx, tok);
   } else {
     base_error = fmt::format("unable to convert field \"{}\" to", tok);
@@ -75,8 +75,8 @@ template <class N>
 void parse_numeric_or_throw(std::string_view tok, N &field) {
   auto [ptr, err] = utils::from_chars(tok.data(), tok.end(), field);
   if (ptr != tok.end() && err != std::errc{}) {
-    utils::detail::throw_except_from_errc(tok, (std::numeric_limits<usize>::max)(), field, ptr,
-                                          err);
+    utils::detail::throw_except_from_errc(tok, (std::numeric_limits<std::size_t>::max)(), field,
+                                          ptr, err);
   }
 }
 
@@ -88,20 +88,20 @@ N parse_numeric_or_throw(std::string_view tok) {
 }
 
 template <class N>
-void parse_numeric_or_throw(const std::vector<std::string_view> &toks, usize idx, N &field) {
+void parse_numeric_or_throw(const std::vector<std::string_view> &toks, std::size_t idx, N &field) {
   parse_numeric_or_throw(toks[idx], field);
 }
 
 template <class N>
-void parse_vect_of_numbers_or_throw(const std::vector<std::string_view> &toks, usize idx,
-                                    std::vector<N> &fields, u64 expected_size) {
+void parse_vect_of_numbers_or_throw(const std::vector<std::string_view> &toks, std::size_t idx,
+                                    std::vector<N> &fields, std::uint64_t expected_size) {
   static_assert(std::is_arithmetic<N>());
   const auto ns = str_split(toks[idx], ',');
   if (ns.size() != expected_size) {
     throw std::runtime_error(fmt::format("expected {} fields, got {}.", expected_size, ns.size()));
   }
   fields.resize(ns.size());
-  for (usize i = 0; i < expected_size; ++i) {
+  for (std::size_t i = 0; i < expected_size; ++i) {
     parse_numeric_or_throw(ns, i, fields[i]);
   }
 }

@@ -93,7 +93,7 @@ void Cli::make_annotate_barriers_subcommand() {
       *_cli.add_subcommand("annotate-barriers",
                            "Helper tool to generate an extrusion barrier annotation for MoDLE.")
            ->fallthrough()
-           ->preparse_callback([this]([[maybe_unused]] usize i) {
+           ->preparse_callback([this]([[maybe_unused]] std::size_t i) {
              assert(_config.index() == 0);
              _config = annotate_barriers_config{};
            });
@@ -164,7 +164,7 @@ void Cli::make_eval_subcommand() {
   auto& sc =
       *_cli.add_subcommand("evaluate", "Helper tool to compare contact matrices in cooler format.")
            ->fallthrough()
-           ->preparse_callback([this]([[maybe_unused]] usize i) {
+           ->preparse_callback([this]([[maybe_unused]] std::size_t i) {
              assert(_config.index() == 0);
              _config = eval_config{};
            });
@@ -292,7 +292,7 @@ void Cli::make_transform_subcommand() {
                                   "Transform contact matrices in cooler format using one of the "
                                   "supported transformation methods.")
                   ->fallthrough()
-                  ->preparse_callback([this]([[maybe_unused]] usize i) {
+                  ->preparse_callback([this]([[maybe_unused]] std::size_t i) {
                     assert(_config.index() == 0);
                     _config = transform_config{};
                   });
@@ -631,7 +631,7 @@ modle::tools::modle_tools_config Cli::parse_arguments() {
   std::visit(
       [&, this](auto& config) {
         if constexpr (!std::is_same_v<absl::remove_cvref_t<decltype(config)>, std::monostate>) {
-          config.args = absl::MakeSpan(_argv, static_cast<usize>(_argc));
+          config.args = absl::MakeSpan(_argv, static_cast<std::size_t>(_argc));
           config.args_json = to_json();
         }
       },

@@ -11,38 +11,38 @@ namespace modle::stats::stats {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test utils: sort vect. by idx", "[correlation][utils][short]") {
-  const std::vector<u32> v{10, 5, 67, 3, 60, 45, 49, 1000};
-  const std::vector<u32> expected{3, 1, 0, 5, 6, 4, 2, 7};
-  std::vector<usize> vi;
+  const std::vector<std::uint32_t> v{10, 5, 67, 3, 60, 45, 49, 1000};
+  const std::vector<std::uint32_t> expected{3, 1, 0, 5, 6, 4, 2, 7};
+  std::vector<std::size_t> vi;
   internal::sort_by_index(v.begin(), v.end(), vi);
   REQUIRE(vi.size() == expected.size());
-  for (usize i = 0; i < expected.size(); ++i) {
+  for (std::size_t i = 0; i < expected.size(); ++i) {
     CHECK(vi[i] == expected[i]);
   }
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test utils: compute ranks wo ties", "[correlation][utils][short]") {
-  const std::vector<u32> v{10, 5, 67, 3, 60, 45, 49, 1000};
-  const std::vector<u32> expected{2, 1, 6, 0, 5, 3, 4, 7};
+  const std::vector<std::uint32_t> v{10, 5, 67, 3, 60, 45, 49, 1000};
+  const std::vector<std::uint32_t> expected{2, 1, 6, 0, 5, 3, 4, 7};
   std::vector<double> vr;
-  std::vector<usize> vi;
+  std::vector<std::size_t> vi;
   internal::compute_element_ranks(v.begin(), v.end(), vr, vi);
   REQUIRE(vr.size() == expected.size());
-  for (usize i = 0; i < expected.size(); ++i) {
+  for (std::size_t i = 0; i < expected.size(); ++i) {
     CHECK(vr[i] == expected[i]);
   }
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Corr. test utils: compute ranks w ties", "[correlation][utils][short]") {
-  const std::vector<u32> v{10, 5, 67, 3, 67, 45, 49, 1000};
+  const std::vector<std::uint32_t> v{10, 5, 67, 3, 67, 45, 49, 1000};
   const std::vector<double> expected{2, 1, 5.5, 0, 5.5, 3, 4, 7};
   std::vector<double> vr;
-  std::vector<usize> vi;
+  std::vector<std::size_t> vi;
   internal::compute_element_ranks(v.begin(), v.end(), vr, vi);
   REQUIRE(vr.size() == expected.size());
-  for (usize i = 0; i < expected.size(); ++i) {
+  for (std::size_t i = 0; i < expected.size(); ++i) {
     CHECK(vr[i] == expected[i]);
   }
 }

@@ -80,7 +80,7 @@ TEST_CASE("bigwig::Reader", "[bigwig][io][short]") {
     REQUIRE(!!intervals);
     CHECK(intervals->l == 10);
 
-    for (u32 i = 0; i < intervals->l; ++i) {
+    for (std::uint32_t i = 0; i < intervals->l; ++i) {
       CHECK(intervals->start[i] == bin_size * i);           // NOLINT
       CHECK(intervals->end[i] == bin_size * (i + 1));       // NOLINT
       CHECK(intervals->value[i] == static_cast<float>(i));  // NOLINT
@@ -101,14 +101,14 @@ TEST_CASE("bigwig::Writer", "[bigwig][io][short]") {
   const auto path = testdir() / "test.bw";
 
   const std::vector<std::string> chrom_names{"chr1", "chr2"};
-  const std::vector<u32> chrom_sizes{1000, 500};
-  const u32 bin_size = 10;
+  const std::vector<std::uint32_t> chrom_sizes{1000, 500};
+  const std::uint32_t bin_size = 10;
   {
     io::bigwig::Writer w{path};
     REQUIRE(!!w);
     w.write_chromosomes(chrom_names, chrom_sizes);
 
-    for (usize i = 0; i < chrom_names.size(); ++i) {
+    for (std::size_t i = 0; i < chrom_names.size(); ++i) {
       std::vector<float> values(chrom_sizes[i] / bin_size);
       std::iota(values.begin(), values.end(), 0.0F);
 
@@ -126,7 +126,7 @@ TEST_CASE("bigwig::Writer", "[bigwig][io][short]") {
     const auto intervals = r.get_intervals(chrom.first, 0, chrom.second);
     REQUIRE(intervals->l == ((chrom.second + bin_size - 1) / bin_size));
 
-    for (u32 i = 0; i < intervals->l; ++i) {
+    for (std::uint32_t i = 0; i < intervals->l; ++i) {
       CHECK(intervals->start[i] == bin_size * i);           // NOLINT
       CHECK(intervals->end[i] == bin_size * (i + 1));       // NOLINT
       CHECK(intervals->value[i] == static_cast<float>(i));  // NOLINT

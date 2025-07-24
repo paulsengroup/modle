@@ -57,9 +57,9 @@ TEST_CASE("BED Tree multiple overlaps", "[BED][io][long]") {
   std::vector<std::string_view> toks;
   while (r.getline(buff)) {
     toks = str_split(buff, '\t');
-    usize num_expected_overlaps{};
-    usize start{};
-    usize end{};
+    std::size_t num_expected_overlaps{};
+    std::size_t start{};
+    std::size_t end{};
     const auto chrom = std::string{toks.front()};
     utils::parse_numeric_or_throw(toks[1], start);
     utils::parse_numeric_or_throw(toks[2], end);

@@ -22,7 +22,7 @@ void Simulation::correct_moves_for_lef_bar_collisions(
     const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
     const absl::Span<const CollisionT> rev_collisions,
     const absl::Span<const CollisionT> fwd_collisions) noexcept(utils::ndebug_defined()) {
-  for (usize i = 0; i < lefs.size(); ++i) {
+  for (std::size_t i = 0; i < lefs.size(); ++i) {
     if (rev_collisions[i].collision_occurred(CollisionT::LEF_BAR))
         [[unlikely]] {  // Process rev collisions
       const auto barrier_idx = rev_collisions[i].decode_index();
@@ -52,8 +52,8 @@ void Simulation::correct_moves_for_lef_bar_collisions(
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::correct_moves_for_primary_lef_lef_collisions(
-    const absl::Span<const Lef> lefs, const absl::Span<const usize> rev_ranks,
-    const absl::Span<const usize> fwd_ranks, const absl::Span<bp_t> rev_moves,
+    const absl::Span<const Lef> lefs, const absl::Span<const std::size_t> rev_ranks,
+    const absl::Span<const std::size_t> fwd_ranks, const absl::Span<bp_t> rev_moves,
     const absl::Span<bp_t> fwd_moves, const absl::Span<const CollisionT> rev_collisions,
     const absl::Span<const CollisionT> fwd_collisions) noexcept(utils::ndebug_defined()) {
   // Primary LEF-LEF collisions are encoded with a number between nbarriers and nbarriers + nlefs.

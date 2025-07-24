@@ -130,7 +130,7 @@ static void try_init_archive_entry(ArchiveEntryPtr& entry) {
   archive_entry_clear(entry.get());
 }
 
-Reader::Reader(const std::filesystem::path& path, usize buff_capacity) {
+Reader::Reader(const std::filesystem::path& path, std::size_t buff_capacity) {
   assert(buff_capacity != 0);
   _buff.reserve(buff_capacity);
   open(path);
@@ -271,7 +271,7 @@ bool Reader::read_next_chunk() {
     _tok_tmp_buff.clear();
     return false;
   }
-  _buff.resize(static_cast<usize>(bytes_read));
+  _buff.resize(static_cast<std::size_t>(bytes_read));
   _idx = 0;
   return true;
 }
@@ -285,14 +285,14 @@ bool Reader::read_next_token(std::string& buff, char sep) {
   }
 
   const auto pos = _buff.find(sep, _idx);
-  const auto i = static_cast<i64>(_idx);
+  const auto i = static_cast<std::int64_t>(_idx);
   if (pos == std::string::npos) {
     buff.append(_buff.begin() + i, _buff.end());
     return false;
   }
 
   assert(pos >= _idx);
-  buff.append(_buff.begin() + i, _buff.begin() + static_cast<i64>(pos));
+  buff.append(_buff.begin() + i, _buff.begin() + static_cast<std::int64_t>(pos));
   _idx = pos + 1;
   return true;
 }
@@ -306,7 +306,7 @@ std::string_view Reader::read_next_token(char sep) {
   }
 
   const auto pos = _buff.find(sep, _idx);
-  const auto i = static_cast<i64>(_idx);
+  const auto i = static_cast<std::int64_t>(_idx);
   if (pos == std::string::npos) {
     _tok_tmp_buff.append(_buff.begin() + i, _buff.end());
     return {};
@@ -315,10 +315,11 @@ std::string_view Reader::read_next_token(char sep) {
   assert(pos >= _idx);
   _idx = pos + 1;
   if (_tok_tmp_buff.empty()) {
-    return std::string_view{_buff.data() + static_cast<usize>(i), pos - static_cast<usize>(i)};
+    return std::string_view{_buff.data() + static_cast<std::size_t>(i),
+                            pos - static_cast<std::size_t>(i)};
   }
 
-  _tok_tmp_buff.append(_buff.begin() + i, _buff.begin() + static_cast<i64>(pos));
+  _tok_tmp_buff.append(_buff.begin() + i, _buff.begin() + static_cast<std::int64_t>(pos));
   return std::string_view{_tok_tmp_buff};
 }
 

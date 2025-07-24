@@ -22,11 +22,13 @@ template <class N>
 inline N parse_numeric_or_throw(std::string_view tok);
 
 template <class N>
-inline void parse_numeric_or_throw(const std::vector<std::string_view>& toks, usize idx, N& field);
+inline void parse_numeric_or_throw(const std::vector<std::string_view>& toks, std::size_t idx,
+                                   N& field);
 
 template <class N>
-inline void parse_vect_of_numbers_or_throw(const std::vector<std::string_view>& toks, usize idx,
-                                           std::vector<N>& fields, u64 expected_size);
+inline void parse_vect_of_numbers_or_throw(const std::vector<std::string_view>& toks,
+                                           std::size_t idx, std::vector<N>& fields,
+                                           std::uint64_t expected_size);
 }  // namespace modle::utils
 
 #include "../../../numeric_utils_impl.hpp"  // IWYU pragma: export

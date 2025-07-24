@@ -37,7 +37,7 @@ ContactMatrixDense<N>::ContactMatrixDense(const ContactMatrixDense<N> &other)
       _updates_missed(other._updates_missed.load()) {}
 
 template <class N>
-ContactMatrixDense<N>::ContactMatrixDense(const usize nrows_, const usize ncols_)
+ContactMatrixDense<N>::ContactMatrixDense(const std::size_t nrows_, const std::size_t ncols_)
     : _nrows(std::min(nrows_, ncols_)),
       _ncols(ncols_),
       _contacts(_nrows * _ncols + 1, N(0)),
@@ -50,14 +50,15 @@ ContactMatrixDense<N>::ContactMatrixDense(const bp_t length, const bp_t diagonal
                          (length + bin_size - 1) / bin_size) {}
 
 template <class N>
-ContactMatrixDense<N>::ContactMatrixDense(const absl::Span<const N> contacts, const usize nrows_,
-                                          const usize ncols_, const usize tot_contacts,
-                                          const usize updates_missed)
+ContactMatrixDense<N>::ContactMatrixDense(const absl::Span<const N> contacts,
+                                          const std::size_t nrows_, const std::size_t ncols_,
+                                          const std::size_t tot_contacts,
+                                          const std::size_t updates_missed)
     : _nrows(nrows_),
       _ncols(ncols_),
       _contacts(contacts.begin(), contacts.end()),
       _mtxes(compute_number_of_mutexes(nrows(), ncols())),
-      _tot_contacts(static_cast<i64>(tot_contacts)),
+      _tot_contacts(static_cast<std::int64_t>(tot_contacts)),
       _global_stats_outdated(true),
       _updates_missed(updates_missed) {
   assert(_contacts.size() == _nrows * _ncols + 1);
@@ -92,7 +93,7 @@ ContactMatrixDense<N> &ContactMatrixDense<N>::operator=(const ContactMatrixDense
 
 template <class N>
 std::unique_lock<typename ContactMatrixDense<N>::mutex_t> ContactMatrixDense<N>::lock_pixel(
-    usize row, usize col) const {
+    std::size_t row, std::size_t col) const {
   return std::unique_lock<ContactMatrixDense<N>::mutex_t>(_mtxes[get_pixel_mutex_idx(row, col)]);
 }
 
@@ -104,27 +105,27 @@ utils::LockRangeExclusive<typename ContactMatrixDense<N>::mutex_t> ContactMatrix
 }
 
 template <class N>
-constexpr usize ContactMatrixDense<N>::ncols() const {
+constexpr std::size_t ContactMatrixDense<N>::ncols() const {
   return _ncols;
 }
 
 template <class N>
-constexpr usize ContactMatrixDense<N>::nrows() const {
+constexpr std::size_t ContactMatrixDense<N>::nrows() const {
   return _nrows;
 }
 
 template <class N>
-constexpr usize ContactMatrixDense<N>::npixels() const {
+constexpr std::size_t ContactMatrixDense<N>::npixels() const {
   return _nrows * _ncols;
 }
 
 template <class N>
-constexpr usize ContactMatrixDense<N>::get_n_of_missed_updates() const noexcept {
+constexpr std::size_t ContactMatrixDense<N>::get_n_of_missed_updates() const noexcept {
   return _updates_missed.load();
 }
 
 template <class N>
-constexpr usize ContactMatrixDense<N>::get_matrix_size_in_bytes() const {
+constexpr std::size_t ContactMatrixDense<N>::get_matrix_size_in_bytes() const {
   return ((npixels() + 1) * sizeof(N)) + (_mtxes.size() * sizeof(mutex_t));
 }
 
@@ -144,34 +145,37 @@ absl::Span<N> ContactMatrixDense<N>::get_raw_count_vector() {
 }
 
 template <class N>
-void ContactMatrixDense<N>::bound_check_coords([[maybe_unused]] const usize row,
-                                               [[maybe_unused]] const usize col) const {
+void ContactMatrixDense<N>::bound_check_coords([[maybe_unused]] const std::size_t row,
+                                               [[maybe_unused]] const std::size_t col) const {
   if constexpr (utils::ndebug_not_defined()) {
     internal::bound_check_coords(*this, row, col);
   }
 }
 
 template <class N>
-usize ContactMatrixDense<N>::hash_coordinates(const usize i, const usize j) noexcept {
-  const std::array<usize, 2> buff{i, j};
-  return utils::conditional_static_cast<usize>(XXH3_64bits(buff.data(), sizeof(usize) * 2));
+std::size_t ContactMatrixDense<N>::hash_coordinates(const std::size_t i,
+                                                    const std::size_t j) noexcept {
+  const std::array<std::size_t, 2> buff{i, j};
+  return utils::conditional_static_cast<std::size_t>(
+      XXH3_64bits(buff.data(), sizeof(std::size_t) * 2));
 }
 
 template <class N>
-constexpr usize ContactMatrixDense<N>::compute_number_of_mutexes(const usize rows,
-                                                                 const usize cols) noexcept {
+constexpr std::size_t ContactMatrixDense<N>::compute_number_of_mutexes(
+    const std::size_t rows, const std::size_t cols) noexcept {
   if (rows + cols == 0) {
     return 0;
   }
-  const auto nthreads = static_cast<usize>(std::thread::hardware_concurrency());
+  const auto nthreads = static_cast<std::size_t>(std::thread::hardware_concurrency());
   const auto max_dim = std::max(rows, cols);
   // Clamping to 2-n is needed because get_pixel_mutex_idx expects the number of
   // mutexes to be a multiple of 2
-  return utils::next_pow2(std::clamp(max_dim, usize(2), 1000 * nthreads));
+  return utils::next_pow2(std::clamp(max_dim, std::size_t(2), 1000 * nthreads));
 }
 
 template <class N>
-usize ContactMatrixDense<N>::get_pixel_mutex_idx(const usize row, const usize col) const noexcept {
+std::size_t ContactMatrixDense<N>::get_pixel_mutex_idx(const std::size_t row,
+                                                       const std::size_t col) const noexcept {
   assert(!_mtxes.empty());
   assert(_mtxes.size() % 2 == 0);
   // equivalent to hash_coordinates(row, col) % _mtxes.size() when _mtxes.size() % 2 == 0

@@ -29,7 +29,7 @@ std::vector<bed::BED> Parser::parse_all(char sep) {
   phmap::flat_hash_set<std::string> chrom_names{};
   std::vector<bed::BED> chrom_sizes;
 
-  for (usize i = 1UL, id = 0; _reader.getline(buff); ++i) {
+  for (std::size_t i = 1UL, id = 0; _reader.getline(buff); ++i) {
     buff = strip_trailing_whitespace(buff);
     if (buff.empty()) {
       continue;

@@ -23,9 +23,9 @@
 namespace modle {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-std::pair<usize, usize> Simulation::detect_units_at_interval_boundaries(
+std::pair<std::size_t, std::size_t> Simulation::detect_units_at_interval_boundaries(
     const GenomicInterval& interval, absl::Span<const Lef> lefs,
-    absl::Span<const usize> rev_lef_ranks, absl::Span<const usize> fwd_lef_ranks,
+    absl::Span<const std::size_t> rev_lef_ranks, absl::Span<const std::size_t> fwd_lef_ranks,
     absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves,
     absl::Span<CollisionT> rev_collisions, absl::Span<CollisionT> fwd_collisions) {
   {
@@ -51,8 +51,8 @@ std::pair<usize, usize> Simulation::detect_units_at_interval_boundaries(
   // Detect if the first rev unit or last fwd unit are about to fall off interval. boundaries
   // Also detect extr. units that are already at interval boundaries
 
-  usize num_rev_units_at_5prime = 0;
-  usize num_fwd_units_at_3prime = 0;
+  std::size_t num_rev_units_at_5prime = 0;
+  std::size_t num_fwd_units_at_3prime = 0;
 
   const auto& first_active_fwd_unit = lefs[fwd_lef_ranks[0]].fwd_unit;
   const auto& last_active_rev_unit =
@@ -61,7 +61,7 @@ std::pair<usize, usize> Simulation::detect_units_at_interval_boundaries(
       })].rev_unit;
 
   // Detect and count the number of rev units located at the 5'-end
-  for (usize i = 0; i < lefs.size(); ++i) {
+  for (std::size_t i = 0; i < lefs.size(); ++i) {
     const auto& rev_idx = rev_lef_ranks[i];
     const auto& rev_unit = lefs[rev_idx].rev_unit;
     const auto& rev_move = rev_moves[rev_idx];
@@ -69,7 +69,7 @@ std::pair<usize, usize> Simulation::detect_units_at_interval_boundaries(
     assert(lefs[rev_idx].is_bound());
     assert(interval.start() + rev_move <= rev_unit.pos());
 
-    const usize _5prime_idx = 5;
+    const std::size_t _5prime_idx = 5;
     if (rev_unit.pos() == interval.start()) {  // Unit already at the 5'-end
       assert(rev_moves[rev_idx] == 0);
       ++num_rev_units_at_5prime;
@@ -100,7 +100,7 @@ std::pair<usize, usize> Simulation::detect_units_at_interval_boundaries(
                                   // buffers to avoid doing some work in later steps
     }
 
-    const usize _3prime_idx = 3;
+    const std::size_t _3prime_idx = 3;
     assert(fwd_unit.pos() + fwd_move < interval.end());
     if (fwd_unit.pos() == interval.end() - 1) {
       assert(fwd_moves[fwd_idx] == 0);
@@ -122,12 +122,12 @@ std::pair<usize, usize> Simulation::detect_units_at_interval_boundaries(
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::detect_lef_bar_collisions(
-    const absl::Span<const Lef> lefs, const absl::Span<const usize> rev_lef_ranks,
-    const absl::Span<const usize> fwd_lef_ranks, const absl::Span<const bp_t> rev_moves,
+    const absl::Span<const Lef> lefs, const absl::Span<const std::size_t> rev_lef_ranks,
+    const absl::Span<const std::size_t> fwd_lef_ranks, const absl::Span<const bp_t> rev_moves,
     const absl::Span<const bp_t> fwd_moves, const ExtrusionBarriers& barriers,
     const absl::Span<CollisionT> rev_collisions, const absl::Span<CollisionT> fwd_collisions,
-    random::PRNG_t& rand_eng, usize num_rev_units_at_5prime, usize num_fwd_units_at_3prime) const
-    noexcept(utils::ndebug_defined()) {
+    random::PRNG_t& rand_eng, std::size_t num_rev_units_at_5prime,
+    std::size_t num_fwd_units_at_3prime) const noexcept(utils::ndebug_defined()) {
   {
     assert(lefs.size() == fwd_lef_ranks.size());
     assert(lefs.size() == rev_lef_ranks.size());
@@ -171,7 +171,7 @@ void Simulation::detect_lef_bar_collisions(
   auto unit_pos = lefs[unit_idx].rev_unit.pos();
 
   // Loop over extr. barriers and find the first, possibly colliding extr. unit
-  for (usize i = 0; i < barriers.size(); ++i) {
+  for (std::size_t i = 0; i < barriers.size(); ++i) {
     if (barriers.is_not_active(i)) {  // Inactive barriers are trnsparent to extr. units
       continue;
     }
@@ -218,7 +218,7 @@ process_fwd_unit:
 
   // Loop over extr. barriers and find the first, possibly colliding extr. unit
   assert(!barriers.empty());
-  const auto sentinel_idx = (std::numeric_limits<usize>::max)();
+  const auto sentinel_idx = (std::numeric_limits<std::size_t>::max)();
   for (auto i = barriers.size() - 1; i != sentinel_idx; --i) {
     if (barriers.is_not_active(i)) {  // Inactive barriers are trnsparent to extr. units
       continue;
@@ -250,10 +250,11 @@ process_fwd_unit:
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::detect_primary_lef_lef_collisions(
     const absl::Span<const Lef> lefs, const ExtrusionBarriers& barriers,
-    const absl::Span<const usize> rev_lef_ranks, const absl::Span<const usize> fwd_lef_ranks,
-    const absl::Span<const bp_t> rev_moves, const absl::Span<const bp_t> fwd_moves,
-    const absl::Span<CollisionT> rev_collisions, const absl::Span<CollisionT> fwd_collisions,
-    random::PRNG_t& rand_eng, usize num_rev_units_at_5prime, usize num_fwd_units_at_3prime) const
+    const absl::Span<const std::size_t> rev_lef_ranks,
+    const absl::Span<const std::size_t> fwd_lef_ranks, const absl::Span<const bp_t> rev_moves,
+    const absl::Span<const bp_t> fwd_moves, const absl::Span<CollisionT> rev_collisions,
+    const absl::Span<CollisionT> fwd_collisions, random::PRNG_t& rand_eng,
+    std::size_t num_rev_units_at_5prime, std::size_t num_fwd_units_at_3prime) const
     noexcept(utils::ndebug_defined()) {
   {
     assert(!lefs.empty());
@@ -296,7 +297,7 @@ void Simulation::detect_primary_lef_lef_collisions(
   }
 
   //    Initialize indexes so that we skip over rev units at the 5' and fwd units at the 3' (if any)
-  usize i1 = 0;
+  std::size_t i1 = 0;
   auto j1 = num_rev_units_at_5prime;
   const auto i2 = lefs.size() - std::min(num_fwd_units_at_3prime, num_fwd_units_at_3prime - 1);
   const auto j2 = lefs.size();
@@ -399,10 +400,11 @@ void Simulation::detect_primary_lef_lef_collisions(
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::process_secondary_lef_lef_collisions(
     [[maybe_unused]] const GenomicInterval& interval, const absl::Span<const Lef> lefs,
-    const absl::Span<const usize> rev_lef_ranks, const absl::Span<const usize> fwd_lef_ranks,
-    const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
-    const absl::Span<CollisionT> rev_collisions, const absl::Span<CollisionT> fwd_collisions,
-    random::PRNG_t& rand_eng, usize num_rev_units_at_5prime, usize num_fwd_units_at_3prime) const
+    const absl::Span<const std::size_t> rev_lef_ranks,
+    const absl::Span<const std::size_t> fwd_lef_ranks, const absl::Span<bp_t> rev_moves,
+    const absl::Span<bp_t> fwd_moves, const absl::Span<CollisionT> rev_collisions,
+    const absl::Span<CollisionT> fwd_collisions, random::PRNG_t& rand_eng,
+    std::size_t num_rev_units_at_5prime, std::size_t num_fwd_units_at_3prime) const
     noexcept(utils::ndebug_defined()) {
   {
     assert(lefs.size() == fwd_lef_ranks.size());
@@ -434,7 +436,7 @@ void Simulation::process_secondary_lef_lef_collisions(
   // 5. Continue iterating from where we left at step 0
 
   // Loop over rev units in 5'-3' direction, and skip over units that are located at the 5'-end
-  for (auto i = std::max(usize(1), num_rev_units_at_5prime); i < lefs.size(); ++i) {
+  for (auto i = std::max(std::size_t(1), num_rev_units_at_5prime); i < lefs.size(); ++i) {
     // index of the ith-1 rev unit in 5'-3' order (i.e. U1)
     const auto& rev_idx1 = rev_lef_ranks[i - 1];
     const auto& rev_pos1 = lefs[rev_idx1].rev_unit.pos();
@@ -515,11 +517,11 @@ void Simulation::process_secondary_lef_lef_collisions(
 
 void Simulation::fix_secondary_lef_lef_collisions(
     [[maybe_unused]] const GenomicInterval& interval, const absl::Span<Lef> lefs,
-    const absl::Span<usize> rev_lef_ranks, const absl::Span<usize> fwd_lef_ranks,
+    const absl::Span<std::size_t> rev_lef_ranks, const absl::Span<std::size_t> fwd_lef_ranks,
     const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
     const absl::Span<CollisionT> rev_collisions, const absl::Span<CollisionT> fwd_collisions,
-    const usize num_rev_units_at_5prime,
-    const usize num_fwd_units_at_3prime) noexcept(utils::ndebug_defined()) {
+    const std::size_t num_rev_units_at_5prime,
+    const std::size_t num_fwd_units_at_3prime) noexcept(utils::ndebug_defined()) {
   // Let us consider the following scenario:
   // 1>   2>X
   // Where 1> and 2> are two consecutive EUs moving in fwd direction and X is an obstacle (e.g. an
@@ -549,7 +551,7 @@ void Simulation::fix_secondary_lef_lef_collisions(
       lefs.size() - std::min(num_fwd_units_at_3prime, num_fwd_units_at_3prime - 1);
 
   // Loop over rev units in 5'-3' direction, and skip over units that are located at the 5'-end
-  for (auto i = std::max(usize(1), num_rev_units_at_5prime); i < lefs.size(); ++i) {
+  for (auto i = std::max(std::size_t(1), num_rev_units_at_5prime); i < lefs.size(); ++i) {
     // The case addressed by If EU2 (the unit corresponding to rev_idx2) avoided a secondary LEF-LEF
     // collision
     const auto& rev_idx2 = rev_lef_ranks[i];
@@ -601,7 +603,7 @@ void Simulation::fix_secondary_lef_lef_collisions(
   }
 
   // Look above for detailed comments
-  for (usize i = 0; i < num_active_fwd_units - 1; ++i) {
+  for (std::size_t i = 0; i < num_active_fwd_units - 1; ++i) {
     const auto& fwd_idx1 = fwd_lef_ranks[i];
     const auto& fwd_collision1 = fwd_collisions[fwd_idx1];
     if (fwd_collision1.collision_avoided(CollisionT::LEF_LEF_SECONDARY)) {

@@ -58,7 +58,7 @@ class RepeatIterator {
 
  public:
   using value_type = T;
-  using difference_type = isize;
+  using difference_type = std::ptrdiff_t;
   using pointer = T*;
   using reference = T&;
   using iterator_category = std::bidirectional_iterator_tag;
@@ -67,7 +67,7 @@ class RepeatIterator {
   explicit RepeatIterator(T value);
 
   [[nodiscard]] constexpr const T& operator*() const;
-  [[nodiscard]] constexpr const T& operator[](usize i) const;
+  [[nodiscard]] constexpr const T& operator[](std::size_t i) const;
 
   constexpr const RepeatIterator& operator++() const;
   constexpr const RepeatIterator operator++(int) const;

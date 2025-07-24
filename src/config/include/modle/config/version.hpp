@@ -11,9 +11,9 @@
 
 namespace modle::config::version {
 
-[[nodiscard]] u8f major() noexcept;
-[[nodiscard]] u8f minor() noexcept;
-[[nodiscard]] u8f patch() noexcept;
+[[nodiscard]] std::uint_fast8_t major() noexcept;
+[[nodiscard]] std::uint_fast8_t minor() noexcept;
+[[nodiscard]] std::uint_fast8_t patch() noexcept;
 
 [[nodiscard]] std::string_view suffix() noexcept;
 

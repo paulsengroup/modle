@@ -25,8 +25,8 @@ namespace modle::libmodle::test {
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 001", "[simulation][short]") {
   const auto c = init_config(75, 75);
-  const usize nlefs = 7;
-  const usize nbarriers = 5;
+  const std::size_t nlefs = 7;
+  const std::size_t nbarriers = 5;
   const auto chrom = init_interval("chr1", 1000);
   auto rand_eng = DEFAULT_PRNG;
 
@@ -49,8 +49,8 @@ TEST_CASE("Simulation 001", "[simulation][short]") {
   // clang-format on
   REQUIRE(barriers.size() == nbarriers);
 
-  const std::array<usize, nlefs> rev_ranks{0, 1, 2, 3, 4, 5, 6};
-  const std::array<usize, nlefs> fwd_ranks{0, 1, 2, 3, 4, 6, 5};
+  const std::array<std::size_t, nlefs> rev_ranks{0, 1, 2, 3, 4, 5, 6};
+  const std::array<std::size_t, nlefs> fwd_ranks{0, 1, 2, 3, 4, 6, 5};
 
   std::array<bp_t, nlefs> rev_moves{25, 75, 75, 75, 75, 75, 75};
   std::array<bp_t, nlefs> fwd_moves{75, 75, 75, 75, 75, 75, 75};
@@ -95,8 +95,8 @@ TEST_CASE("Simulation 001", "[simulation][short]") {
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 002", "[simulation][short]") {
   const auto c = init_config(75, 75);
-  const usize nlefs = 7;
-  const usize nbarriers = 5;
+  const std::size_t nlefs = 7;
+  const std::size_t nbarriers = 5;
   const auto chrom = init_interval("chr1", 1000);
   auto rand_eng = DEFAULT_PRNG;
 
@@ -119,8 +119,8 @@ TEST_CASE("Simulation 002", "[simulation][short]") {
   // clang-format on
   REQUIRE(barriers.size() == nbarriers);
 
-  const std::array<usize, nlefs> rev_ranks{0, 1, 2, 3, 4, 5, 6};
-  const std::array<usize, nlefs> fwd_ranks{1, 0, 2, 3, 4, 5, 6};
+  const std::array<std::size_t, nlefs> rev_ranks{0, 1, 2, 3, 4, 5, 6};
+  const std::array<std::size_t, nlefs> fwd_ranks{1, 0, 2, 3, 4, 5, 6};
 
   std::array<bp_t, nlefs> rev_moves{75, 75, 75, 75, 75, 75, 75};
   std::array<bp_t, nlefs> fwd_moves{75, 75, 75, 75, 75, 75, 24};
@@ -167,8 +167,8 @@ TEST_CASE("Simulation 003 - Soft collisions on", "[simulation][short]") {
   auto c = init_config(75, 75);
   c.lef_bar_major_collision_pblock = 1;
   c.lef_bar_minor_collision_pblock = 1;
-  const usize nlefs = 7;
-  const usize nbarriers = 5;
+  const std::size_t nlefs = 7;
+  const std::size_t nbarriers = 5;
   const auto chrom = init_interval("chr1", 1000);
   auto rand_eng = DEFAULT_PRNG;
 
@@ -191,8 +191,8 @@ TEST_CASE("Simulation 003 - Soft collisions on", "[simulation][short]") {
   // clang-format on
   REQUIRE(barriers.size() == nbarriers);
 
-  const std::array<usize, nlefs> rev_ranks{0, 1, 2, 3, 4, 5, 6};
-  const std::array<usize, nlefs> fwd_ranks{1, 0, 2, 3, 4, 5, 6};
+  const std::array<std::size_t, nlefs> rev_ranks{0, 1, 2, 3, 4, 5, 6};
+  const std::array<std::size_t, nlefs> fwd_ranks{1, 0, 2, 3, 4, 5, 6};
 
   std::array<bp_t, nlefs> rev_moves{75, 75, 75, 75, 75, 75, 75};
   std::array<bp_t, nlefs> fwd_moves{75, 75, 75, 75, 75, 75, 24};
@@ -237,8 +237,8 @@ TEST_CASE("Simulation 003 - Soft collisions on", "[simulation][short]") {
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 004 - Inactive barriers", "[simulation][short]") {
   const auto c = init_config(75, 75);
-  const usize nlefs = 7;
-  const usize nbarriers = 5;
+  const std::size_t nlefs = 7;
+  const std::size_t nbarriers = 5;
   const auto chrom = init_interval("chr1", 1000);
   auto rand_eng = DEFAULT_PRNG;
 
@@ -262,8 +262,8 @@ TEST_CASE("Simulation 004 - Inactive barriers", "[simulation][short]") {
   // clang-format on
   REQUIRE(barriers.size() == nbarriers);
 
-  const std::array<usize, nlefs> rev_ranks{0, 1, 2, 3, 4, 5, 6};
-  const std::array<usize, nlefs> fwd_ranks{1, 0, 2, 3, 4, 5, 6};
+  const std::array<std::size_t, nlefs> rev_ranks{0, 1, 2, 3, 4, 5, 6};
+  const std::array<std::size_t, nlefs> fwd_ranks{1, 0, 2, 3, 4, 5, 6};
 
   std::array<bp_t, nlefs> rev_moves{75, 75, 75, 75, 75, 75, 75};
   std::array<bp_t, nlefs> fwd_moves{75, 75, 75, 75, 75, 75, 24};
@@ -306,8 +306,8 @@ TEST_CASE("Simulation 004 - Inactive barriers", "[simulation][short]") {
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 005 - Multiple LEFs located at the same site", "[simulation][short]") {
   const auto c = init_config(25, 25);
-  constexpr usize nlefs = 6;
-  constexpr usize nbarriers = 1;
+  constexpr std::size_t nlefs = 6;
+  constexpr std::size_t nbarriers = 1;
   const auto chrom = init_interval("chr1", 150);
   auto rand_eng = DEFAULT_PRNG;
 
@@ -324,8 +324,8 @@ TEST_CASE("Simulation 005 - Multiple LEFs located at the same site", "[simulatio
   const auto barriers = construct_barriers(ExtrusionBarrier{100, 1.0, 0.0, '-'});
   REQUIRE(barriers.size() == nbarriers);
 
-  const std::array<usize, nlefs> rev_ranks{0, 1, 2, 3, 4, 5};
-  const std::array<usize, nlefs> fwd_ranks{0, 1, 2, 3, 4, 5};
+  const std::array<std::size_t, nlefs> rev_ranks{0, 1, 2, 3, 4, 5};
+  const std::array<std::size_t, nlefs> fwd_ranks{0, 1, 2, 3, 4, 5};
 
   std::array<bp_t, nlefs> rev_moves{25, 25, 25, 25, 25, 25};
   std::array<bp_t, nlefs> fwd_moves{25, 25, 25, 24,  8,  9};
@@ -367,8 +367,8 @@ TEST_CASE("Simulation 005 - Multiple LEFs located at the same site", "[simulatio
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Simulation 006 - Few inactive LEFs", "[simulation][short]") {
   const auto c = init_config(25, 25);
-  constexpr usize nlefs = 6;
-  constexpr usize nbarriers = 1;
+  constexpr std::size_t nlefs = 6;
+  constexpr std::size_t nbarriers = 1;
   const auto chrom = init_interval("chr1", 150);
   auto rand_eng = DEFAULT_PRNG;
 
@@ -388,8 +388,8 @@ TEST_CASE("Simulation 006 - Few inactive LEFs", "[simulation][short]") {
   const auto barriers = construct_barriers(ExtrusionBarrier{100, 1.0, 0.0, '-'});
   REQUIRE(barriers.size() == nbarriers);
 
-  const std::array<usize, nlefs> rev_ranks{0, 1, 3, 4, 2, 5};
-  const std::array<usize, nlefs> fwd_ranks{0, 1, 3, 4, 2, 5};
+  const std::array<std::size_t, nlefs> rev_ranks{0, 1, 3, 4, 2, 5};
+  const std::array<std::size_t, nlefs> fwd_ranks{0, 1, 3, 4, 2, 5};
 
   std::array<bp_t, nlefs> rev_moves{25, 25, 0, 25, 25, 0};
   std::array<bp_t, nlefs> fwd_moves{25, 25, 0, 24,  9, 0};
@@ -432,8 +432,8 @@ TEST_CASE("Simulation 006 - Few inactive LEFs", "[simulation][short]") {
 TEST_CASE("Simulation 007 - LEF-LEF collision overrides LEF-BAR collision 1",
           "[simulation][short]") {
   const auto c = init_config(20, 20);
-  constexpr usize nlefs = 2;
-  constexpr usize nbarriers = 1;
+  constexpr std::size_t nlefs = 2;
+  constexpr std::size_t nbarriers = 1;
   const auto chrom = init_interval("chr1", 200);
   auto rand_eng = DEFAULT_PRNG;
 
@@ -447,8 +447,8 @@ TEST_CASE("Simulation 007 - LEF-LEF collision overrides LEF-BAR collision 1",
   // clang-format on
   REQUIRE(barriers.size() == nbarriers);
 
-  const std::array<usize, nlefs> rev_ranks{0, 1};
-  const std::array<usize, nlefs> fwd_ranks{0, 1};
+  const std::array<std::size_t, nlefs> rev_ranks{0, 1};
+  const std::array<std::size_t, nlefs> fwd_ranks{0, 1};
 
   std::array<bp_t, nlefs> rev_moves{20, 20};
   std::array<bp_t, nlefs> fwd_moves{20, 20};
@@ -481,8 +481,8 @@ TEST_CASE("Simulation 007 - LEF-LEF collision overrides LEF-BAR collision 1",
 TEST_CASE("Simulation 008 - LEF-LEF collision overrides LEF-BAR collision 2",
           "[simulation][short]") {
   const auto c = init_config(20, 20);
-  constexpr usize nlefs = 2;
-  constexpr usize nbarriers = 1;
+  constexpr std::size_t nlefs = 2;
+  constexpr std::size_t nbarriers = 1;
   const auto chrom = init_interval("chr1", 200);
   auto rand_eng = DEFAULT_PRNG;
 
@@ -497,8 +497,8 @@ TEST_CASE("Simulation 008 - LEF-LEF collision overrides LEF-BAR collision 2",
   // clang-format on
   REQUIRE(barriers.size() == nbarriers);
 
-  const std::array<usize, nlefs> rev_ranks{0, 1};
-  const std::array<usize, nlefs> fwd_ranks{0, 1};
+  const std::array<std::size_t, nlefs> rev_ranks{0, 1};
+  const std::array<std::size_t, nlefs> fwd_ranks{0, 1};
 
   std::array<bp_t, nlefs> rev_moves{20, 20};
   std::array<bp_t, nlefs> fwd_moves{20, 20};
@@ -531,8 +531,8 @@ TEST_CASE("Simulation 008 - LEF-LEF collision overrides LEF-BAR collision 2",
 TEST_CASE("Simulation 009 - Ensure stacked LEFs do not interfere with surrounding extr. barriers",
           "[simulation][short]") {
   const auto c = init_config(10, 10);
-  constexpr usize nlefs = 5;
-  constexpr usize nbarriers = 2;
+  constexpr std::size_t nlefs = 5;
+  constexpr std::size_t nbarriers = 2;
   const auto chrom = init_interval("chr1", 200);
   auto rand_eng = DEFAULT_PRNG;
 
@@ -550,8 +550,8 @@ TEST_CASE("Simulation 009 - Ensure stacked LEFs do not interfere with surroundin
   // clang-format on
   REQUIRE(barriers.size() == nbarriers);
 
-  const std::array<usize, nlefs> rev_ranks{0, 1, 2, 3, 4};
-  const std::array<usize, nlefs> fwd_ranks{0, 1, 2, 3, 4};
+  const std::array<std::size_t, nlefs> rev_ranks{0, 1, 2, 3, 4};
+  const std::array<std::size_t, nlefs> fwd_ranks{0, 1, 2, 3, 4};
 
   std::array<bp_t, nlefs> rev_moves{10, 10, 10, 10, 10};
   std::array<bp_t, nlefs> fwd_moves{10, 10, 10, 10, 10};
@@ -592,8 +592,8 @@ TEST_CASE("Simulation 009 - Ensure stacked LEFs do not interfere with surroundin
 TEST_CASE("Simulation 010 - Ensure stacked LEFs do not interfere with surrounding extr. barriers",
           "[simulation][short]") {
   const auto c = init_config(10, 10);
-  constexpr usize nlefs = 6;
-  constexpr usize nbarriers = 2;
+  constexpr std::size_t nlefs = 6;
+  constexpr std::size_t nbarriers = 2;
   const auto chrom = init_interval("chr1", 200);
   auto rand_eng = DEFAULT_PRNG;
 
@@ -612,8 +612,8 @@ TEST_CASE("Simulation 010 - Ensure stacked LEFs do not interfere with surroundin
   // clang-format on
   REQUIRE(barriers.size() == nbarriers);
 
-  const std::array<usize, nlefs> rev_ranks{0, 1, 2, 5, 3, 4};
-  const std::array<usize, nlefs> fwd_ranks{0, 5, 1, 2, 3, 4};
+  const std::array<std::size_t, nlefs> rev_ranks{0, 1, 2, 5, 3, 4};
+  const std::array<std::size_t, nlefs> fwd_ranks{0, 5, 1, 2, 3, 4};
 
   std::array<bp_t, nlefs> rev_moves{10, 10, 10, 10, 10, 10};
   std::array<bp_t, nlefs> fwd_moves{10, 10, 10, 10, 10, 10};
@@ -656,8 +656,8 @@ TEST_CASE("Simulation 010 - Ensure stacked LEFs do not interfere with surroundin
 TEST_CASE("Simulation 011 - fix_secondary_lef_lef_collisions", "[simulation][short]") {
   auto c = init_config(3, 2);
   c.probability_of_extrusion_unit_bypass = 0.25;
-  constexpr usize nlefs = 2;
-  constexpr usize nbarriers = 1;
+  constexpr std::size_t nlefs = 2;
+  constexpr std::size_t nbarriers = 1;
   const auto chrom = init_interval("chr1", 200);
   // DO NOT CHANGE SEED!
   // The outcome of this test depends on the seed
@@ -673,8 +673,8 @@ TEST_CASE("Simulation 011 - fix_secondary_lef_lef_collisions", "[simulation][sho
   const auto barriers = construct_barriers(ExtrusionBarrier{100, 1.0, 0.0, '-'});
   REQUIRE(barriers.size() == nbarriers);
 
-  std::array<usize, nlefs> rev_ranks{0, 1};
-  std::array<usize, nlefs> fwd_ranks{0, 1};
+  std::array<std::size_t, nlefs> rev_ranks{0, 1};
+  std::array<std::size_t, nlefs> fwd_ranks{0, 1};
 
   std::array<bp_t, nlefs> rev_moves{10, 10};
   std::array<bp_t, nlefs> fwd_moves{10, 10};
@@ -722,8 +722,8 @@ TEST_CASE("Simulation 011 - fix_secondary_lef_lef_collisions", "[simulation][sho
 TEST_CASE("Simulation 012 - fix_secondary_lef_lef_collisions", "[simulation][short]") {
   auto c = init_config(3, 2);
   c.probability_of_extrusion_unit_bypass = 0.25;
-  constexpr usize nlefs = 2;
-  constexpr usize nbarriers = 1;
+  constexpr std::size_t nlefs = 2;
+  constexpr std::size_t nbarriers = 1;
   const auto chrom = init_interval("chr1", 200);
   // DO NOT CHANGE SEED!
   // The outcome of this test depends on the seed
@@ -738,8 +738,8 @@ TEST_CASE("Simulation 012 - fix_secondary_lef_lef_collisions", "[simulation][sho
   const auto barriers = construct_barriers(ExtrusionBarrier{25, 1.0, 0.0, '+'});
   REQUIRE(barriers.size() == nbarriers);
 
-  std::array<usize, nlefs> rev_ranks{0, 1};
-  std::array<usize, nlefs> fwd_ranks{0, 1};
+  std::array<std::size_t, nlefs> rev_ranks{0, 1};
+  std::array<std::size_t, nlefs> fwd_ranks{0, 1};
 
   std::array<bp_t, nlefs> rev_moves{10, 10};
   std::array<bp_t, nlefs> fwd_moves{10, 10};

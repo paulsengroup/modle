@@ -24,7 +24,8 @@
 namespace modle {
 
 template <typename Task>
-inline ContextManager<Task>::ContextManager(usize num_worker_threads, usize num_io_threads)
+inline ContextManager<Task>::ContextManager(std::size_t num_worker_threads,
+                                            std::size_t num_io_threads)
     : _pending(2 * num_worker_threads, 1, 0),
       _finished(2 * num_worker_threads, num_worker_threads + 1, 0),
       _worker_tpool(num_worker_threads),
@@ -133,11 +134,11 @@ inline void ContextManager<Task>::set_exception_main(std::exception_ptr e) {
 }
 
 template <typename Task>
-inline usize ContextManager<Task>::num_tasks_submitted() const noexcept {
+inline std::size_t ContextManager<Task>::num_tasks_submitted() const noexcept {
   return _num_in.load();
 }
 template <typename Task>
-inline usize ContextManager<Task>::num_tasks_completed() const noexcept {
+inline std::size_t ContextManager<Task>::num_tasks_completed() const noexcept {
   return _num_out.load();
 }
 
@@ -182,16 +183,16 @@ inline void ContextManager<Task>::check_exceptions() {
 }
 
 template <typename Task>
-inline usize ContextManager<Task>::num_threads() const noexcept {
+inline std::size_t ContextManager<Task>::num_threads() const noexcept {
   return num_worker_threads() + num_io_threads();
 }
 template <typename Task>
-inline usize ContextManager<Task>::num_worker_threads() const noexcept {
-  return utils::conditional_static_cast<usize>(_worker_tpool.get_thread_count());
+inline std::size_t ContextManager<Task>::num_worker_threads() const noexcept {
+  return utils::conditional_static_cast<std::size_t>(_worker_tpool.get_thread_count());
 }
 template <typename Task>
-inline usize ContextManager<Task>::num_io_threads() const noexcept {
-  return utils::conditional_static_cast<usize>(_io_tpool.get_thread_count());
+inline std::size_t ContextManager<Task>::num_io_threads() const noexcept {
+  return utils::conditional_static_cast<std::size_t>(_io_tpool.get_thread_count());
 }
 
 template <typename Task>

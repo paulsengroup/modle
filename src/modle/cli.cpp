@@ -639,7 +639,7 @@ const Config& Cli::parse_arguments() {
 
   validate_args();
   transform_args();
-  _config.args = absl::MakeSpan(_argv, static_cast<usize>(_argc));
+  _config.args = absl::MakeSpan(_argv, static_cast<std::size_t>(_argc));
 
   _config.args_json = to_json();
   return _config;
@@ -986,7 +986,7 @@ void cli_update_burnin_params(Config& c) {
   const auto lef_activation_bp = 5 * c.avg_lef_processivity;
   c.burnin_target_epochs_for_lef_activation = std::min(
       c.max_burnin_epochs,
-      utils::conditional_static_cast<usize>(
+      utils::conditional_static_cast<std::size_t>(
           lef_activation_bp / (c.rev_extrusion_speed_burnin + c.fwd_extrusion_speed_burnin)));
 }
 

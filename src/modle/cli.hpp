@@ -19,7 +19,7 @@ namespace modle {
 
 class Cli {
  public:
-  enum subcommand : u8f { help, simulate };
+  enum subcommand : std::uint_fast8_t { help, simulate };
 
   Cli(int argc, char** argv);
   [[nodiscard]] const Config& parse_arguments();

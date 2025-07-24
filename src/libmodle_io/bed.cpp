@@ -41,7 +41,8 @@ bool RGB::operator==(const modle::bed::RGB& other) const noexcept {
 
 bool RGB::operator!=(const modle::bed::RGB& other) const noexcept { return !(*this == other); }
 
-void BED::parse_strand_or_throw(const std::vector<std::string_view>& toks, u8 idx, char& field) {
+void BED::parse_strand_or_throw(const std::vector<std::string_view>& toks, std::uint8_t idx,
+                                char& field) {
   const auto tok = utils::strip_quote_pairs(toks[idx]);
   const auto match = bed_strand_encoding.find(tok);
   if (match == bed_strand_encoding.end()) {
@@ -50,7 +51,8 @@ void BED::parse_strand_or_throw(const std::vector<std::string_view>& toks, u8 id
   field = *match.second;
 }
 
-void BED::parse_rgb_or_throw(const std::vector<std::string_view>& toks, u8 idx, RGB& field) {
+void BED::parse_rgb_or_throw(const std::vector<std::string_view>& toks, std::uint8_t idx,
+                             RGB& field) {
   const auto tok = utils::strip_quote_pairs(toks[idx]);
   if (tok == "0") {
     field = RGB{0, 0, 0};
@@ -66,7 +68,7 @@ void BED::parse_rgb_or_throw(const std::vector<std::string_view>& toks, u8 idx, 
   utils::parse_numeric_or_throw(channels, 2, field.b);
 }
 
-RGB BED::parse_rgb_or_throw(const std::vector<std::string_view>& toks, u8 idx) {
+RGB BED::parse_rgb_or_throw(const std::vector<std::string_view>& toks, std::uint8_t idx) {
   RGB buff{};
   BED::parse_rgb_or_throw(toks, idx, buff);
   return buff;
@@ -240,7 +242,8 @@ BED::BED(std::string_view chrom_, bp_t chrom_start_, bp_t chrom_end_)
 BED::BED(BED::Dialect d) : _standard(d) {}
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-BED::BED(std::string_view record, usize id_, BED::Dialect bed_standard, bool validate) : _id(id_) {
+BED::BED(std::string_view record, std::size_t id_, BED::Dialect bed_standard, bool validate)
+    : _id(id_) {
   std::vector<std::string_view> toks;
   for (const auto tok : str_split(strip_trailing_whitespace(record), "\t ")) {
     if (!tok.empty()) {
@@ -362,10 +365,10 @@ bool BED::operator<(const BED& other) const noexcept {
   return chrom_end < other.chrom_end;
 }
 
-usize BED::num_fields() const noexcept {
+std::size_t BED::num_fields() const noexcept {
   assert(_standard != autodetect);
   if (_standard != none) {
-    return static_cast<usize>(_standard);
+    return static_cast<std::size_t>(_standard);
   }
   if (thick_end == -1ULL) {
     return BED_THICK_START;
@@ -381,12 +384,13 @@ usize BED::num_fields() const noexcept {
     return BED_BLOCK_SIZES;
   }
   assert(!extra_tokens.empty());
-  return BED12 + static_cast<usize>(std::count(extra_tokens.begin(), extra_tokens.end(), '\t'));
+  return BED12 +
+         static_cast<std::size_t>(std::count(extra_tokens.begin(), extra_tokens.end(), '\t'));
 }
 
 bool BED::empty() const { return chrom.empty(); }
 
-u64 BED::hash(XXH3_state_t* state, u64 seed) const {
+std::uint64_t BED::hash(XXH3_state_t* state, std::uint64_t seed) const {
   auto handle_errors = [&](const auto& status) {
     if (status == XXH_ERROR || !state) {
       throw std::runtime_error(fmt::format("Failed to hash the following BED record: {}", *this));
@@ -400,7 +404,7 @@ u64 BED::hash(XXH3_state_t* state, u64 seed) const {
   handle_errors(XXH3_64bits_update(state, &chrom_start, sizeof(decltype(chrom_start))));
   handle_errors(XXH3_64bits_update(state, &chrom_end, sizeof(decltype(chrom_end))));
 
-  return utils::conditional_static_cast<u64>(XXH3_64bits_digest(state));
+  return utils::conditional_static_cast<std::uint64_t>(XXH3_64bits_digest(state));
   DISABLE_WARNING_POP
 }
 
@@ -443,15 +447,15 @@ BED Parser::parse_next() {
   return record;
 }
 
-std::vector<BED> Parser::parse_n(usize num_records) {
+std::vector<BED> Parser::parse_n(std::size_t num_records) {
   if (_reader.path().empty()) {
     return std::vector<BED>{};
   }
   assert(_reader.is_open());
 
   struct RecordMetadata {
-    usize record_idx;
-    usize line_num;
+    std::size_t record_idx;
+    std::size_t line_num;
   };
 
   phmap::btree_map<BED, RecordMetadata> records;
@@ -485,13 +489,13 @@ std::vector<BED> Parser::parse_n(usize num_records) {
   return _records;
 }
 
-BED_tree<> Parser::parse_n_in_interval_tree(usize num_records) {
+BED_tree<> Parser::parse_n_in_interval_tree(std::size_t num_records) {
   if (_reader.path().empty()) {
     return BED_tree<>{};
   }
   assert(_reader.is_open());
 
-  using line_num_t = usize;
+  using line_num_t = std::size_t;
   phmap::btree_map<BED, line_num_t> records;
   BED_tree<> intervals;
 
@@ -520,7 +524,7 @@ BED_tree<> Parser::parse_n_in_interval_tree(usize num_records) {
   return intervals;
 }
 
-std::string Parser::validate(usize nrecords) {
+std::string Parser::validate(std::size_t nrecords) {
   try {
     std::ignore = parse_n(nrecords);
   } catch (const std::runtime_error& e) {
@@ -529,10 +533,10 @@ std::string Parser::validate(usize nrecords) {
   return "";
 }
 
-std::vector<BED> Parser::parse_all() { return parse_n((std::numeric_limits<usize>::max)()); }
+std::vector<BED> Parser::parse_all() { return parse_n((std::numeric_limits<std::size_t>::max)()); }
 
 BED_tree<> Parser::parse_all_in_interval_tree() {
-  return parse_n_in_interval_tree((std::numeric_limits<usize>::max)());
+  return parse_n_in_interval_tree((std::numeric_limits<std::size_t>::max)());
 }
 
 void Parser::reset() {
@@ -560,12 +564,12 @@ void Parser::reset() {
   skip_header();
 }
 
-usize Parser::skip_header() {
+std::size_t Parser::skip_header() {
   if (!_reader.is_open()) {
     return 0;
   }
   assert(_num_records_parsed == 0);
-  usize num_header_lines = 0L;
+  std::size_t num_header_lines = 0L;
   assert(_reader.is_open());
   while (_reader.getline(_buff)) {
     if (_buff.empty()) {  // Skip empty lines

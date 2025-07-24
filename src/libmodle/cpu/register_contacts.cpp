@@ -66,13 +66,13 @@ struct PosPair {
 [[nodiscard]] static const Lef& sample_lef_with_replacement(const absl::Span<const Lef> lefs,
                                                             random::PRNG_t& rand_eng) noexcept {
   assert(!lefs.empty());
-  const auto i = random::uniform_int_distribution<usize>{0, lefs.size() - 1}(rand_eng);
+  const auto i = random::uniform_int_distribution<std::size_t>{0, lefs.size() - 1}(rand_eng);
   return lefs[i];
 }
 
-[[nodiscard]] static usize compute_num_contacts_loop(const usize num_contacts,
-                                                     const double tad_to_loop_contact_ratio,
-                                                     random::PRNG_t& rand_eng) {
+[[nodiscard]] static std::size_t compute_num_contacts_loop(const std::size_t num_contacts,
+                                                           const double tad_to_loop_contact_ratio,
+                                                           random::PRNG_t& rand_eng) {
   // Handle special case where TAD contact sampling has been disabled
   if (tad_to_loop_contact_ratio == 0) {
     return num_contacts;
@@ -85,13 +85,13 @@ struct PosPair {
   }
 
   const auto prob_loop_contact = 1.0 / (tad_to_loop_contact_ratio + 1.0);
-  // Using usize as template param the distribution causes an ambiguous call to abs() inside
+  // Using std::size_t as template param the distribution causes an ambiguous call to abs() inside
   // boost::random (boost v1.79)
-  return static_cast<usize>(
-      random::binomial_distribution<isize>{isize(num_contacts), prob_loop_contact}(rand_eng));
+  return static_cast<std::size_t>(random::binomial_distribution<std::ptrdiff_t>{
+      std::ptrdiff_t(num_contacts), prob_loop_contact}(rand_eng));
 }
 
-void Simulation::sample_and_register_contacts(State& s, usize num_sampling_events) const {
+void Simulation::sample_and_register_contacts(State& s, std::size_t num_sampling_events) const {
   assert(s.num_active_lefs == s.num_lefs);
 
   // Ensure we do not overshoot the target contact density
@@ -120,11 +120,11 @@ void Simulation::sample_and_register_contacts(State& s, usize num_sampling_event
   assert(s.num_contacts <= s.num_target_contacts);
 }
 
-usize Simulation::register_contacts_loop(const bp_t start_pos, const bp_t end_pos,
-                                         ContactMatrixDense<contacts_t>& contacts,
-                                         const absl::Span<const Lef> lefs,
-                                         usize num_sampling_events,
-                                         random::PRNG_t& rand_eng) const {
+std::size_t Simulation::register_contacts_loop(const bp_t start_pos, const bp_t end_pos,
+                                               ContactMatrixDense<contacts_t>& contacts,
+                                               const absl::Span<const Lef> lefs,
+                                               std::size_t num_sampling_events,
+                                               random::PRNG_t& rand_eng) const {
   if (num_sampling_events == 0) {
     return 0;
   }
@@ -135,7 +135,7 @@ usize Simulation::register_contacts_loop(const bp_t start_pos, const bp_t end_po
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
   const bool noisify_contacts = c().contact_sampling_strategy & CS::noisify;
 
-  usize num_contacts_registered = 0;
+  std::size_t num_contacts_registered = 0;
   for (; num_sampling_events != 0; --num_sampling_events) {
     const auto& lef = sample_lef_with_replacement(lefs, rand_eng);
     if (lef.is_bound() && lef_within_bound(lef, start_pos, end_pos)) [[likely]] {
@@ -157,10 +157,11 @@ usize Simulation::register_contacts_loop(const bp_t start_pos, const bp_t end_po
   return num_contacts_registered;
 }
 
-usize Simulation::register_contacts_tad(bp_t start_pos, bp_t end_pos,
-                                        ContactMatrixDense<contacts_t>& contacts,
-                                        absl::Span<const Lef> lefs, usize num_sampling_events,
-                                        random::PRNG_t& rand_eng) const {
+std::size_t Simulation::register_contacts_tad(bp_t start_pos, bp_t end_pos,
+                                              ContactMatrixDense<contacts_t>& contacts,
+                                              absl::Span<const Lef> lefs,
+                                              std::size_t num_sampling_events,
+                                              random::PRNG_t& rand_eng) const {
   if (num_sampling_events == 0) {
     return 0;
   }
@@ -171,7 +172,7 @@ usize Simulation::register_contacts_tad(bp_t start_pos, bp_t end_pos,
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
   const bool noisify_contacts = c().contact_sampling_strategy & CS::noisify;
 
-  usize num_contacts_registered = 0;
+  std::size_t num_contacts_registered = 0;
   for (; num_sampling_events != 0; --num_sampling_events) {
     const auto& lef = sample_lef_with_replacement(lefs, rand_eng);
     if (lef.is_bound() && lef_within_bound(lef, start_pos, end_pos)) [[likely]] {
@@ -196,10 +197,9 @@ usize Simulation::register_contacts_tad(bp_t start_pos, bp_t end_pos,
   return num_contacts_registered;
 }
 
-usize Simulation::register_1d_lef_occupancy(bp_t start_pos, bp_t end_pos,
-                                            std::vector<std::atomic<u64>>& occupancy_buff,
-                                            absl::Span<const Lef> lefs, usize num_sampling_events,
-                                            random::PRNG_t& rand_eng) const {
+std::size_t Simulation::register_1d_lef_occupancy(
+    bp_t start_pos, bp_t end_pos, std::vector<std::atomic<std::uint64_t>>& occupancy_buff,
+    absl::Span<const Lef> lefs, std::size_t num_sampling_events, random::PRNG_t& rand_eng) const {
   if (num_sampling_events == 0) {
     return 0;
   }
@@ -208,7 +208,7 @@ usize Simulation::register_1d_lef_occupancy(bp_t start_pos, bp_t end_pos,
   // NOLINTNEXTLINE(readability-implicit-bool-conversion)
   const bool noisify_positions = c().contact_sampling_strategy & CS::noisify;
 
-  usize num_successful_sampling_events = 0;
+  std::size_t num_successful_sampling_events = 0;
   for (; num_sampling_events != 0; --num_sampling_events) {
     const auto& lef = sample_lef_with_replacement(lefs, rand_eng);
     if (lef.is_bound() && lef_within_bound(lef, start_pos, end_pos)) [[likely]] {
@@ -220,10 +220,10 @@ usize Simulation::register_1d_lef_occupancy(bp_t start_pos, bp_t end_pos,
         continue;
       }
 
-      const auto i1 =
-          utils::conditional_static_cast<usize>((static_cast<bp_t>(p1) - start_pos) / c().bin_size);
-      const auto i2 =
-          utils::conditional_static_cast<usize>((static_cast<bp_t>(p2) - start_pos) / c().bin_size);
+      const auto i1 = utils::conditional_static_cast<std::size_t>(
+          (static_cast<bp_t>(p1) - start_pos) / c().bin_size);
+      const auto i2 = utils::conditional_static_cast<std::size_t>(
+          (static_cast<bp_t>(p2) - start_pos) / c().bin_size);
       occupancy_buff[i1]++;
       occupancy_buff[i2]++;
       ++num_successful_sampling_events;
@@ -232,23 +232,25 @@ usize Simulation::register_1d_lef_occupancy(bp_t start_pos, bp_t end_pos,
   return num_successful_sampling_events;
 }
 
-usize Simulation::register_contacts_loop(GenomicInterval& interval,
-                                         const absl::Span<const Lef> lefs,
-                                         usize num_sampling_events,
-                                         random::PRNG_t& rand_eng) const {
+std::size_t Simulation::register_contacts_loop(GenomicInterval& interval,
+                                               const absl::Span<const Lef> lefs,
+                                               std::size_t num_sampling_events,
+                                               random::PRNG_t& rand_eng) const {
   return register_contacts_loop(interval.start() + 1, interval.end() - 1, interval.contacts(), lefs,
                                 num_sampling_events, rand_eng);
 }
 
-usize Simulation::register_contacts_tad(GenomicInterval& interval, absl::Span<const Lef> lefs,
-                                        usize num_sampling_events, random::PRNG_t& rand_eng) const {
+std::size_t Simulation::register_contacts_tad(GenomicInterval& interval, absl::Span<const Lef> lefs,
+                                              std::size_t num_sampling_events,
+                                              random::PRNG_t& rand_eng) const {
   return register_contacts_tad(interval.start() + 1, interval.end() - 1, interval.contacts(), lefs,
                                num_sampling_events, rand_eng);
 }
 
-usize Simulation::register_1d_lef_occupancy(GenomicInterval& interval, absl::Span<const Lef> lefs,
-                                            usize num_sampling_events,
-                                            random::PRNG_t& rand_eng) const {
+std::size_t Simulation::register_1d_lef_occupancy(GenomicInterval& interval,
+                                                  absl::Span<const Lef> lefs,
+                                                  std::size_t num_sampling_events,
+                                                  random::PRNG_t& rand_eng) const {
   return register_1d_lef_occupancy(interval.start() + 1, interval.end() - 1,
                                    interval.lef_1d_occupancy(), lefs, num_sampling_events,
                                    rand_eng);

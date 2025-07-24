@@ -15,17 +15,19 @@ namespace modle::libmodle::test {
   return fmt::format("{:08b}", event());
 }
 
-[[maybe_unused]] constexpr usize EVENT_BITS = 5;
-[[maybe_unused]] constexpr usize RESERVED_EVENT_BITS = 8;
-[[maybe_unused]] constexpr usize INDEX_BITS = (sizeof(u32f) * 8) - RESERVED_EVENT_BITS;
-[[maybe_unused]] constexpr u32f EVENT_MASK = (~u32f(0)) << (INDEX_BITS - 1);
-[[maybe_unused]] constexpr u32f INDEX_MASK = ~EVENT_MASK;
+[[maybe_unused]] constexpr std::size_t EVENT_BITS = 5;
+[[maybe_unused]] constexpr std::size_t RESERVED_EVENT_BITS = 8;
+[[maybe_unused]] constexpr std::size_t INDEX_BITS =
+    (sizeof(std::uint_fast32_t) * 8) - RESERVED_EVENT_BITS;
+[[maybe_unused]] constexpr std::uint_fast32_t EVENT_MASK = (~std::uint_fast32_t(0))
+                                                           << (INDEX_BITS - 1);
+[[maybe_unused]] constexpr std::uint_fast32_t INDEX_MASK = ~EVENT_MASK;
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Collision encoding", "[simulation][short]") {
-  usize idx = 5;
+  std::size_t idx = 5;
   // clang-format off
-  const std::array<CollisionEvent<u8f>, 8> events{
+  const std::array<CollisionEvent<std::uint_fast8_t>, 8> events{
         Collision<>::LEF_BAR,
         Collision<>::LEF_LEF_PRIMARY,
         Collision<>::LEF_LEF_SECONDARY,
@@ -45,7 +47,7 @@ TEST_CASE("Collision encoding", "[simulation][short]") {
 
   if constexpr (utils::ndebug_not_defined()) {
     // clang-format off
-    const std::array<CollisionEvent<u8f>, 9> invalid_events{
+    const std::array<CollisionEvent<std::uint_fast8_t>, 9> invalid_events{
           Collision<>::COLLISION,
           Collision<>::COLLISION | Collision<>::LEF_BAR | Collision<>::LEF_LEF_PRIMARY,
           Collision<>::LEF_BAR | Collision<>::LEF_LEF_PRIMARY
@@ -62,7 +64,7 @@ TEST_CASE("Collision encoding", "[simulation][short]") {
       }
     }
 
-    CollisionEvent<u8f> event{};
+    CollisionEvent<std::uint_fast8_t> event{};
     CHECK_THROWS_WITH(
         (Collision<>{idx, event}.collision_occurred()),
         Catch::Matchers::EndsWith("idx must be 0 when no collision has occurred/been avoided"));
@@ -95,7 +97,7 @@ TEST_CASE("Collision encoding", "[simulation][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Collision encoding - Chromosomal boundaries", "[simulation][short]") {
-  for (const auto idx : std::array<usize, 2>{3, 5}) {
+  for (const auto idx : std::array<std::size_t, 2>{3, 5}) {
     auto event = Collision<>::COLLISION | Collision<>::CHROM_BOUNDARY;
     CHECK(Collision<>{idx, event}.collision_occurred());
     CHECK(Collision<>{idx, event}.collision_occurred(Collision<>::CHROM_BOUNDARY));
@@ -114,9 +116,9 @@ TEST_CASE("Collision encoding - Chromosomal boundaries", "[simulation][short]") 
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Collision encoding - LEF-BAR", "[simulation][short]") {
-  const usize idx = 123;
+  const std::size_t idx = 123;
 
-  CollisionEvent<u8f> event = Collision<>::COLLISION() | Collision<>::LEF_BAR();
+  CollisionEvent<std::uint_fast8_t> event = Collision<>::COLLISION() | Collision<>::LEF_BAR();
   CHECK(Collision<>{idx, event}.collision_occurred());
   CHECK(Collision<>{idx, event}.collision_occurred(Collision<>::LEF_BAR));
 
@@ -133,9 +135,10 @@ TEST_CASE("Collision encoding - LEF-BAR", "[simulation][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Collision encoding - LEF-LEF primary", "[simulation][short]") {
-  const usize idx = 123;
+  const std::size_t idx = 123;
 
-  CollisionEvent<u8f> event = Collision<>::COLLISION() | Collision<>::LEF_LEF_PRIMARY();
+  CollisionEvent<std::uint_fast8_t> event =
+      Collision<>::COLLISION() | Collision<>::LEF_LEF_PRIMARY();
   CHECK(Collision<>{idx, event}.collision_occurred());
   CHECK(Collision<>{idx, event}.collision_occurred(Collision<>::LEF_LEF_PRIMARY));
 
@@ -152,9 +155,10 @@ TEST_CASE("Collision encoding - LEF-LEF primary", "[simulation][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Collision encoding - LEF-LEF secondary", "[simulation][short]") {
-  const usize idx = 123;
+  const std::size_t idx = 123;
 
-  CollisionEvent<u8f> event = Collision<>::COLLISION() | Collision<>::LEF_LEF_SECONDARY();
+  CollisionEvent<std::uint_fast8_t> event =
+      Collision<>::COLLISION() | Collision<>::LEF_LEF_SECONDARY();
   CHECK(Collision<>{idx, event}.collision_occurred());
   CHECK(Collision<>{idx, event}.collision_occurred(Collision<>::LEF_LEF_SECONDARY));
 

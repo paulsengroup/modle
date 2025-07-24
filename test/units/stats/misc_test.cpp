@@ -26,7 +26,7 @@ namespace modle::stats::test {
 constexpr double DEFAULT_FP_TOLERANCE =
     static_cast<double>(std::numeric_limits<float>::epsilon() * 100);
 
-[[nodiscard]] static std::vector<double> import_reference_kernel(const usize radius,
+[[nodiscard]] static std::vector<double> import_reference_kernel(const std::size_t radius,
                                                                  const double sigma) {
   const auto sbuff = [&]() {
     const auto path = data_dir() / std::filesystem::path{"reference_gaussian_kernels"} /
@@ -51,13 +51,13 @@ constexpr double DEFAULT_FP_TOLERANCE =
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Gaussian kernel", "[stats][short]") {
-  for (usize radius = 1; radius < 15; ++radius) {
+  for (std::size_t radius = 1; radius < 15; ++radius) {
     for (const auto sigma : {0.5, 1.0, 1.5, 2.5, 6.3, 10.0}) {
       const auto ref_kernel = import_reference_kernel(radius, sigma);
       const auto kernel = compute_gauss_kernel2d(radius, sigma);
 
       REQUIRE(ref_kernel.size() == kernel.size());
-      for (usize i = 0; i < kernel.size(); ++i) {
+      for (std::size_t i = 0; i < kernel.size(); ++i) {
         CHECK_THAT(ref_kernel[i], Catch::Matchers::WithinRel(kernel[i], DEFAULT_FP_TOLERANCE));
       }
     }

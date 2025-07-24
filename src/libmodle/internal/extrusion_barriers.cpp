@@ -17,7 +17,7 @@
 
 namespace modle {
 
-ExtrusionBarriers::ExtrusionBarriers(usize size)
+ExtrusionBarriers::ExtrusionBarriers(std::size_t size)
     : _pos(size),
       _direction(size, dna::NONE),
       _stp_active(size),
@@ -49,9 +49,9 @@ ExtrusionBarriers::ExtrusionBarriers(std::initializer_list<ExtrusionBarrier> bar
   assert(size() == states.size());
   _state = states;
 
-  for (usize i = 0; i < barriers.size(); ++i) {
+  for (std::size_t i = 0; i < barriers.size(); ++i) {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    const auto& b = *(std::begin(barriers) + static_cast<isize>(i));
+    const auto& b = *(std::begin(barriers) + static_cast<std::ptrdiff_t>(i));
 
     _pos[i] = b.pos;
     _direction[i] = b.blocking_direction;
@@ -64,14 +64,14 @@ ExtrusionBarriers::ExtrusionBarriers(std::initializer_list<ExtrusionBarrier> bar
   }
 }
 
-usize ExtrusionBarriers::size() const noexcept {
+std::size_t ExtrusionBarriers::size() const noexcept {
   assert_buffer_sizes_are_equal();
   return _pos.size();
 }
 
 bool ExtrusionBarriers::empty() const noexcept { return size() == 0; }
 
-void ExtrusionBarriers::resize(usize new_size) {
+void ExtrusionBarriers::resize(std::size_t new_size) {
   _pos.resize(new_size);
   _direction.resize(new_size, dna::NONE);
   _stp_active.resize(new_size);
@@ -91,13 +91,13 @@ void ExtrusionBarriers::clear() noexcept {
   assert_buffer_sizes_are_equal();
 }
 
-bp_t ExtrusionBarriers::pos(usize i) const noexcept {
+bp_t ExtrusionBarriers::pos(std::size_t i) const noexcept {
   assert_index_within_bounds(i);
   return _pos[i];
 }
 const std::vector<bp_t>& ExtrusionBarriers::pos() const noexcept { return _pos; }
 
-dna::Direction ExtrusionBarriers::direction(usize i) const noexcept {
+dna::Direction ExtrusionBarriers::direction(std::size_t i) const noexcept {
   assert_index_within_bounds(i);
   return _direction[i];
 }
@@ -105,7 +105,7 @@ const std::vector<dna::Direction>& ExtrusionBarriers::direction() const noexcept
   return _direction;
 }
 
-double ExtrusionBarriers::stp_active(usize i) const noexcept {
+double ExtrusionBarriers::stp_active(std::size_t i) const noexcept {
   assert_index_within_bounds(i);
   return _stp_active[i]();
 }
@@ -113,7 +113,7 @@ auto ExtrusionBarriers::stp_active() const noexcept -> const std::vector<TP>& {
   return _stp_active;
 }
 
-double ExtrusionBarriers::stp_inactive(usize i) const noexcept {
+double ExtrusionBarriers::stp_inactive(std::size_t i) const noexcept {
   assert_index_within_bounds(i);
   return _stp_inactive[i]();
 }
@@ -121,28 +121,28 @@ auto ExtrusionBarriers::stp_inactive() const noexcept -> const std::vector<TP>& 
   return _stp_inactive;
 }
 
-auto ExtrusionBarriers::state(usize i) const noexcept -> State {
+auto ExtrusionBarriers::state(std::size_t i) const noexcept -> State {
   assert_index_within_bounds(i);
   return _state[i];
 }
 auto ExtrusionBarriers::state() const noexcept -> const std::vector<State>& { return _state; }
 
-bool ExtrusionBarriers::is_active(usize i) const noexcept {
+bool ExtrusionBarriers::is_active(std::size_t i) const noexcept {
   assert_index_within_bounds(i);
   return _state[i] == State::ACTIVE;
 }
 
-bool ExtrusionBarriers::is_not_active(usize i) const noexcept {
+bool ExtrusionBarriers::is_not_active(std::size_t i) const noexcept {
   assert_index_within_bounds(i);
   return _state[i] == State::INACTIVE;
 }
 
-double ExtrusionBarriers::occupancy(usize i) const noexcept {
+double ExtrusionBarriers::occupancy(std::size_t i) const noexcept {
   assert_index_within_bounds(i);
   return ExtrusionBarrier::compute_occupancy_from_stp(stp_active(i), stp_inactive(i));
 }
 
-auto ExtrusionBarriers::next_state(usize i, random::PRNG_t& rand_eng) noexcept -> State {
+auto ExtrusionBarriers::next_state(std::size_t i, random::PRNG_t& rand_eng) noexcept -> State {
   const auto p = random::generate_canonical<double, std::numeric_limits<double>::digits>(rand_eng);
 
   if (is_not_active(i) && p > stp_inactive(i)) {
@@ -155,17 +155,17 @@ auto ExtrusionBarriers::next_state(usize i, random::PRNG_t& rand_eng) noexcept -
 }
 
 void ExtrusionBarriers::next_state(random::PRNG_t& rand_eng) noexcept {
-  for (usize i = 0; i < size(); ++i) {
+  for (std::size_t i = 0; i < size(); ++i) {
     next_state(i, rand_eng);
   }
 }
 
-usize ExtrusionBarriers::count_active() const noexcept {
-  return static_cast<usize>(std::count(_state.begin(), _state.end(), State::ACTIVE));
+std::size_t ExtrusionBarriers::count_active() const noexcept {
+  return static_cast<std::size_t>(std::count(_state.begin(), _state.end(), State::ACTIVE));
 }
-usize ExtrusionBarriers::count_inactive() const noexcept {
+std::size_t ExtrusionBarriers::count_inactive() const noexcept {
   const auto num_active =
-      static_cast<usize>(std::count(_state.begin(), _state.end(), State::ACTIVE));
+      static_cast<std::size_t>(std::count(_state.begin(), _state.end(), State::ACTIVE));
   assert(num_active <= size());
   return size() - num_active;
 }
@@ -177,11 +177,11 @@ void ExtrusionBarriers::assert_buffer_sizes_are_equal() const noexcept {
   assert(_pos.size() == _state.size());
 }
 
-void ExtrusionBarriers::assert_index_within_bounds([[maybe_unused]] usize i) const noexcept {
+void ExtrusionBarriers::assert_index_within_bounds([[maybe_unused]] std::size_t i) const noexcept {
   assert(i < size());
 }
 
-void ExtrusionBarriers::set(usize i, bp_t pos, dna::Direction direction, TP stp_active,
+void ExtrusionBarriers::set(std::size_t i, bp_t pos, dna::Direction direction, TP stp_active,
                             TP stp_inactive, State state) noexcept {
   assert_index_within_bounds(i);
   assert(direction != dna::NONE);
@@ -202,7 +202,7 @@ void ExtrusionBarriers::push_back(bp_t pos, dna::Direction direction, TP stp_act
   _state.push_back(state);
 }
 
-void ExtrusionBarriers::set(usize i, const ExtrusionBarrier& barrier, State state) noexcept {
+void ExtrusionBarriers::set(std::size_t i, const ExtrusionBarrier& barrier, State state) noexcept {
   set(i, barrier.pos, barrier.blocking_direction, barrier.stp_active, barrier.stp_inactive, state);
 }
 
@@ -211,12 +211,12 @@ void ExtrusionBarriers::push_back(const ExtrusionBarrier& barrier, State state) 
             state);
 }
 
-void ExtrusionBarriers::set(usize i, State state) noexcept {
+void ExtrusionBarriers::set(std::size_t i, State state) noexcept {
   assert_index_within_bounds(i);
   _state[i] = state;
 }
 
-auto ExtrusionBarriers::init_state(usize i, random::PRNG_t& rand_eng) noexcept -> State {
+auto ExtrusionBarriers::init_state(std::size_t i, random::PRNG_t& rand_eng) noexcept -> State {
   assert_index_within_bounds(i);
   _state[i] = random::bernoulli_trial{occupancy(i)}(rand_eng) ? State::ACTIVE : State::INACTIVE;
 
@@ -224,23 +224,23 @@ auto ExtrusionBarriers::init_state(usize i, random::PRNG_t& rand_eng) noexcept -
 }
 
 void ExtrusionBarriers::init_states(random::PRNG_t& rand_eng) noexcept {
-  for (usize i = 0; i < size(); ++i) {
+  for (std::size_t i = 0; i < size(); ++i) {
     init_state(i, rand_eng);
   }
 }
 
 void ExtrusionBarriers::sort() {
-  std::vector<usize> buff(size());
+  std::vector<std::size_t> buff(size());
   sort(buff);
 }
 
-void ExtrusionBarriers::sort(std::vector<usize>& idx_buff) {
+void ExtrusionBarriers::sort(std::vector<std::size_t>& idx_buff) {
   idx_buff.resize(size());
-  std::iota(idx_buff.begin(), idx_buff.end(), usize(0));
+  std::iota(idx_buff.begin(), idx_buff.end(), std::size_t(0));
 
   cppsort::pdq_sort(idx_buff.begin(), idx_buff.end(),
                     [&](const auto i1, const auto i2) { return pos(i1) < pos(i2); });
-  for (usize i = 0; i < size(); ++i) {
+  for (std::size_t i = 0; i < size(); ++i) {
     // https://stackoverflow.com/a/22218699
     while (idx_buff[i] != i) {
       const auto j = idx_buff[i];

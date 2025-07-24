@@ -30,7 +30,7 @@
 namespace modle {
 
 template <class N>
-N ContactMatrixDense<N>::unsafe_get(const usize row, const usize col) const {
+N ContactMatrixDense<N>::unsafe_get(const std::size_t row, const std::size_t col) const {
   const auto [i, j] = internal::transpose_coords(row, col);
   bound_check_coords(i, j);
 
@@ -48,8 +48,8 @@ N ContactMatrixDense<N>::unsafe_get(const usize row, const usize col) const {
 //          3  5  6
 // Fetching col #3 would yield 6 5 3
 template <class N>
-void ContactMatrixDense<N>::unsafe_get_column(const usize col, std::vector<N> &buff,
-                                              const usize row_offset) const {
+void ContactMatrixDense<N>::unsafe_get_column(const std::size_t col, std::vector<N> &buff,
+                                              const std::size_t row_offset) const {
   assert(row_offset <= col);
   const auto [rowt, colt] = internal::transpose_coords(col - row_offset, col);
   bound_check_coords(rowt, colt);
@@ -60,8 +60,8 @@ void ContactMatrixDense<N>::unsafe_get_column(const usize col, std::vector<N> &b
   buff.resize(last_idx - first_idx);
   assert(buff.size() <= nrows());
 
-  const auto first = _contacts.begin() + static_cast<isize>(first_idx);
-  const auto last = _contacts.begin() + static_cast<isize>(last_idx);
+  const auto first = _contacts.begin() + static_cast<std::ptrdiff_t>(first_idx);
+  const auto last = _contacts.begin() + static_cast<std::ptrdiff_t>(last_idx);
 
   std::copy(first, last, buff.begin());
 }
@@ -73,19 +73,19 @@ void ContactMatrixDense<N>::unsafe_get_column(const usize col, std::vector<N> &b
 //          3  5  6
 // Fetching col #1 would yield 1 2 3
 template <class N>
-void ContactMatrixDense<N>::unsafe_get_row(const usize row, std::vector<N> &buff,
-                                           const usize col_offset) const {
+void ContactMatrixDense<N>::unsafe_get_row(const std::size_t row, std::vector<N> &buff,
+                                           const std::size_t col_offset) const {
   assert(row >= col_offset);
-  buff.resize(std::clamp(ncols() - row - col_offset, usize(0), nrows() - col_offset));
+  buff.resize(std::clamp(ncols() - row - col_offset, std::size_t(0), nrows() - col_offset));
 
-  for (usize i = 0; i < buff.size(); ++i) {
+  for (std::size_t i = 0; i < buff.size(); ++i) {
     buff[i] = unsafe_get(row, row + col_offset + i);
   }
 }
 
 template <class N>
-N ContactMatrixDense<N>::unsafe_get_block(const usize row, const usize col,
-                                          const usize block_size) const {
+N ContactMatrixDense<N>::unsafe_get_block(const std::size_t row, const std::size_t col,
+                                          const std::size_t block_size) const {
   assert(block_size > 0);
   assert(block_size < nrows());
   // For now we only support blocks with an odd size
@@ -95,15 +95,17 @@ N ContactMatrixDense<N>::unsafe_get_block(const usize row, const usize col,
   }
 
   // Edges are handled like shown here: https://en.wikipedia.org/wiki/File:Extend_Edge-Handling.png
-  const auto bs = static_cast<i64>(block_size);
-  const auto first_row = static_cast<i64>(row) - (bs / 2);
-  const auto first_col = static_cast<i64>(col) - (bs / 2);
+  const auto bs = static_cast<std::int64_t>(block_size);
+  const auto first_row = static_cast<std::int64_t>(row) - (bs / 2);
+  const auto first_col = static_cast<std::int64_t>(col) - (bs / 2);
 
   N n{0};
   for (auto i = first_row; i < first_row + bs; ++i) {
     for (auto j = first_col; j < first_col + bs; ++j) {
-      const auto ii = static_cast<usize>(std::clamp(i, i64(0), static_cast<i64>(_ncols - 1)));
-      const auto jj = static_cast<usize>(std::clamp(j, i64(0), static_cast<i64>(_ncols - 1)));
+      const auto ii = static_cast<std::size_t>(
+          std::clamp(i, std::int64_t(0), static_cast<std::int64_t>(_ncols - 1)));
+      const auto jj = static_cast<std::size_t>(
+          std::clamp(j, std::int64_t(0), static_cast<std::int64_t>(_ncols - 1)));
       n += unsafe_get(ii, jj);
     }
   }
@@ -111,8 +113,9 @@ N ContactMatrixDense<N>::unsafe_get_block(const usize row, const usize col,
 }
 
 template <class N>
-void ContactMatrixDense<N>::unsafe_get_block(const usize row, const usize col,
-                                             const usize block_size, std::vector<N> &buff) const {
+void ContactMatrixDense<N>::unsafe_get_block(const std::size_t row, const std::size_t col,
+                                             const std::size_t block_size,
+                                             std::vector<N> &buff) const {
   assert(block_size > 0);
   assert(block_size < nrows());
   // For now we only support blocks with an odd size
@@ -124,28 +127,30 @@ void ContactMatrixDense<N>::unsafe_get_block(const usize row, const usize col,
   }
 
   // Edges are handled like shown here: https://en.wikipedia.org/wiki/File:Extend_Edge-Handling.png
-  const auto bs = static_cast<i64>(block_size);
-  const auto first_row = static_cast<i64>(row) - (bs / 2);
-  const auto first_col = static_cast<i64>(col) - (bs / 2);
+  const auto bs = static_cast<std::int64_t>(block_size);
+  const auto first_row = static_cast<std::int64_t>(row) - (bs / 2);
+  const auto first_col = static_cast<std::int64_t>(col) - (bs / 2);
   buff.resize(block_size * block_size);
 
-  usize k = 0;
+  std::size_t k = 0;
   for (auto i = first_row; i < first_row + bs; ++i) {
     for (auto j = first_col; j < first_col + bs; ++j) {
-      const auto ii = static_cast<usize>(std::clamp(i, i64(0), static_cast<i64>(_ncols - 1)));
-      const auto jj = static_cast<usize>(std::clamp(j, i64(0), static_cast<i64>(_ncols - 1)));
+      const auto ii = static_cast<std::size_t>(
+          std::clamp(i, std::int64_t(0), static_cast<std::int64_t>(_ncols - 1)));
+      const auto jj = static_cast<std::size_t>(
+          std::clamp(j, std::int64_t(0), static_cast<std::int64_t>(_ncols - 1)));
       buff[k++] = unsafe_get(ii, jj);
     }
   }
 }
 
 template <class N>
-void ContactMatrixDense<N>::unsafe_set(const usize row, const usize col, const N n) {
+void ContactMatrixDense<N>::unsafe_set(const std::size_t row, const std::size_t col, const N n) {
   const auto [i, j] = internal::transpose_coords(row, col);
   bound_check_coords(i, j);
 
   if (i >= nrows()) {
-    std::atomic_fetch_add_explicit(&_updates_missed, usize(1), std::memory_order_relaxed);
+    std::atomic_fetch_add_explicit(&_updates_missed, std::size_t(1), std::memory_order_relaxed);
     return;
   }
 
@@ -154,13 +159,13 @@ void ContactMatrixDense<N>::unsafe_set(const usize row, const usize col, const N
 }
 
 template <class N>
-void ContactMatrixDense<N>::unsafe_add(const usize row, const usize col, const N n) {
+void ContactMatrixDense<N>::unsafe_add(const std::size_t row, const std::size_t col, const N n) {
   assert(n > 0);
   const auto [i, j] = internal::transpose_coords(row, col);
   bound_check_coords(i, j);
 
   if (i >= nrows()) {
-    std::atomic_fetch_add_explicit(&_updates_missed, usize(1), std::memory_order_relaxed);
+    std::atomic_fetch_add_explicit(&_updates_missed, std::size_t(1), std::memory_order_relaxed);
     return;
   }
 
@@ -169,13 +174,14 @@ void ContactMatrixDense<N>::unsafe_add(const usize row, const usize col, const N
 }
 
 template <class N>
-void ContactMatrixDense<N>::unsafe_subtract(const usize row, const usize col, const N n) {
+void ContactMatrixDense<N>::unsafe_subtract(const std::size_t row, const std::size_t col,
+                                            const N n) {
   assert(n >= 0);
   const auto [i, j] = internal::transpose_coords(row, col);
   bound_check_coords(i, j);
 
   if (i >= nrows()) {
-    std::atomic_fetch_add_explicit(&_updates_missed, usize(1), std::memory_order_relaxed);
+    std::atomic_fetch_add_explicit(&_updates_missed, std::size_t(1), std::memory_order_relaxed);
     return;
   }
 
@@ -184,12 +190,12 @@ void ContactMatrixDense<N>::unsafe_subtract(const usize row, const usize col, co
 }
 
 template <class N>
-void ContactMatrixDense<N>::unsafe_increment(usize row, usize col) {
+void ContactMatrixDense<N>::unsafe_increment(std::size_t row, std::size_t col) {
   unsafe_add(row, col, N(1));
 }
 
 template <class N>
-void ContactMatrixDense<N>::unsafe_decrement(usize row, usize col) {
+void ContactMatrixDense<N>::unsafe_decrement(std::size_t row, std::size_t col) {
   unsafe_subtract(row, col, N(1));
 }
 
@@ -211,7 +217,7 @@ auto ContactMatrixDense<N>::unsafe_get_tot_contacts() const noexcept -> SumT {
 }
 
 template <class N>
-usize ContactMatrixDense<N>::unsafe_get_nnz() const noexcept {
+std::size_t ContactMatrixDense<N>::unsafe_get_nnz() const noexcept {
   if (_global_stats_outdated) {
     unsafe_update_global_stats();
   }
@@ -243,9 +249,9 @@ template <class N>
 void ContactMatrixDense<N>::unsafe_print(std::ostream &out_stream, bool full) const {
   if (full) {
     std::vector<N> row(_ncols, 0);
-    for (usize y = 0; y < _ncols; ++y) {
+    for (std::size_t y = 0; y < _ncols; ++y) {
       std::fill(row.begin(), row.end(), 0);
-      for (usize x = 0; x < _ncols; ++x) {
+      for (std::size_t x = 0; x < _ncols; ++x) {
         auto j = x;
         auto i = j - y;
         if (y > x) {
@@ -262,7 +268,7 @@ void ContactMatrixDense<N>::unsafe_print(std::ostream &out_stream, bool full) co
     }
   } else {
     std::vector<N> row(ncols());
-    for (usize i = 0; i < nrows(); ++i) {
+    for (std::size_t i = 0; i < nrows(); ++i) {
       for (auto j = i; j < ncols(); ++j) {
         row[j] = unsafe_at(i, j);
       }
@@ -281,9 +287,9 @@ template <class N>
 std::vector<std::vector<N>> ContactMatrixDense<N>::unsafe_generate_symmetric_matrix() const {
   std::vector<std::vector<N>> m;
   m.reserve(_ncols);
-  for (usize y = 0; y < _ncols; ++y) {
+  for (std::size_t y = 0; y < _ncols; ++y) {
     std::vector<N> row(_ncols, 0);
-    for (usize x = 0; x < _ncols; ++x) {
+    for (std::size_t x = 0; x < _ncols; ++x) {
       const auto [j, i] = [&]() {
         if (y > x) {
           return std::make_pair(y, y - x);
@@ -308,7 +314,7 @@ void ContactMatrixDense<N>::unsafe_reset() {
 }
 
 template <class N>
-void ContactMatrixDense<N>::unsafe_resize(const usize nrows, const usize ncols) {
+void ContactMatrixDense<N>::unsafe_resize(const std::size_t nrows, const std::size_t ncols) {
   if (nrows == _nrows && ncols == _ncols) {
     return;
   }
@@ -334,12 +340,12 @@ void ContactMatrixDense<N>::unsafe_resize(const bp_t length, const bp_t diagonal
 }
 
 template <class N>
-N &ContactMatrixDense<N>::unsafe_at(const usize i, const usize j) {
+N &ContactMatrixDense<N>::unsafe_at(const std::size_t i, const std::size_t j) {
   return _contacts[internal::encode_idx(i, j, _nrows)];
 }
 
 template <class N>
-const N &ContactMatrixDense<N>::unsafe_at(const usize i, const usize j) const {
+const N &ContactMatrixDense<N>::unsafe_at(const std::size_t i, const std::size_t j) const {
   return _contacts[internal::encode_idx(i, j, _nrows)];
 }
 
@@ -479,7 +485,7 @@ bool ContactMatrixDense<N>::unsafe_empty() const {
 template <class N>
 void ContactMatrixDense<N>::unsafe_update_global_stats() const noexcept {
   assert(_global_stats_outdated);
-  _nnz = usize(
+  _nnz = std::size_t(
       std::count_if(_contacts.begin(), _contacts.end(), [&](const auto n) { return n != N(0); }));
   assert(_nnz <= npixels());
 

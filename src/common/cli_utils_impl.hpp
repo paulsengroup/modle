@@ -125,7 +125,7 @@ template <class EnumT, class StringT>
   assert(labels.size() == enums.size());
   std::vector<std::pair<StringT, EnumT>> result;
   result.reserve(labels.size());
-  for (usize i = 0; i < labels.size(); ++i) {
+  for (std::size_t i = 0; i < labels.size(); ++i) {
     result.emplace_back(labels[i], enums[i]);
   }
 
@@ -329,7 +329,7 @@ AsGenomicDistanceTransformer::AsGenomicDistanceTransformer() : CLI::CheckedTrans
       return "";  // input validation was successful
     }
 
-    const auto i = s.size() - static_cast<usize>(std::distance(s.rbegin(), unit_rbegin));
+    const auto i = s.size() - static_cast<std::size_t>(std::distance(s.rbegin(), unit_rbegin));
     auto num_str = input.substr(0, i);
     auto unit = input.substr(i);
 

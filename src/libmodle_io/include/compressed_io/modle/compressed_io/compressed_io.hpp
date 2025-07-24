@@ -42,7 +42,7 @@ class Reader {
   using archive_entry_ptr_t = std::unique_ptr<archive_entry, detail::ArchiveEntryDeleter>;
 
   Reader() = default;
-  explicit Reader(const std::filesystem::path& path, usize buff_capacity = 512 * 1024);
+  explicit Reader(const std::filesystem::path& path, std::size_t buff_capacity = 512 * 1024);
 
   bool getline(std::string& buff, char sep = '\n');
   [[nodiscard]] std::string_view getline(char sep = '\n');
@@ -67,7 +67,7 @@ class Reader {
   archive_entry_ptr_t _arc_entry{};
   std::string _buff{};
   std::string _tok_tmp_buff{};
-  usize _idx{0};
+  std::size_t _idx{0};
   bool _eof{false};
 
   // Returns false when reaching eof
@@ -82,7 +82,7 @@ DISABLE_WARNING_PADDED
 class Writer {
   DISABLE_WARNING_POP
  public:
-  enum Compression : u8f { AUTO, NONE, GZIP, BZIP2, LZMA, XZ, ZSTD };
+  enum Compression : std::uint_fast8_t { AUTO, NONE, GZIP, BZIP2, LZMA, XZ, ZSTD };
 
   using archive_ptr_t = std::unique_ptr<archive, detail::ArchiveWriterDeleter>;
   using archive_entry_ptr_t = std::unique_ptr<archive_entry, detail::ArchiveEntryDeleter>;

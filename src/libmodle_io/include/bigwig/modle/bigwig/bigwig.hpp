@@ -94,12 +94,13 @@ class Writer {
   template <class Chromosomes>
   void write_chromosomes(Chromosomes& chroms);
   void write_chromosomes(const std::vector<std::string>& chrom_names,
-                         const std::vector<u32>& chrom_sizes);
-  void write_chromosomes(const char* const* chrom_names, const u32* chrom_sizes, usize num_chroms);
+                         const std::vector<std::uint32_t>& chrom_sizes);
+  void write_chromosomes(const char* const* chrom_names, const std::uint32_t* chrom_sizes,
+                         std::size_t num_chroms);
 
   template <class N, class = std::enable_if<std::is_arithmetic_v<N>>>
-  void write_range(std::string_view chrom_name, absl::Span<N> values, u64 span, u64 step,
-                   u64 offset = 0);
+  void write_range(std::string_view chrom_name, absl::Span<N> values, std::uint64_t span,
+                   std::uint64_t step, std::uint64_t offset = 0);
 };
 
 }  // namespace modle::io::bigwig

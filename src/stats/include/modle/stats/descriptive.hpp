@@ -38,8 +38,8 @@ template <class InputIt, class OutputIt, class I, class UnaryOperation = utils::
           class = std::enable_if_t<
               std::is_integral_v<I> &&
               std::is_invocable_v<UnaryOperation, decltype(*std::declval<InputIt>())>>>
-inline usize moving_average(InputIt first, InputIt last, OutputIt output_first, I window_size,
-                            UnaryOperation op = utils::identity());
+inline std::size_t moving_average(InputIt first, InputIt last, OutputIt output_first, I window_size,
+                                  UnaryOperation op = utils::identity());
 /////////
 
 //  Sum of squared deviations

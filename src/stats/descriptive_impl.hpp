@@ -45,19 +45,19 @@ double weighted_mean(InputIt1 first, InputIt1 last, InputIt2 weight_first, Unary
 }
 
 template <class InputIt, class OutputIt, class I, class UnaryOperation, class>
-usize moving_average(InputIt first, InputIt last, OutputIt output_first, const I window_size,
-                     UnaryOperation op) {
+std::size_t moving_average(InputIt first, InputIt last, OutputIt output_first, const I window_size,
+                           UnaryOperation op) {
   using OutputItValueT = typename OutputIt::value_type;
-  if (static_cast<isize>(window_size) >= std::distance(first, last)) {
+  if (static_cast<std::ptrdiff_t>(window_size) >= std::distance(first, last)) {
     *output_first = OutputItValueT(stats::mean(first, last, op));
     return 1;
   }
 
-  for (auto it1 = first, it2 = first + static_cast<isize>(window_size); it2 != last;
+  for (auto it1 = first, it2 = first + static_cast<std::ptrdiff_t>(window_size); it2 != last;
        ++it1, ++it2, ++output_first) {
     *output_first = OutputItValueT(mean(it1, it2, op));
   }
-  return usize(std::distance(first, last)) - usize(window_size);
+  return std::size_t(std::distance(first, last)) - std::size_t(window_size);
 }
 
 template <class InputIt, class FP, class UnaryOperation, class>
@@ -109,7 +109,7 @@ template <class InputIt, class FP, class UnaryOperation, class>
 double covariance(InputIt first1, InputIt last1, InputIt first2, FP mean1, FP mean2,
                   UnaryOperation op) {
   double sum_of_squared_devs = 0;
-  usize i = 0;
+  std::size_t i = 0;
   for (; first1 != last1; ++first1, ++first2, ++i) {
     const auto n1 = utils::conditional_static_cast<double>(op(*first1)) -
                     utils::conditional_static_cast<double>(mean1);
@@ -158,11 +158,11 @@ double sed(InputIt first1, InputIt last1, InputIt first2, UnaryOperation op) noe
 template <class InputIt1, class InputIt2, class UnaryOperation, class>
 double weighted_sed(InputIt1 first1, InputIt1 last1, InputIt1 first2, InputIt2 weight_first,
                     UnaryOperation op) noexcept {
-  const isize size = std::distance(first1, last1);
+  const std::ptrdiff_t size = std::distance(first1, last1);
   assert(size >= 0);
 
   double sed = 0;
-  for (isize i = 0; i < size; ++i) {
+  for (std::ptrdiff_t i = 0; i < size; ++i) {
     const auto n1 = op(*(first1 + i));
     const auto n2 = op(*(first2 + i));
     const auto w = *(weight_first + i);
@@ -188,7 +188,7 @@ double rmse(InputIt first1, InputIt last1, InputIt first2, UnaryOperation op) {
 template <class InputIt1, class InputIt2, class UnaryOperation, class>
 double weighted_rmse(InputIt1 first1, InputIt1 last1, InputIt1 first2, InputIt2 weight_first,
                      UnaryOperation op) {
-  isize n = 0;
+  std::ptrdiff_t n = 0;
   double tot = 0;
   double tot_w = 0;
   auto it1 = first1;

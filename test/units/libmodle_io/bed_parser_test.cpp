@@ -62,7 +62,7 @@ static void compare_bed_records_with_file(std::vector<BED> records, const std::s
     return std::stoull(enda.data(), nullptr) < std::stoull(endb.data(), nullptr);
   });
 
-  for (usize i = 0; i < records.size(); ++i) {
+  for (std::size_t i = 0; i < records.size(); ++i) {
     CHECK(fmt::to_string(records[i]) == lines[i]);
   }
 }
@@ -105,18 +105,18 @@ TEST_CASE("BED: strip quotes", "[parsers][BED][io][short]") {
 TEST_CASE("BED Parser CRLF", "[parsers][BED][io][short]") {
   const auto bed_file = testdir() / "crlf.bed";
 
-  const usize num_records = 3;
+  const std::size_t num_records = 3;
 
   {
     compressed_io::Writer w(bed_file, compressed_io::Writer::NONE);
-    for (usize i = 0; i < num_records; ++i) {
+    for (std::size_t i = 0; i < num_records; ++i) {
       w.write(fmt::format("chr{}\t0\t1\r\n", i));
     }
   }
 
   const auto records = bed::Parser(bed_file).parse_all();
   REQUIRE(records.size() == num_records);
-  for (usize i = 0; i < num_records; ++i) {
+  for (std::size_t i = 0; i < num_records; ++i) {
     CHECK(bed::BED(fmt::format("chr{}\t0\t1", i)) == records[i]);
   }
 }

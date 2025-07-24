@@ -28,7 +28,7 @@ ContactMatrixSparse<N>::ContactMatrixSparse(const ContactMatrixSparse<N>& other)
   const auto tables = other.lock_tables();
   _contact_blocks.resize(tables.size());
 
-  for (usize i = 0; i < _contact_blocks.size(); ++i) {
+  for (std::size_t i = 0; i < _contact_blocks.size(); ++i) {
     const auto& table = tables[i];
     auto& map = _contact_blocks[i];
     map.reserve(table.size());
@@ -39,7 +39,8 @@ ContactMatrixSparse<N>::ContactMatrixSparse(const ContactMatrixSparse<N>& other)
 }
 
 template <class N>
-ContactMatrixSparse<N>::ContactMatrixSparse(usize nrows, usize ncols, ChunkSize max_chunk_size)
+ContactMatrixSparse<N>::ContactMatrixSparse(std::size_t nrows, std::size_t ncols,
+                                            ChunkSize max_chunk_size)
     : _nrows(std::min(nrows, ncols)),
       _ncols(ncols),
       _cols_per_chunk(compute_cols_per_chunk(_nrows, max_chunk_size)),
@@ -72,7 +73,7 @@ ContactMatrixSparse<N>& ContactMatrixSparse<N>::operator=(const ContactMatrixSpa
   const auto tables = other.lock_tables();
   _contact_blocks.resize(tables.size());
 
-  for (usize i = 0; i < _contact_blocks.size(); ++i) {
+  for (std::size_t i = 0; i < _contact_blocks.size(); ++i) {
     const auto& table = tables[i];
     auto& map = _contact_blocks[i];
     map.reserve(table.size());
@@ -85,42 +86,43 @@ ContactMatrixSparse<N>& ContactMatrixSparse<N>::operator=(const ContactMatrixSpa
 }
 
 template <class N>
-constexpr usize ContactMatrixSparse<N>::compute_cols_per_chunk(usize nrows,
-                                                               ChunkSize max_chunk_size) {
-  return std::max(usize(1), max_chunk_size.size / nrows);
+constexpr std::size_t ContactMatrixSparse<N>::compute_cols_per_chunk(std::size_t nrows,
+                                                                     ChunkSize max_chunk_size) {
+  return std::max(std::size_t(1), max_chunk_size.size / nrows);
 }
 
 template <class N>
-constexpr usize ContactMatrixSparse<N>::compute_num_chunks(usize ncols, usize cols_per_chunk) {
+constexpr std::size_t ContactMatrixSparse<N>::compute_num_chunks(std::size_t ncols,
+                                                                 std::size_t cols_per_chunk) {
   return (ncols + cols_per_chunk - 1) / cols_per_chunk;
 }
 
 template <class N>
-usize ContactMatrixSparse<N>::compute_block_idx(usize col) const noexcept {
+std::size_t ContactMatrixSparse<N>::compute_block_idx(std::size_t col) const noexcept {
   return col / _cols_per_chunk;
 }
 
 template <class N>
-usize ContactMatrixSparse<N>::num_blocks() const noexcept {
+std::size_t ContactMatrixSparse<N>::num_blocks() const noexcept {
   return _contact_blocks.size();
 }
 
 template <class N>
-auto ContactMatrixSparse<N>::get_block(usize col) noexcept -> BlockT& {
+auto ContactMatrixSparse<N>::get_block(std::size_t col) noexcept -> BlockT& {
   const auto i = compute_block_idx(col);
   assert(i < num_blocks());
   return _contact_blocks[i];
 }
 
 template <class N>
-auto ContactMatrixSparse<N>::get_block(usize col) const noexcept -> const BlockT& {
+auto ContactMatrixSparse<N>::get_block(std::size_t col) const noexcept -> const BlockT& {
   const auto i = compute_block_idx(col);
   assert(i < num_blocks());
   return _contact_blocks[i];
 }
 
 template <class N>
-N ContactMatrixSparse<N>::get(usize row, usize col) const {
+N ContactMatrixSparse<N>::get(std::size_t row, std::size_t col) const {
   const auto [rowt, colt] = internal::transpose_coords(row, col);
   bound_check_coords(rowt, colt);
 
@@ -137,12 +139,12 @@ N ContactMatrixSparse<N>::get(usize row, usize col) const {
 }
 
 template <class N>
-void ContactMatrixSparse<N>::set(usize row, usize col, N n) {
+void ContactMatrixSparse<N>::set(std::size_t row, std::size_t col, N n) {
   const auto [rowt, colt] = internal::transpose_coords(row, col);
   bound_check_coords(rowt, colt);
 
   if (rowt >= nrows()) {
-    std::atomic_fetch_add_explicit(&_updates_missed, usize(1), std::memory_order_relaxed);
+    std::atomic_fetch_add_explicit(&_updates_missed, std::size_t(1), std::memory_order_relaxed);
     return;
   }
 
@@ -163,12 +165,12 @@ void ContactMatrixSparse<N>::set(usize row, usize col, N n) {
 }
 
 template <class N>
-void ContactMatrixSparse<N>::add(usize row, usize col, N n) {
+void ContactMatrixSparse<N>::add(std::size_t row, std::size_t col, N n) {
   const auto [rowt, colt] = internal::transpose_coords(row, col);
   bound_check_coords(rowt, colt);
 
   if (rowt >= nrows()) {
-    std::atomic_fetch_add_explicit(&_updates_missed, usize(1), std::memory_order_relaxed);
+    std::atomic_fetch_add_explicit(&_updates_missed, std::size_t(1), std::memory_order_relaxed);
     return;
   }
 
@@ -180,13 +182,13 @@ void ContactMatrixSparse<N>::add(usize row, usize col, N n) {
 }
 
 template <class N>
-void ContactMatrixSparse<N>::subtract(const usize row, const usize col, const N n) {
+void ContactMatrixSparse<N>::subtract(const std::size_t row, const std::size_t col, const N n) {
   assert(n >= 0);
   const auto [rowt, colt] = internal::transpose_coords(row, col);
   bound_check_coords(rowt, colt);
 
   if (rowt >= nrows()) {
-    std::atomic_fetch_add_explicit(&_updates_missed, usize(1), std::memory_order_relaxed);
+    std::atomic_fetch_add_explicit(&_updates_missed, std::size_t(1), std::memory_order_relaxed);
     return;
   }
 
@@ -207,32 +209,32 @@ void ContactMatrixSparse<N>::subtract(const usize row, const usize col, const N 
 }
 
 template <class N>
-void ContactMatrixSparse<N>::increment(usize row, usize col) {
+void ContactMatrixSparse<N>::increment(std::size_t row, std::size_t col) {
   add(row, col, 1);
 }
 
 template <class N>
-void ContactMatrixSparse<N>::decrement(usize row, usize col) {
+void ContactMatrixSparse<N>::decrement(std::size_t row, std::size_t col) {
   subtract(row, col, N(1));
 }
 
 template <class N>
-constexpr usize ContactMatrixSparse<N>::ncols() const {
+constexpr std::size_t ContactMatrixSparse<N>::ncols() const {
   return _ncols;
 }
 
 template <class N>
-constexpr usize ContactMatrixSparse<N>::nrows() const {
+constexpr std::size_t ContactMatrixSparse<N>::nrows() const {
   return _nrows;
 }
 
 template <class N>
-constexpr usize ContactMatrixSparse<N>::npixels() const {
+constexpr std::size_t ContactMatrixSparse<N>::npixels() const {
   return _nrows * _ncols;
 }
 
 template <class N>
-constexpr usize ContactMatrixSparse<N>::get_n_of_missed_updates() const noexcept {
+constexpr std::size_t ContactMatrixSparse<N>::get_n_of_missed_updates() const noexcept {
   return _updates_missed.load();
 }
 
@@ -267,7 +269,7 @@ void ContactMatrixSparse<N>::update_global_stats(
     return;
   }
 
-  usize nnz{0};
+  std::size_t nnz{0};
   SumT tot_contacts{0};
   for (auto& table : tables) {
     tot_contacts +=
@@ -298,7 +300,7 @@ auto ContactMatrixSparse<N>::get_tot_contacts() const -> SumT {
 }
 
 template <class N>
-usize ContactMatrixSparse<N>::unsafe_get_nnz() const {
+std::size_t ContactMatrixSparse<N>::unsafe_get_nnz() const {
   if (_global_stats_outdated) {
     update_global_stats(lock_tables());
   }
@@ -306,7 +308,7 @@ usize ContactMatrixSparse<N>::unsafe_get_nnz() const {
 }
 
 template <class N>
-usize ContactMatrixSparse<N>::get_nnz() const {
+std::size_t ContactMatrixSparse<N>::get_nnz() const {
   auto table_locks = lock_tables();
   if (_global_stats_outdated) {
     update_global_stats(table_locks);
@@ -324,8 +326,8 @@ auto ContactMatrixSparse<N>::lock_tables() const -> std::vector<typename BlockT:
 }
 
 template <class N>
-void ContactMatrixSparse<N>::bound_check_coords([[maybe_unused]] const usize row,
-                                                [[maybe_unused]] const usize col) const {
+void ContactMatrixSparse<N>::bound_check_coords([[maybe_unused]] const std::size_t row,
+                                                [[maybe_unused]] const std::size_t col) const {
   if constexpr (utils::ndebug_not_defined()) {
     internal::bound_check_coords(*this, row, col);
   }
