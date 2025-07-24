@@ -7,7 +7,6 @@
 #include "modle/config/version.hpp"
 // clang-format on
 
-#include <absl/strings/strip.h>
 #include <fmt/format.h>
 
 #include <cassert>

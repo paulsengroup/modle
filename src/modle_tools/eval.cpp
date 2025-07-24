@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: MIT
 
 #include <absl/strings/str_replace.h>
-#include <absl/strings/strip.h>
 #include <absl/time/clock.h>
 #include <absl/time/time.h>
 #include <absl/types/span.h>
@@ -234,7 +233,7 @@ template <class Range>
     try {
       return find_col_idx(path_to_weights, header, name);
     } catch (const std::exception &e) {
-      if (!absl::StartsWith(e.what(), "Unable to find column")) {
+      if (!std::string_view{e.what()}.starts_with("Unable to find column")) {
         throw;
       }
     }
@@ -317,7 +316,10 @@ static void validate_weights(
 [[nodiscard]] static io::bigwig::Writer create_bwig_file(
     const std::vector<std::string> &chrom_names, const std::vector<u32> &chrom_sizes,
     std::string_view base_name, std::string_view suffix) {
-  auto bw = io::bigwig::Writer(fmt::format("{}_{}", base_name, absl::StripPrefix(suffix, "_")));
+  if (suffix.starts_with('_')) {
+    suffix.remove_prefix(1);
+  }
+  auto bw = io::bigwig::Writer(fmt::format("{}_{}", base_name, suffix));
   bw.write_chromosomes(chrom_names, chrom_sizes);
   return bw;
 }
@@ -644,7 +646,7 @@ static void run_task(const enum eval_config::Metric metric, const bed::BED &inte
   } catch (const std::exception &e) {
     throw std::runtime_error(fmt::format(
         "The following error occurred while computing {} on {} stripes for {}:{}-{}: {}",
-        corr_method_to_str(metric, true), absl::AsciiStrToLower(direction_to_str(stripe_direction)),
+        corr_method_to_str(metric, true), to_lower(direction_to_str(stripe_direction)),
         interval.chrom, interval.chrom_start, interval.chrom_end, e.what()));
   }
 }

@@ -2,7 +2,6 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/strings/strip.h>
 #include <fmt/format.h>
 #include <fmt/std.h>
 #include <spdlog/common.h>

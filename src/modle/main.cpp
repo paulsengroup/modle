@@ -2,7 +2,6 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/strings/strip.h>
 #include <absl/time/clock.h>
 #include <absl/time/time.h>
 #include <fmt/format.h>
@@ -34,6 +33,7 @@
 #include "modle/common/common.hpp"
 #include "modle/common/fmt_helpers.hpp"
 #include "modle/common/simulation_config.hpp"
+#include "modle/common/string_utils.hpp"
 #include "modle/config/version.hpp"
 #include "modle/simulation.hpp"
 
@@ -136,7 +136,7 @@ std::tuple<int, modle::Cli::subcommand, modle::Config> parse_cli_and_setup_logge
     return std::make_tuple(cli->exit(e), modle::Cli::subcommand::help, modle::Config());
 
   } catch (const std::filesystem::filesystem_error& e) {
-    SPDLOG_ERROR("FAILURE! {}", absl::StripSuffix(e.what(), ": File exists"));
+    SPDLOG_ERROR("FAILURE! {}", modle::str_strip_suffix(e.what(), ": File exists"));
     return std::make_tuple(1, modle::Cli::subcommand::help, modle::Config());
   } catch (const spdlog::spdlog_ex& e) {
     fmt::println(stderr,

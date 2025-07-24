@@ -30,4 +30,12 @@ inline void lower_inplace(std::string& s) {
   return s.find(query) != std::string_view::npos;
 }
 
+[[nodiscard]] inline std::string_view str_strip_suffix(std::string_view s,
+                                                       std::string_view suffix) {
+  if (s.ends_with(suffix)) {
+    s.remove_suffix(suffix.size());
+  }
+  return s;
+}
+
 }  // namespace modle
