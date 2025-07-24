@@ -231,8 +231,8 @@ void Simulation::simulate_worker(const u64 tid, const usize task_batch_size) {
         // some of the tasks may have num_target_contacts = 0.
         // These tasks can be safely skipped as they won't have any effect on the output contact
         // matrix.
-        if (MODLE_LIKELY(task.num_target_epochs != (std::numeric_limits<usize>::max)() ||
-                         task.num_target_contacts != 0)) {
+        if (task.num_target_epochs != (std::numeric_limits<usize>::max)() ||
+            task.num_target_contacts != 0) [[likely]] {
           local_state.status = State::Status::RUNNING;
           SPDLOG_DEBUG("[W{}]: begin processing task {} ({} cell #{}, {})...", tid, task.id,
                        *task.interval, task.cell_id, format_rand_eng(task.rand_eng));

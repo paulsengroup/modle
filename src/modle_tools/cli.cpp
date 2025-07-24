@@ -587,7 +587,7 @@ void Cli::validate() const {
   } else if (_cli.get_subcommand("transform")->parsed()) {
     validate_transform_subcommand();
   } else {
-    MODLE_UNREACHABLE_CODE;
+    utils::unreachable_code();
   }
 }
 

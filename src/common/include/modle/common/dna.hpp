@@ -51,7 +51,7 @@ class Direction {
       case 2:
         return Direction{1};
       default:
-        MODLE_UNREACHABLE_CODE;
+        utils::unreachable_code();
     }
   }
   friend constexpr bool operator==(Direction a, Direction b) noexcept;

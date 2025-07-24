@@ -120,7 +120,7 @@ template <typename FormatContext>
 inline auto fmt::formatter<modle::Chromosome>::format(const modle::Chromosome& chrom,
                                                       FormatContext& ctx) const
     -> decltype(ctx.out()) {
-  if (MODLE_UNLIKELY(!chrom)) {
+  if (!chrom) [[unlikely]] {
     return fmt::format_to(ctx.out(), "null");
   }
   return fmt::format_to(ctx.out(), "{}:{}", chrom.name(), chrom.size());
@@ -137,7 +137,7 @@ template <typename FormatContext>
 inline auto fmt::formatter<modle::GenomicInterval>::format(const modle::GenomicInterval& gi,
                                                            FormatContext& ctx) const
     -> decltype(ctx.out()) {
-  if (MODLE_UNLIKELY(!gi.chrom())) {
+  if (!gi.chrom()) [[unlikely]] {
     return fmt::format_to(ctx.out(), "null");
   }
   return fmt::format_to(ctx.out(), "{}:{}-{}", gi.chrom().name(), gi.start(), gi.end());

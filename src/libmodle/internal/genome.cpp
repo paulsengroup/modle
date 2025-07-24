@@ -169,7 +169,7 @@ const char* Chromosome::name_cstr() const noexcept { return _name.c_str(); }
 
 u64 Chromosome::hash(XXH3_state_t& state) const {
   auto handle_errors = [&](const auto& status) {
-    if (MODLE_UNLIKELY(status == XXH_ERROR)) {
+    if (status == XXH_ERROR) [[unlikely]] {
       throw std::runtime_error(fmt::format("failed to hash {}", *this));
     }
   };
@@ -181,7 +181,7 @@ u64 Chromosome::hash(XXH3_state_t& state) const {
 
 u64 Chromosome::hash(XXH3_state_t& state, u64 seed) const {
   const auto status = XXH3_64bits_reset_withSeed(&state, seed);
-  if (MODLE_UNLIKELY(status == XXH_ERROR)) {
+  if (status == XXH_ERROR) [[unlikely]] {
     throw std::runtime_error(fmt::format("failed to hash {}", *this));
   }
   return hash(state);
@@ -199,7 +199,7 @@ GenomicInterval::GenomicInterval(usize id, std::shared_ptr<const Chromosome> chr
 
 u64 GenomicInterval::hash(XXH3_state_t& state) const {
   auto handle_errors = [&](const auto& status) {
-    if (MODLE_UNLIKELY(status == XXH_ERROR)) {
+    if (status == XXH_ERROR) [[unlikely]] {
       throw std::runtime_error(fmt::format("failed to hash {}", *this));
     }
   };
@@ -216,7 +216,7 @@ u64 GenomicInterval::hash(XXH3_state_t& state) const {
 
 u64 GenomicInterval::hash(XXH3_state_t& state, u64 seed) const {
   const auto status = XXH3_64bits_reset_withSeed(&state, seed);
-  if (MODLE_UNLIKELY(status == XXH_ERROR)) {
+  if (status == XXH_ERROR) [[unlikely]] {
     throw std::runtime_error(fmt::format("Failed to hash {}", *this));
   }
   return hash(state);

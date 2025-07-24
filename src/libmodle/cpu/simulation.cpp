@@ -426,12 +426,12 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
     return lefs[r1].fwd_unit.pos() < lefs[r2].fwd_unit.pos();
   };
 
-  if (MODLE_UNLIKELY(init_buffers)) {  // Init rank buffers
+  if (init_buffers) [[unlikely]] {  // Init rank buffers
     std::iota(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), 0);
     std::iota(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), 0);
   }
 
-  if (MODLE_LIKELY(ranks_are_partially_sorted)) {
+  if (ranks_are_partially_sorted) [[likely]] {
     cppsort::split_adapter<cppsort::pdq_sorter> sorter;
     sorter(rev_lef_rank_buff.begin(), rev_lef_rank_buff.end(), rev_comparator);
     sorter(fwd_lef_rank_buff.begin(), fwd_lef_rank_buff.end(), fwd_comparator);
@@ -448,7 +448,7 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
   for (usize i = 1; i < rev_lef_rank_buff.size(); ++i) {
     const auto& r1 = rev_lef_rank_buff[i - 1];
     const auto& r2 = rev_lef_rank_buff[i];
-    if (MODLE_UNLIKELY(lefs[r1].rev_unit.pos() == lefs[r2].rev_unit.pos())) {
+    if (lefs[r1].rev_unit.pos() == lefs[r2].rev_unit.pos()) [[unlikely]] {
       begin = i - 1;
       for (; i < rev_lef_rank_buff.size(); ++i) {
         const auto& r11 = rev_lef_rank_buff[i - 1];
@@ -472,7 +472,7 @@ void Simulation::rank_lefs(const absl::Span<const Lef> lefs,
   for (usize i = 1; i < fwd_lef_rank_buff.size(); ++i) {
     const auto& r1 = fwd_lef_rank_buff[i - 1];
     const auto& r2 = fwd_lef_rank_buff[i];
-    if (MODLE_UNLIKELY(lefs[r1].fwd_unit.pos() == lefs[r2].fwd_unit.pos())) {
+    if (lefs[r1].fwd_unit.pos() == lefs[r2].fwd_unit.pos()) [[unlikely]] {
       begin = i - 1;
       for (; i < fwd_lef_rank_buff.size(); ++i) {
         const auto& r11 = fwd_lef_rank_buff[i - 1];
@@ -504,7 +504,7 @@ void Simulation::extrude([[maybe_unused]] const GenomicInterval& interval,
     auto& lef = lefs[i];
     const auto& rev_move = rev_moves[i];
     const auto& fwd_move = fwd_moves[i];
-    if (MODLE_UNLIKELY(!lef.is_bound())) {  // Do not process inactive LEFs
+    if (!lef.is_bound()) [[unlikely]] {  // Do not process inactive LEFs
       continue;
     }
     assert(lef.rev_unit.pos() >= interval.start() + rev_move);
@@ -539,7 +539,7 @@ std::pair<bp_t, bp_t> Simulation::compute_lef_lef_collision_pos(const ExtrusionU
         static_cast<double>(rev_pos) - static_cast<double>(rev_speed) * time_to_collision;
     assert(abs(static_cast<double>(collision_pos) - collision_pos_) < 1.0);
   }
-  if (MODLE_UNLIKELY(collision_pos == fwd_pos)) {
+  if (collision_pos == fwd_pos) [[unlikely]] {
     assert(collision_pos >= fwd_pos);
     assert(collision_pos + 1 <= rev_pos);
     return std::make_pair(collision_pos + 1, collision_pos);
@@ -578,7 +578,7 @@ usize Simulation::release_lefs(const absl::Span<Lef> lefs, const ExtrusionBarrie
       case 2:
         return 1.0 / c().hard_stall_lef_stability_multiplier;
       default:
-        MODLE_UNREACHABLE_CODE;
+        utils::unreachable_code();
     }
   };
 
@@ -587,10 +587,10 @@ usize Simulation::release_lefs(const absl::Span<Lef> lefs, const ExtrusionBarrie
 
   usize lefs_released = 0;
   for (usize i = 0; i < lefs.size(); ++i) {
-    if (MODLE_LIKELY(lefs[i].is_bound())) {
+    if (lefs[i].is_bound()) [[likely]] {
       const auto p = compute_lef_unloader_affinity(i) * base_prob_lef_release;
       assert(p >= 0 && p <= 1);
-      if (MODLE_UNLIKELY(random::bernoulli_trial{p}(rand_eng))) {
+      if (random::bernoulli_trial{p}(rand_eng)) [[unlikely]] {
         ++lefs_released;
         lefs[i].release();
       }
@@ -965,7 +965,7 @@ void Simulation::simulate_one_cell([[maybe_unused]] u64 tid, State& s) const {
       Simulation::extrude(*s.interval, s.get_lefs(), s.get_rev_moves(), s.get_fwd_moves());
 
       // Log model internal state
-      if (MODLE_UNLIKELY(c().log_model_internal_state)) {
+      if (c().log_model_internal_state) [[unlikely]] {
         assert(s.model_state_logger);
         Simulation::dump_stats(s.id, s.epoch, s.cell_id, !s.burnin_completed, *s.interval,
                                s.get_lefs(), s.barriers, s.get_rev_collisions(),

@@ -825,7 +825,7 @@ CLI::App* Cli::get_subcommand_ptr() {
       return s;
     }
   }
-  MODLE_UNREACHABLE_CODE;
+  utils::unreachable_code();
 }
 
 const CLI::App* Cli::get_subcommand_ptr() const {
@@ -834,14 +834,14 @@ const CLI::App* Cli::get_subcommand_ptr() const {
       return s;
     }
   }
-  MODLE_UNREACHABLE_CODE;
+  utils::unreachable_code();
 }
 
 // The following two functions have been copied from the ExtrusionBarrier class.
 // This is not ideal, but I think it is better than make the CLI interface depend on the
 // ExtrusionBarrier class (which is part of libmodle_internal)
 constexpr double compute_stp_active_from_occupancy(double stp_inactive, double occupancy) noexcept {
-  if (MODLE_UNLIKELY(occupancy == 0)) {
+  if (occupancy == 0) [[unlikely]] {
     return 0.0;
   }
 
@@ -852,7 +852,7 @@ constexpr double compute_stp_active_from_occupancy(double stp_inactive, double o
 }
 
 constexpr double compute_occupancy_from_stp(double stp_active, double stp_inactive) noexcept {
-  if (MODLE_UNLIKELY(stp_active + stp_inactive == 0)) {
+  if (stp_active + stp_inactive == 0) [[unlikely]] {
     return 0.0;
   }
 

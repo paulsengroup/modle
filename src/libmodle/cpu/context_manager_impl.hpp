@@ -175,7 +175,7 @@ inline void ContextManager<Task>::rethrow_exceptions() const {
 
 template <typename Task>
 inline void ContextManager<Task>::check_exceptions() {
-  if (MODLE_UNLIKELY(_exception_thrown.load())) {
+  if (_exception_thrown.load()) [[unlikely]] {
     SPDLOG_ERROR("MoDLE encountered an exception. Shutting down worker threads...");
     shutdown();
   }

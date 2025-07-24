@@ -95,7 +95,7 @@ FP Pearson<FP>::compute_pcc(It1 first1, It1 last1, It2 first2) {
 template <class FP>
 template <class I, class>
 FP Pearson<FP>::compute_significance(const FP pcc, const I n) {
-  if (MODLE_UNLIKELY(std::isnan(pcc))) {
+  if (std::isnan(pcc)) [[unlikely]] {
     return std::numeric_limits<FP>::quiet_NaN();
   }
   assert(n > I(2));
@@ -115,8 +115,8 @@ FP Spearman<FP>::compute_rho(It1 first1, It1 last1, It2 first2) {
 
   const auto size = static_cast<usize>(std::distance(first1, last1));
   auto last2 = first2 + static_cast<isize>(size);
-  if (MODLE_UNLIKELY(std::all_of(first1, last1, [](const auto n) { return n == FP(0); }) ||
-                     std::all_of(first2, last2, [](const auto n) { return n == FP(0); }))) {
+  if (std::all_of(first1, last1, [](const auto n) { return n == FP(0); }) ||
+      std::all_of(first2, last2, [](const auto n) { return n == FP(0); })) [[unlikely]] {
     return FP(1);
   }
 
@@ -134,8 +134,8 @@ FP Spearman<FP>::compute_weighted_rho(It1 first1, It1 last1, It2 first2, It3 wei
 
   const auto size = static_cast<usize>(std::distance(first1, last1));
   auto last2 = first2 + static_cast<isize>(size);
-  if (MODLE_UNLIKELY(std::all_of(first1, last1, [](const auto n) { return n == FP(0); }) ||
-                     std::all_of(first2, last2, [](const auto n) { return n == FP(0); }))) {
+  if (std::all_of(first1, last1, [](const auto n) { return n == FP(0); }) ||
+      std::all_of(first2, last2, [](const auto n) { return n == FP(0); })) [[unlikely]] {
     return FP(1);
   }
 
@@ -151,7 +151,7 @@ template <class FP>
 template <class I, class>
 FP Spearman<FP>::compute_significance(const FP rho, const I n) {
   assert(n > I(2));
-  if (MODLE_UNLIKELY(std::isnan(rho))) {
+  if (std::isnan(rho)) [[unlikely]] {
     return std::numeric_limits<FP>::quiet_NaN();
   }
   const auto dof = static_cast<FP>(n - 2);
@@ -230,7 +230,7 @@ void compute_element_ranks(It first, It last, std::vector<FP>& rank_buff,
     const auto& current = *(first + idx_buff[i]);
     DISABLE_WARNING_POP
 
-    if (MODLE_UNLIKELY(prev == current)) {   // Process ties
+    if (prev == current) [[unlikely]] {      // Process ties
       const usize lower_bound_idx = i - 1;   // first tied-element
       const usize upper_bound_idx = [&]() {  // last tied-element
         for (auto j = lower_bound_idx + 1; j < size; ++j) {
@@ -247,7 +247,7 @@ void compute_element_ranks(It first, It last, std::vector<FP>& rank_buff,
         rank_buff[idx_buff[i]] = avg_rank;
       }
       // Deal with the remote possibility that the last element in the collection is tied
-      if (MODLE_UNLIKELY(i == size)) {
+      if (i == size) [[unlikely]] {
         return;
       }
     }
@@ -275,7 +275,7 @@ void compute_weighted_element_ranks(It1 first, It1 last, It2 weight_first,
     const auto& prev_weight = *(weight_first + idx_buff[i - 1]);
     DISABLE_WARNING_POP
 
-    if (MODLE_UNLIKELY(prev == current)) {   // Process ties
+    if (prev == current) [[unlikely]] {      // Process ties
       const usize lower_bound_idx = i - 1;   // first tied-element
       const usize upper_bound_idx = [&]() {  // last tied-element
         for (auto j = lower_bound_idx + 1; j < size; ++j) {
@@ -309,7 +309,7 @@ void compute_weighted_element_ranks(It1 first, It1 last, It2 weight_first,
       // This is equivalent to adding n * avg_tie_weight
       weight_sum += weight_sum_ties;
       // Deal with the remote possibility that the last element in the collection is tied
-      if (MODLE_UNLIKELY(i == size)) {
+      if (i == size) [[unlikely]] {
         return;
       }
     }

@@ -156,7 +156,7 @@ template <class N>
                                            c.gaussian_blur_sigma * c.gaussian_blur_sigma_multiplier,
                                            c.saturation_range);
       default:
-        MODLE_UNREACHABLE_CODE;
+        utils::unreachable_code();
     }
   }();
 

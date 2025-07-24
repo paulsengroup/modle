@@ -362,7 +362,7 @@ static void setup_compression(archive* arc, Writer::Compression compression) {
       if constexpr (utils::ndebug_not_defined()) {
         throw std::logic_error("unsupported compression algorithm");
       } else {
-        MODLE_UNREACHABLE_CODE;
+        utils::unreachable_code();
       }
   }
   handle_errors(arc, ec);

@@ -105,7 +105,7 @@ constexpr double internal::TransitionProbability::operator()() const noexcept { 
 
 constexpr double ExtrusionBarrier::compute_stp_active_from_occupancy(TP stp_inactive,
                                                                      double occupancy) noexcept {
-  if (MODLE_UNLIKELY(occupancy == 0)) {
+  if (occupancy == 0) [[unlikely]] {
     return 0.0;
   }
 
@@ -117,7 +117,7 @@ constexpr double ExtrusionBarrier::compute_stp_active_from_occupancy(TP stp_inac
 
 constexpr double ExtrusionBarrier::compute_occupancy_from_stp(TP stp_active,
                                                               TP stp_inactive) noexcept {
-  if (MODLE_UNLIKELY(stp_active() + stp_inactive() == 0)) {
+  if (stp_active() + stp_inactive() == 0) [[unlikely]] {
     return 0.0;
   }
 

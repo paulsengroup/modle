@@ -4,10 +4,9 @@
 
 #pragma once
 
-#include <fmt/format.h>
-
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <initializer_list>
 #include <stdexcept>
 #include <utility>

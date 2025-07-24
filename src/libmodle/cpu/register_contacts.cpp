@@ -25,8 +25,8 @@ namespace modle {
                                                      const bp_t end_pos) {
   assert(lef.is_bound());
   assert(end_pos >= start_pos);
-  return MODLE_LIKELY(lef.rev_unit.pos() > start_pos && lef.rev_unit.pos() < end_pos &&
-                      lef.fwd_unit.pos() > start_pos && lef.fwd_unit.pos() < end_pos);
+  return lef.rev_unit.pos() > start_pos && lef.rev_unit.pos() < end_pos &&
+         lef.fwd_unit.pos() > start_pos && lef.fwd_unit.pos() < end_pos;
 }
 
 /// Check whether a pait of genomic coordinates (FP) fall in the interval [start_pos and end_pos)
@@ -37,7 +37,7 @@ namespace modle {
   const auto start_pos_ = static_cast<double>(start_pos);
   const auto end_pos_ = static_cast<double>(end_pos);
 
-  return MODLE_LIKELY(p1 >= start_pos_ && p2 >= start_pos_ && p1 < end_pos_ && p2 < end_pos_);
+  return p1 >= start_pos_ && p2 >= start_pos_ && p1 < end_pos_ && p2 < end_pos_;
 }
 
 struct PosPair {
@@ -138,7 +138,7 @@ usize Simulation::register_contacts_loop(const bp_t start_pos, const bp_t end_po
   usize num_contacts_registered = 0;
   for (; num_sampling_events != 0; --num_sampling_events) {
     const auto& lef = sample_lef_with_replacement(lefs, rand_eng);
-    if (MODLE_LIKELY(lef.is_bound() && lef_within_bound(lef, start_pos, end_pos))) {
+    if (lef.is_bound() && lef_within_bound(lef, start_pos, end_pos)) [[likely]] {
       const auto [p1, p2] =
           randomize_extrusion_unit_positions(lef, c().genextreme_mu, c().genextreme_sigma,
                                              c().genextreme_xi, noisify_contacts, rand_eng);
@@ -174,7 +174,7 @@ usize Simulation::register_contacts_tad(bp_t start_pos, bp_t end_pos,
   usize num_contacts_registered = 0;
   for (; num_sampling_events != 0; --num_sampling_events) {
     const auto& lef = sample_lef_with_replacement(lefs, rand_eng);
-    if (MODLE_LIKELY(lef.is_bound() && lef_within_bound(lef, start_pos, end_pos))) {
+    if (lef.is_bound() && lef_within_bound(lef, start_pos, end_pos)) [[likely]] {
       const auto [p1, p2] =
           randomize_extrusion_unit_positions(lef, c().genextreme_mu, c().genextreme_sigma,
                                              c().genextreme_xi, noisify_contacts, rand_eng);
@@ -211,7 +211,7 @@ usize Simulation::register_1d_lef_occupancy(bp_t start_pos, bp_t end_pos,
   usize num_successful_sampling_events = 0;
   for (; num_sampling_events != 0; --num_sampling_events) {
     const auto& lef = sample_lef_with_replacement(lefs, rand_eng);
-    if (MODLE_LIKELY(lef.is_bound() && lef_within_bound(lef, start_pos, end_pos))) {
+    if (lef.is_bound() && lef_within_bound(lef, start_pos, end_pos)) [[likely]] {
       const auto [p1, p2] =
           randomize_extrusion_unit_positions(lef, c().genextreme_mu, c().genextreme_sigma,
                                              c().genextreme_xi, noisify_positions, rand_eng);

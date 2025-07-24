@@ -47,7 +47,7 @@ constexpr usize encode_idx(const PixelCoordinates& coords, usize nrows) noexcept
 
 template <class ContactMatrix>
 void bound_check_coords(const ContactMatrix& m, const usize row, const usize col) {
-  if (MODLE_UNLIKELY(row >= m.ncols()) || col >= m.ncols()) {
+  if (row >= m.ncols() || col >= m.ncols()) [[unlikely]] {
     throw std::logic_error(
         fmt::format("detected an out-of-bound read: attempt to access "
                     "item at {}:{} of a matrix of shape {}x{} ({}x{})",

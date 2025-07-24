@@ -117,7 +117,7 @@ void ContactMatrixDense<N>::unsafe_get_block(const usize row, const usize col,
   assert(block_size < nrows());
   // For now we only support blocks with an odd size
   assert(block_size % 2 != 0);
-  if (MODLE_UNLIKELY(block_size == 1)) {
+  if (block_size == 1) [[unlikely]] {
     buff.resize(1);
     buff.front() = unsafe_get(row, col);
     return;

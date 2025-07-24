@@ -183,8 +183,8 @@ void Simulation::detect_lef_bar_collisions(
 
     // Look for the first rev extr. unit that comes after the current barrier
     while (unit_pos <= barriers.pos(i)) {
-      if (MODLE_UNLIKELY(++j == lefs.size())) {  // All rev units have been processed
-        goto process_fwd_unit;                   // Move to the next section
+      if (++j == lefs.size()) [[unlikely]] {  // All rev units have been processed
+        goto process_fwd_unit;                // Move to the next section
       }
 
       // Update idx and position with those corresponding to the rev extr. unit that comes next
@@ -192,7 +192,7 @@ void Simulation::detect_lef_bar_collisions(
       unit_pos = lefs[unit_idx].rev_unit.pos();
     }
 
-    if (MODLE_LIKELY(lefs[unit_idx].is_bound())) {
+    if (lefs[unit_idx].is_bound()) [[unlikely]] {
       // We have a LEF-BAR collision event if the distance between the rev. unit and the extr.
       // barrier is less or equal than the distance that the rev extr. unit is set to move in
       // the current iteration. If pblock != 1, then we also require a successful bernoulli
@@ -229,7 +229,7 @@ process_fwd_unit:
                                                            : c().lef_bar_minor_collision_pblock;
     // Look for the next fwd unit that comes strictly before the current extr. barrier
     while (unit_pos >= barriers.pos(i)) {
-      if (MODLE_UNLIKELY(--j == sentinel_idx)) {
+      if (--j == sentinel_idx) [[unlikely]] {
         return;
       }
 
@@ -237,7 +237,7 @@ process_fwd_unit:
       unit_pos = lefs[unit_idx].fwd_unit.pos();
     }
 
-    if (MODLE_LIKELY(lefs[unit_idx].is_bound())) {
+    if (lefs[unit_idx].is_bound()) [[unlikely]] {
       const auto delta = barriers.pos(i) - unit_pos;
       if (delta > 0 && delta <= fwd_moves[unit_idx] &&
           Simulation::run_lef_bar_collision_trial(pblock, rand_eng)) {
@@ -290,8 +290,8 @@ void Simulation::detect_primary_lef_lef_collisions(
   //      mask. This kind of collisions are encoded as offset + i, where offset = nbarriers and i =
   //      the index of the unit that is colliding.
 
-  if (MODLE_UNLIKELY(num_rev_units_at_5prime == lefs.size() ||
-                     num_fwd_units_at_3prime == lefs.size())) {
+  if (num_rev_units_at_5prime == lefs.size() || num_fwd_units_at_3prime == lefs.size())
+      [[unlikely]] {
     return;
   }
 
@@ -309,7 +309,7 @@ void Simulation::detect_primary_lef_lef_collisions(
 
     // Find the first rev unit that comes right after the ith fwd unit
     while (rev_pos <= fwd_pos) {
-      if (MODLE_UNLIKELY(++j1 == j2)) {
+      if (++j1 == j2) [[unlikely]] {
         return;  // all rev units have been processed
       }
       rev_idx = rev_lef_ranks[j1];
@@ -320,7 +320,7 @@ void Simulation::detect_primary_lef_lef_collisions(
     // This is necessary in order to handle ties in fwd units ranking, as well as the case where
     // there are many fwd units between the pos of the jth-1 and jth rev extr. units
     while (fwd_pos < rev_pos) {
-      if (MODLE_UNLIKELY(++i1 == i2)) {
+      if (++i1 == i2) [[unlikely]] {
         return;  // all fwd units have been processed
       }
       fwd_idx = fwd_lef_ranks[i1];             // index of the ith fwd unit in 5'-3' order
@@ -369,7 +369,7 @@ void Simulation::detect_primary_lef_lef_collisions(
         assert(rev_collision.collision_occurred(CollisionT::LEF_BAR));
         assert(collision_pos_rev != 0 && collision_pos_fwd != 0);
         const auto barrier_pos = barriers.pos(rev_collision.decode_index());
-        if (MODLE_UNLIKELY(collision_pos_fwd > barrier_pos)) {
+        if (collision_pos_fwd > barrier_pos) [[unlikely]] {
           // Detected the mis-prediction mentioned above: make the LEF-BAR collision a LEF-LEF
           // collision
           rev_collision.set(fwd_idx, CollisionT::COLLISION | CollisionT::LEF_LEF_PRIMARY);
@@ -388,7 +388,7 @@ void Simulation::detect_primary_lef_lef_collisions(
         assert(collision_pos_rev != 0 && collision_pos_fwd != 0);
         const auto barrier_pos = barriers.pos(fwd_collision.decode_index());
         rev_collision.set(fwd_idx, CollisionT::COLLISION | CollisionT::LEF_LEF_PRIMARY);
-        if (MODLE_UNLIKELY(collision_pos_rev < barrier_pos)) {
+        if (collision_pos_rev < barrier_pos) [[unlikely]] {
           fwd_collision.set(rev_idx, CollisionT::COLLISION | CollisionT::LEF_LEF_PRIMARY);
         }
       }
@@ -438,7 +438,7 @@ void Simulation::process_secondary_lef_lef_collisions(
     // index of the ith-1 rev unit in 5'-3' order (i.e. U1)
     const auto& rev_idx1 = rev_lef_ranks[i - 1];
     const auto& rev_pos1 = lefs[rev_idx1].rev_unit.pos();
-    if (MODLE_LIKELY(!rev_collisions[rev_idx1].collision_occurred())) {
+    if (!rev_collisions[rev_idx1].collision_occurred()) [[likely]] {
       // If U1 is not stalled, then it is not possible to have a secondary LEF-LEF collision
       continue;
     }
@@ -481,7 +481,7 @@ void Simulation::process_secondary_lef_lef_collisions(
     // index of the ith fwd unit in 3'-5' order (i.e. U2)
     const auto& fwd_idx2 = fwd_lef_ranks[i];
     const auto& fwd_pos2 = lefs[fwd_idx2].fwd_unit.pos();
-    if (MODLE_LIKELY(!fwd_collisions[fwd_idx2].collision_occurred())) {
+    if (!fwd_collisions[fwd_idx2].collision_occurred()) [[likely]] {
       // If U2 is not stalled, then it is not possible to have a secondary LEF-LEF collision
       continue;
     }
@@ -554,7 +554,7 @@ void Simulation::fix_secondary_lef_lef_collisions(
     // collision
     const auto& rev_idx2 = rev_lef_ranks[i];
     const auto& rev_collision2 = rev_collisions[rev_idx2];
-    if (MODLE_UNLIKELY(rev_collision2.collision_avoided(CollisionT::LEF_LEF_SECONDARY))) {
+    if (rev_collision2.collision_avoided(CollisionT::LEF_LEF_SECONDARY)) [[unlikely]] {
       const auto& rev_idx1 = rev_lef_ranks[i - 1];
       [[maybe_unused]] const auto& rev_collision1 = rev_collisions[rev_idx1];
       assert(rev_idx1 == rev_collision2.decode_index());  // idx of the EU blocking EU1
@@ -566,7 +566,7 @@ void Simulation::fix_secondary_lef_lef_collisions(
       const auto pos1 = lef1.rev_unit.pos() - rev_moves[rev_idx1];
       // If possible, adjust EU2's move so that after extrusion EU2 will be located 1bp upstream of
       // EU1
-      if (MODLE_LIKELY(lef2.rev_unit.pos() > pos1 + 1)) {
+      if (lef2.rev_unit.pos() > pos1 + 1) [[likely]] {
         rev_moves[rev_idx2] = lef2.rev_unit.pos() - (pos1 + 1);
       } else {
         rev_moves[rev_idx2] = 0;

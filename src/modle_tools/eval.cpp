@@ -353,7 +353,7 @@ template <class N>
   // Do a backward search for the first non-zero pixel
   auto non_zero_backward_search = [](const auto &vect) -> usize {
     const auto it = std::find_if(vect.rbegin(), vect.rend(), [](const auto n) { return n != 0; });
-    if (MODLE_UNLIKELY(it == vect.rend())) {
+    if (it == vect.rend()) [[unlikely]] {
       return 0;
     }
     return static_cast<usize>(vect.rend() - 1 - it);
@@ -453,7 +453,7 @@ template <StripeDirection stripe_direction, class N, class WeightIt = utils::Rep
                 ? stats::Spearman<double>{nrows}(ref_pixel_buff, tgt_pixel_buff)
                 : stats::Spearman<double>{nrows}(ref_pixel_buff, tgt_pixel_buff, weight_buff));
     }
-    MODLE_UNREACHABLE_CODE;
+    utils::unreachable_code();
   };
 
   for (usize i = 0; i < ncols; ++i) {
@@ -523,7 +523,7 @@ template <StripeDirection stripe_direction, class N>
   if (m == StripeDirection::horizontal) {
     return "Horizontal";
   }
-  MODLE_UNREACHABLE_CODE;
+  utils::unreachable_code();
 }
 
 [[nodiscard]] static auto init_writers(const modle::tools::eval_config &c,

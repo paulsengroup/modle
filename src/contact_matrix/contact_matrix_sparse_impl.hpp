@@ -152,7 +152,7 @@ void ContactMatrixSparse<N>::set(usize row, usize col, N n) {
   block.uprase_fn(
       i,
       [n](auto& num) {
-        if (MODLE_UNLIKELY(n == 0)) {
+        if (n == 0) [[unlikely]] {
           return true;
         }
         num = n;
@@ -197,7 +197,7 @@ void ContactMatrixSparse<N>::subtract(const usize row, const usize col, const N 
       i,
       [n](auto& num) {
         num -= n;
-        if (MODLE_UNLIKELY(num == 0)) {
+        if (num == 0) [[unlikely]] {
           return true;
         }
         return false;
