@@ -6,9 +6,10 @@
 
 #include "modle/bed/bed.hpp"
 
-#include <absl/strings/str_join.h>
 #include <absl/strings/str_split.h>
+#include <fmt/compile.h>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 #include <fmt/std.h>
 
 #include <algorithm>
@@ -221,7 +222,7 @@ void BED::parse_extra_tokens(const std::vector<std::string_view>& toks) {
   assert(_standard == none);
   assert(toks.size() >= BED12);
   // Copy non-whitespace tokens
-  extra_tokens = absl::StrJoin(toks.begin() + BED12, toks.end(), "\t");
+  extra_tokens = fmt::format(FMT_COMPILE("{}"), fmt::join(toks.begin() + BED12, toks.end(), "\t"));
 }
 
 BED::Dialect BED::str_to_dialect(std::string_view s) {
