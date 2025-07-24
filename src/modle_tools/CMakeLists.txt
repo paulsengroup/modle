@@ -54,7 +54,6 @@ target_link_system_libraries(
   absl::str_format
   absl::symbolize
   absl::time
-  absl::variant
   Boost::headers
   bshoshany-thread-pool::bshoshany-thread-pool
   CLI11::CLI11

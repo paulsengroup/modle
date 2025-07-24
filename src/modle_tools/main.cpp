@@ -5,7 +5,6 @@
 #include <absl/debugging/failure_signal_handler.h>
 #include <absl/debugging/symbolize.h>
 #include <absl/strings/strip.h>
-#include <absl/types/variant.h>
 #include <fmt/format.h>
 #include <fmt/std.h>
 #include <spdlog/common.h>
@@ -24,6 +23,7 @@
 #include <new>
 #include <stdexcept>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 #include "./cli.hpp"
@@ -66,13 +66,13 @@ int main(int argc, char** argv) {
       using subcmd = Cli::subcommand;
       switch (cli->get_subcommand()) {
         case subcmd::annotate_barriers:
-          annotate_barriers_subcmd(absl::get<annotate_barriers_config>(config));
+          annotate_barriers_subcmd(std::get<annotate_barriers_config>(config));
           return 0;
         case subcmd::eval:
-          eval_subcmd(absl::get<eval_config>(config));
+          eval_subcmd(std::get<eval_config>(config));
           return 0;
         case subcmd::transform:
-          transform_subcmd(absl::get<transform_config>(config));
+          transform_subcmd(std::get<transform_config>(config));
           return 0;
         default:
           throw std::runtime_error(

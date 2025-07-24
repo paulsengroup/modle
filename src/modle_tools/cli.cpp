@@ -9,7 +9,6 @@
 #include <absl/strings/str_format.h>
 #include <absl/strings/str_split.h>
 #include <absl/strings/strip.h>
-#include <absl/types/variant.h>
 #include <fmt/format.h>
 #include <fmt/std.h>
 #include <toml++/toml.h>
@@ -28,6 +27,7 @@
 #include <thread>
 #include <tuple>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "modle/bed/bed.hpp"
@@ -103,7 +103,7 @@ void Cli::make_annotate_barriers_subcommand() {
            });
 
   _config = annotate_barriers_config{};
-  auto& c = absl::get<annotate_barriers_config>(_config);
+  auto& c = std::get<annotate_barriers_config>(_config);
 
   auto& io = *sc.add_option_group("IO", "");
   auto& gen = *sc.add_option_group("Generic", "");
@@ -161,7 +161,7 @@ void Cli::make_annotate_barriers_subcommand() {
      ->capture_default_str();
   // clang-format on
 
-  _config = absl::monostate{};
+  _config = std::monostate{};
 }
 
 void Cli::make_eval_subcommand() {
@@ -175,7 +175,7 @@ void Cli::make_eval_subcommand() {
   sc.alias("eval");
 
   _config = eval_config{};
-  auto& c = absl::get<eval_config>(_config);
+  auto& c = std::get<eval_config>(_config);
 
   auto& io = *sc.add_option_group("IO", "");
   auto& gen = *sc.add_option_group("Generic", "");
@@ -288,7 +288,7 @@ void Cli::make_eval_subcommand() {
   // clang-format on
   gen.get_option("--reciprocal-weights")->needs(io.get_option("--weight-file"));
   gen.get_option("--weight-column-name")->needs(io.get_option("--weight-file"));
-  _config = absl::monostate{};
+  _config = std::monostate{};
 }
 
 void Cli::make_transform_subcommand() {
@@ -302,7 +302,7 @@ void Cli::make_transform_subcommand() {
                   });
 
   _config = transform_config{};
-  auto& c = absl::get<transform_config>(_config);
+  auto& c = std::get<transform_config>(_config);
 
   auto& io = *sc.add_option_group("Input/Output", "");
   auto& trans = *sc.add_option_group("Transformations", "");
@@ -417,7 +417,7 @@ void Cli::make_transform_subcommand() {
   trans.get_option("--binary-discretization-value")
       ->excludes(trans.get_option("--discretization-ranges-tsv"));
 
-  _config = absl::monostate{};
+  _config = std::monostate{};
 }
 
 void Cli::make_cli() {
@@ -439,7 +439,7 @@ void Cli::make_cli() {
 void Cli::validate_annotate_barriers_subcomand() const {
   assert(_cli.get_subcommand("annotate-barriers")->parsed());
   std::vector<std::string> errors;
-  const auto& c = absl::get<annotate_barriers_config>(_config);
+  const auto& c = std::get<annotate_barriers_config>(_config);
 
   if (c.occupancy_lb >= c.occupancy_ub) {
     errors.emplace_back(
@@ -460,7 +460,7 @@ void Cli::validate_annotate_barriers_subcomand() const {
 void Cli::validate_eval_subcommand() const {
   assert(_cli.get_subcommand("eval")->parsed());
   std::vector<std::string> errors;
-  const auto& c = absl::get<eval_config>(_config);
+  const auto& c = std::get<eval_config>(_config);
 
   try {
     const hictk::cooler::File f1(c.input_cooler_uri.string());
@@ -546,7 +546,7 @@ void Cli::validate_eval_subcommand() const {
 void Cli::validate_transform_subcommand() const {
   assert(_cli.get_subcommand("transform")->parsed());
   std::vector<std::string> errors;
-  const auto& c = absl::get<transform_config>(_config);
+  const auto& c = std::get<transform_config>(_config);
 
   if (auto collision = utils::detect_path_collision(c.output_cooler_uri, c.force,
                                                     std::filesystem::file_type::regular);
@@ -632,9 +632,9 @@ modle::tools::modle_tools_config Cli::parse_arguments() {
   }
   validate();
 
-  absl::visit(
+  std::visit(
       [&, this](auto& config) {
-        if constexpr (!std::is_same_v<absl::remove_cvref_t<decltype(config)>, absl::monostate>) {
+        if constexpr (!std::is_same_v<absl::remove_cvref_t<decltype(config)>, std::monostate>) {
           config.args = absl::MakeSpan(_argv, static_cast<usize>(_argc));
           config.args_json = to_json();
         }

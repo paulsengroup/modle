@@ -4,12 +4,11 @@
 
 #pragma once
 
-#include <absl/types/variant.h>
-
 #include <filesystem>
 #include <hictk/cooler/uri.hpp>
 #include <string>
 #include <thread>
+#include <variant>
 #include <vector>
 
 #include "modle/bed/bed.hpp"
@@ -115,10 +114,10 @@ struct annotate_barriers_config {
 };
 
 // clang-format off
-using modle_tools_config = absl::variant<absl::monostate,
-                                         annotate_barriers_config,
-                                         eval_config,
-                                         transform_config>;
+using modle_tools_config = std::variant<std::monostate,
+                                        annotate_barriers_config,
+                                        eval_config,
+                                        transform_config>;
 // clang-format on
 
 }  // namespace modle::tools

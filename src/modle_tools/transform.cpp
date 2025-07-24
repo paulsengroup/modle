@@ -9,7 +9,6 @@
 #include <absl/time/clock.h>
 #include <absl/time/time.h>
 #include <absl/types/span.h>
-#include <absl/types/variant.h>
 #include <cpp-sort/comparators/natural_less.h>
 #include <fmt/format.h>
 #include <parallel_hashmap/btree.h>
@@ -32,6 +31,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "modle/bed/bed.hpp"
