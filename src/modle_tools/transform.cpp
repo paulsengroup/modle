@@ -2,7 +2,6 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/algorithm/container.h>
 #include <absl/strings/ascii.h>  // AsciiStrToLower
 #include <absl/strings/str_split.h>
 #include <absl/strings/strip.h>

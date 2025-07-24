@@ -47,7 +47,6 @@ target_link_libraries(
 target_link_system_libraries(
   modle_tools
   PRIVATE
-  absl::algorithm_container
   absl::span
   absl::strings
   absl::str_format
