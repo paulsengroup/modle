@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "modle/common/common.hpp"
+#include "modle/common/string_utils.hpp"
 #include "modle/compressed_io/compressed_io.hpp"
 
 namespace modle::cmatrix::test {
@@ -49,12 +50,11 @@ TEST_CASE("ContactMatrixDense simple", "[cmatrix][short]") {
   std::vector<std::vector<u32>> m;
   compressed_io::Reader r(path_to_matrix);
   std::string line;
-  std::string buff;
   u32 n{};
   while (r.getline(line)) {
     std::vector<u32> v;
 
-    for (const auto& tok : absl::StrSplit(line, sep)) {
+    for (const auto tok : str_split(line, sep)) {
       modle::utils::parse_numeric_or_throw(tok, n);
       v.push_back(n);
     }

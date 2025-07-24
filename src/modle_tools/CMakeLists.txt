@@ -50,7 +50,6 @@ target_link_system_libraries(
   modle_tools
   PRIVATE
   absl::span
-  absl::strings
   absl::time
   Boost::headers
   bshoshany-thread-pool::bshoshany-thread-pool

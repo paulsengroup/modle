@@ -40,7 +40,6 @@ target_link_system_libraries(
   cmatrix
   INTERFACE
   absl::span
-  absl::strings
   Boost::headers
   bshoshany-thread-pool::bshoshany-thread-pool
   cpp-sort::cpp-sort

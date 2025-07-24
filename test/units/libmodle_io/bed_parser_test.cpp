@@ -2,7 +2,6 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/strings/str_split.h>
 #include <fmt/format.h>
 
 #include <algorithm>
@@ -12,9 +11,9 @@
 #include <string_view>
 #include <vector>
 
-#include "absl/strings/match.h"
 #include "modle/bed/bed.hpp"
 #include "modle/common/common.hpp"
+#include "modle/common/string_utils.hpp"
 #include "modle/compressed_io/compressed_io.hpp"
 #include "modle/test/tmpdir.hpp"
 
@@ -37,8 +36,7 @@ static void compare_bed_records_with_file(std::vector<BED> records, const std::s
   lines.reserve(records.size());
   std::string buff;
   while (r.getline(buff)) {
-    if (buff.front() == '#' || absl::StrContains(buff, "track") ||
-        absl::StrContains(buff, "browser")) {
+    if (buff.front() == '#' || str_contains(buff, "track") || str_contains(buff, "browser")) {
       continue;
     }
     lines.push_back(buff);
@@ -47,8 +45,8 @@ static void compare_bed_records_with_file(std::vector<BED> records, const std::s
   REQUIRE(records.size() == lines.size());
   std::sort(records.begin(), records.end());
   std::sort(lines.begin(), lines.end(), [&](const std::string_view &a, const std::string_view &b) {
-    const std::vector<std::string_view> toksa = absl::StrSplit(a, '\t');
-    const std::vector<std::string_view> toksb = absl::StrSplit(b, '\t');
+    const auto toksa = str_split(a, '\t');
+    const auto toksb = str_split(b, '\t');
     const auto &chra = toksa[0];
     const auto &chrb = toksb[0];
     const auto &starta = toksa[1];

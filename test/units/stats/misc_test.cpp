@@ -4,7 +4,6 @@
 
 #include "modle/stats/misc.hpp"
 
-#include <absl/strings/str_split.h>
 #include <fmt/format.h>
 
 #include <catch2/catch_test_macros.hpp>
@@ -13,6 +12,7 @@
 #include <vector>
 
 #include "modle/common/numeric_utils.hpp"
+#include "modle/common/string_utils.hpp"
 #include "modle/compressed_io/compressed_io.hpp"
 
 namespace modle::stats::test {
@@ -38,7 +38,7 @@ constexpr double DEFAULT_FP_TOLERANCE =
   }();
 
   std::vector<double> buff;
-  for (const auto& tok : absl::StrSplit(sbuff, absl::ByAnyChar("\t,\n"))) {
+  for (const auto& tok : str_split(sbuff, "\t,\n")) {
     if (!tok.empty()) {
       buff.push_back(utils::parse_numeric_or_throw<double>(tok));
     }

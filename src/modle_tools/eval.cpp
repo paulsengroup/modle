@@ -214,7 +214,7 @@ static void validate_chrom_sizes(const hictk::Reference &chrom_sizes_cooler,
 
 [[nodiscard]] static isize find_col_idx(const std::filesystem::path &path_to_weights,
                                         std::string_view header, std::string_view col_name) {
-  const auto toks = absl::StrSplit(header, '\t');
+  const auto toks = str_split(header, '\t');
   const auto it = std::find(toks.begin(), toks.end(), col_name);
   if (it == toks.end()) {
     throw std::runtime_error(
@@ -269,7 +269,7 @@ template <class Range>
   const auto col_weight_idx = find_col_idx(path_to_weights, buff, weight_column_name);
 
   for (usize i = 1; r.getline(buff); ++i) {
-    const auto toks = absl::StrSplit(buff, '\t');
+    const auto toks = str_split(buff, '\t');
     if (const auto ntoks = std::distance(toks.begin(), toks.end()); ntoks < col_weight_idx) {
       throw std::runtime_error(fmt::format(
           "Failed to parse column \"{}\" at line #{}: expected at least {} columns, found {}",

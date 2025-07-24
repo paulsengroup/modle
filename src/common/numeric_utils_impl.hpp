@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <absl/strings/str_split.h>
 #include <fast_float/fast_float.h>
 #include <fmt/format.h>
 
@@ -18,6 +17,7 @@
 #include <vector>
 
 #include "modle/common/common.hpp"
+#include "modle/common/string_utils.hpp"
 
 namespace modle::utils {
 
@@ -96,7 +96,7 @@ template <class N>
 void parse_vect_of_numbers_or_throw(const std::vector<std::string_view> &toks, usize idx,
                                     std::vector<N> &fields, u64 expected_size) {
   static_assert(std::is_arithmetic<N>());
-  std::vector<std::string_view> ns = absl::StrSplit(toks[idx], ',');
+  const auto ns = str_split(toks[idx], ',');
   if (ns.size() != expected_size) {
     throw std::runtime_error(fmt::format("expected {} fields, got {}.", expected_size, ns.size()));
   }

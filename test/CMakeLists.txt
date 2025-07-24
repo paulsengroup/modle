@@ -71,7 +71,6 @@ target_link_system_libraries(
   PRIVATE
   absl::hash
   absl::span
-  absl::strings
   Boost::headers
   bshoshany-thread-pool::bshoshany-thread-pool
   Catch2::Catch2WithMain

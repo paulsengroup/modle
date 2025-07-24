@@ -40,8 +40,6 @@ target_link_libraries(
 
 target_link_system_libraries(
   libmodle_io_bed
-  PRIVATE
-  absl::strings
   PUBLIC
   absl::hash
   absl::span
@@ -119,7 +117,6 @@ target_link_libraries(
 target_link_system_libraries(
   libmodle_io_chrom_sizes
   PRIVATE
-  absl::strings
   phmap
 )
 
@@ -151,7 +148,6 @@ target_link_libraries(
 target_link_system_libraries(
   libmodle_io_compressed
   PRIVATE
-  absl::strings
   fmt::fmt-header-only
   spdlog::spdlog_header_only
   PUBLIC

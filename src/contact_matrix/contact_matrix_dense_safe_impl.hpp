@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include <absl/strings/str_split.h>
 
 #include <BS_thread_pool.hpp>
 #include <atomic>
@@ -15,6 +14,7 @@
 #include "modle/common/common.hpp"
 #include "modle/common/numeric_utils.hpp"
 #include "modle/common/random.hpp"
+#include "modle/common/string_utils.hpp"
 #include "modle/common/suppress_compiler_warnings.hpp"
 #include "modle/common/utils.hpp"
 #include "modle/compressed_io/compressed_io.hpp"
@@ -286,7 +286,7 @@ ContactMatrixDense<N> ContactMatrixDense<N>::from_txt(const std::filesystem::pat
   std::vector<std::string_view> toks;
   usize i = 0;
   for (; r.getline(buff); ++i) {
-    toks = absl::StrSplit(buff, sep);
+    toks = str_split(buff, sep);
     if (i == 0) {
       m.unsafe_resize(toks.size(), toks.size());
     }

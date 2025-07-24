@@ -4,7 +4,6 @@
 
 #include "./cli.hpp"
 
-#include <absl/strings/str_split.h>
 #include <fmt/format.h>
 #include <fmt/std.h>
 
@@ -29,6 +28,7 @@
 #include "modle/common/cli_utils.hpp"
 #include "modle/common/common.hpp"
 #include "modle/common/fmt_helpers.hpp"
+#include "modle/common/string_utils.hpp"
 #include "modle/common/utils.hpp"
 #include "modle/config/version.hpp"
 #include "modle/json/json.hpp"
@@ -646,7 +646,7 @@ int Cli::exit(const CLI::ParseError& e) const { return _cli.exit(e); }
 std::string Cli::to_json() const {
   const auto prefix = std::string{get_printable_subcommand()} + ".";
   std::string buff;
-  for (const auto& line : absl::StrSplit(_cli.config_to_str(true, false), '\n')) {
+  for (const auto& line : str_split(_cli.config_to_str(true, false), '\n')) {
     if (line.empty() || line.front() == '[') {
       continue;
     }

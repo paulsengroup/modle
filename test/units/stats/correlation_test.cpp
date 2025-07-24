@@ -15,6 +15,7 @@
 
 #include "modle/common/common.hpp"
 #include "modle/common/numeric_utils.hpp"
+#include "modle/common/string_utils.hpp"
 #include "modle/compressed_io/compressed_io.hpp"
 
 namespace modle::stats::test {
@@ -50,20 +51,20 @@ struct CorrelationBuffer {
     // buff is expected to contain one line with the following syntax:
     // |v1|v2|weights|pcc|pcc_pval|rho|rho_pval|pccw|pccw_pval|rhow|rhow_pval|
     // v1, v2 and weights are comma-separated list of numbers (ints or floats)
-    const std::vector<std::string_view> toks = absl::StrSplit(buff, '|');
+    const std::vector<std::string_view> toks = str_split(buff, '|');
     REQUIRE(toks.size() == 3 + 8);
 
-    for (const auto tok : absl::StrSplit(toks[0], '\t')) {
+    for (const auto tok : str_split(toks[0], '\t')) {
       v1.push_back(utils::parse_numeric_or_throw<N>(tok));
     }
 
     v2.reserve(v1.size());
-    for (const auto tok : absl::StrSplit(toks[1], '\t')) {
+    for (const auto tok : str_split(toks[1], '\t')) {
       v2.push_back(utils::parse_numeric_or_throw<N>(tok));
     }
 
     weights.reserve(v1.size());
-    for (const auto tok : absl::StrSplit(toks[2], '\t')) {
+    for (const auto tok : str_split(toks[2], '\t')) {
       weights.push_back(utils::parse_numeric_or_throw<double>(tok));
     }
 

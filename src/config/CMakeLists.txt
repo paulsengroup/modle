@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-find_package(absl CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 
 add_library(modle_config)
@@ -39,6 +38,5 @@ target_link_libraries(
     Modle::common
     fmt::fmt-header-only
 )
-target_link_system_libraries(modle_config PUBLIC absl::strings)
 
 target_include_directories(modle_config PUBLIC include/)

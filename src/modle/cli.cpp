@@ -4,7 +4,6 @@
 
 #include "./cli.hpp"
 
-#include <absl/strings/str_split.h>
 #include <absl/time/clock.h>
 #include <absl/types/span.h>
 #include <fmt/format.h>
@@ -31,6 +30,7 @@
 #include "modle/common/common.hpp"
 #include "modle/common/fmt_helpers.hpp"
 #include "modle/common/simulation_config.hpp"
+#include "modle/common/string_utils.hpp"
 #include "modle/common/utils.hpp"
 #include "modle/config/version.hpp"
 #include "modle/json/json.hpp"
@@ -165,7 +165,9 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
                   "Depending on the input file(s) and parameters, specifying this option may hinder\n"
                   "simulation throughput. Currently the following metrics are collected:\n"
                   " - {}",
-                  fmt::join(absl::StrSplit(Config::model_internal_state_log_header, '\t'), "\n - ")))
+                  str_replace(std::string{Config::model_internal_state_log_header},
+                                     "\t",
+                                     "\n - ")))
       ->capture_default_str();
 
   io_adv.add_flag(

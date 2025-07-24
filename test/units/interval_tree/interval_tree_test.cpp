@@ -4,8 +4,6 @@
 
 #include "modle/interval_tree.hpp"
 
-#include <absl/strings/str_split.h>
-
 #include <catch2/catch_test_macros.hpp>
 #include <filesystem>
 #include <string>
@@ -13,6 +11,7 @@
 #include <vector>
 
 #include "modle/common/numeric_utils.hpp"
+#include "modle/common/string_utils.hpp"
 #include "modle/compressed_io/compressed_io.hpp"
 
 namespace modle::interval_tree::test {
@@ -30,7 +29,7 @@ struct Record {
   Record() = default;
 
   explicit Record(std::string_view buff) {
-    const std::vector<std::string_view> toks = absl::StrSplit(buff, absl::ByAnyChar("\t "));
+    const auto toks = str_split(buff, "\t ");
     REQUIRE(toks.size() == 3UL);
     utils::parse_numeric_or_throw(toks[1], start);
     utils::parse_numeric_or_throw(toks[2], end);

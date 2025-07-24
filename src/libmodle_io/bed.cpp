@@ -6,7 +6,6 @@
 
 #include "modle/bed/bed.hpp"
 
-#include <absl/strings/str_split.h>
 #include <fmt/compile.h>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
@@ -57,7 +56,7 @@ void BED::parse_rgb_or_throw(const std::vector<std::string_view>& toks, u8 idx, 
     field = RGB{0, 0, 0};
     return;
   }
-  const std::vector<std::string_view> channels = absl::StrSplit(tok, ',');
+  const std::vector<std::string_view> channels = str_split(tok, ',');
   if (channels.size() != 3) {
     throw std::runtime_error(
         fmt::format("RGB: expected 3 fields, got {}: \"{}\"", channels.size(), tok));
@@ -74,7 +73,7 @@ RGB BED::parse_rgb_or_throw(const std::vector<std::string_view>& toks, u8 idx) {
 }
 
 BED::Dialect BED::detect_standard(std::string_view line) {
-  return BED::detect_standard(absl::StrSplit(line, absl::ByAnyChar("\t ")));
+  return BED::detect_standard(str_split(line, "\t "));
 }
 
 BED::Dialect BED::detect_standard(const std::vector<std::string_view>& toks) {
@@ -243,8 +242,7 @@ BED::BED(BED::Dialect d) : _standard(d) {}
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 BED::BED(std::string_view record, usize id_, BED::Dialect bed_standard, bool validate) : _id(id_) {
   std::vector<std::string_view> toks;
-  for (std::string_view tok :
-       absl::StrSplit(strip_trailing_whitespace(record), absl::ByAnyChar("\t "))) {
+  for (const auto tok : str_split(strip_trailing_whitespace(record), "\t ")) {
     if (!tok.empty()) {
       toks.push_back(tok);
     }

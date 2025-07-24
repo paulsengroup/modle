@@ -15,12 +15,12 @@
 #include <cmath>
 #include <exception>
 #include <filesystem>
-#include <regex>
 #include <string>
 #include <string_view>
 
 #include "modle/common/fmt_helpers.hpp"
 #include "modle/common/numeric_utils.hpp"
+#include "modle/common/string_utils.hpp"
 #include "modle/common/suppress_compiler_warnings.hpp"
 
 namespace modle::utils {
@@ -238,7 +238,7 @@ std::string Formatter::make_option_opts(const CLI::Option *opt) const {
       const auto p1 = t.find("[", t.find(" in "));
       const auto p2 = t.find("]", t.find(" in "));
       if (p1 != std::string::npos && p2 != std::string::npos && p2 > p1) {
-        out += " " + std::regex_replace(t.substr(p1, p2), std::regex{" - "}, ", ");
+        out += " " + str_replace(t.substr(p1, p2), " - ", ", ");
       }
     } else if (str_contains(t, "POSITIVE")) {
       out += " (0, inf)";
@@ -334,7 +334,7 @@ AsGenomicDistanceTransformer::AsGenomicDistanceTransformer() : CLI::CheckedTrans
     auto unit = input.substr(i);
 
     // Look-up the appropriate multiplier
-    auto it = mappings.find(absl::AsciiStrToLower(unit));
+    auto it = mappings.find(to_lower(unit));
     if (it == mappings.end()) {
       throw CLI::ValidationError(
           fmt::format("{} unit not recognized.\n"

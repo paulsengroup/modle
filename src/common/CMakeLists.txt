@@ -55,7 +55,6 @@ target_link_system_libraries(
   modle_common
   INTERFACE
   absl::span
-  absl::strings
   bitflags::bitflags
   Boost::headers
   Boost::random

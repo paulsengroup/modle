@@ -2,7 +2,6 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/strings/str_split.h>
 #include <absl/time/clock.h>
 #include <absl/time/time.h>
 #include <absl/types/span.h>
@@ -35,6 +34,7 @@
 #include "modle/bigwig/bigwig.hpp"
 #include "modle/common/common.hpp"
 #include "modle/common/fmt_helpers.hpp"
+#include "modle/common/string_utils.hpp"
 #include "modle/common/utils.hpp"
 #include "modle/compressed_io/compressed_io.hpp"
 #include "modle/config/version.hpp"
@@ -60,7 +60,7 @@ static modle::IITree<double, double> import_discretization_ranges(const std::fil
   std::vector<std::string_view> toks(3);
   usize i;  // NOLINT(cppcoreguidelines-init-variables)
   for (i = 1; r.getline(buff); ++i) {
-    toks = absl::StrSplit(buff, sep);
+    toks = str_split(buff, sep);
     try {
       if (toks.size() != 3) {
         throw std::runtime_error(

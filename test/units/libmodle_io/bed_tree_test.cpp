@@ -2,8 +2,6 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/strings/str_split.h>
-
 #include <catch2/catch_test_macros.hpp>
 #include <filesystem>
 #include <string>
@@ -13,6 +11,7 @@
 #include "modle/bed/bed.hpp"
 #include "modle/common/common.hpp"
 #include "modle/common/numeric_utils.hpp"
+#include "modle/common/string_utils.hpp"
 #include "modle/compressed_io/compressed_io.hpp"
 
 namespace modle::bed::test {
@@ -57,7 +56,7 @@ TEST_CASE("BED Tree multiple overlaps", "[BED][io][long]") {
 
   std::vector<std::string_view> toks;
   while (r.getline(buff)) {
-    toks = absl::StrSplit(buff, '\t');
+    toks = str_split(buff, '\t');
     usize num_expected_overlaps{};
     usize start{};
     usize end{};

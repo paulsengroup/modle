@@ -4,7 +4,6 @@
 
 #include "modle/chrom_sizes/chrom_sizes.hpp"
 
-#include <absl/strings/str_split.h>
 #include <fmt/compile.h>
 #include <fmt/format.h>
 #include <fmt/std.h>
@@ -36,17 +35,16 @@ std::vector<bed::BED> Parser::parse_all(char sep) {
       continue;
     }
 
-    const auto splitter = absl::StrSplit(buff, sep);
-    const auto num_toks = std::distance(splitter.begin(), splitter.end());
+    const auto toks = str_split(buff, sep);
     try {
-      if (num_toks != 2) {
+      if (toks.size() != 2) {
         throw std::runtime_error(
-            fmt::format("expected exactly 2 fields, found {}: \"{}\"", num_toks, buff));
+            fmt::format("expected exactly 2 fields, found {}: \"{}\"", toks.size(), buff));
       }
       DISABLE_WARNING_PUSH
       DISABLE_WARNING_NULL_DEREF
-      const auto chrom_name = utils::strip_quote_pairs(*splitter.begin());
-      const auto chrom_size = *std::next(splitter.begin());
+      const auto chrom_name = utils::strip_quote_pairs(toks.front());
+      const auto chrom_size = toks.back();
       DISABLE_WARNING_POP
       if (chrom_names.contains(chrom_name)) {
         throw std::runtime_error(
@@ -56,9 +54,8 @@ std::vector<bed::BED> Parser::parse_all(char sep) {
       if (chrom_size == "0") {
         throw std::runtime_error(fmt::format("chrom \"{}\" has a length of 0bp", chrom_name));
       }
-      chrom_sizes.emplace_back(
-          fmt::format(FMT_COMPILE("{}\t0\t{}"), chrom_name, *std::next(splitter.begin())), id++,
-          bed::BED::BED3);
+      chrom_sizes.emplace_back(fmt::format(FMT_COMPILE("{}\t0\t{}"), chrom_name, chrom_size), id++,
+                               bed::BED::BED3);
     } catch (const std::runtime_error& e) {
       throw std::runtime_error(
           fmt::format("encountered a malformed record at line {} of file {}: {}.\n "
