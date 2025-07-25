@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include <absl/types/span.h>
 #include <fmt/format.h>
 
 #include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 #include <cstddef>
+#include <span>
 #include <vector>
 
 #include "modle/common/common.hpp"

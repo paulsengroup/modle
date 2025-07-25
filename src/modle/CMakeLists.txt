@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-find_package(absl CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED COMPONENTS headers)
 find_package(CLI11 CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
@@ -34,7 +33,6 @@ target_link_libraries(
 target_link_system_libraries(
   modle
   PRIVATE
-  absl::span
   Boost::headers
   CLI11::CLI11
   phmap

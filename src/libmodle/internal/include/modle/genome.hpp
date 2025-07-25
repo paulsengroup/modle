@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <absl/types/span.h>
 #include <fmt/format.h>
 #include <parallel_hashmap/btree.h>
 #include <xxhash.h>
@@ -15,6 +14,7 @@
 #include <memory>
 #include <optional>
 #include <shared_mutex>
+#include <span>
 #include <string>
 #include <string_view>
 #include <type_traits>

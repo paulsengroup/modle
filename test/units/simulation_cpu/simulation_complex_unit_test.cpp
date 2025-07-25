@@ -2,12 +2,11 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/types/span.h>
-
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>
 #include <cassert>
 #include <catch2/catch_test_macros.hpp>
 #include <memory>
+#include <span>
 #include <string_view>
 #include <vector>
 
@@ -79,13 +78,11 @@ TEST_CASE("Simulation 001", "[simulation][short]") {
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  Simulation::test_adjust_and_clamp_moves(chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks,
-                                          absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves));
+  Simulation::test_adjust_and_clamp_moves(chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves);
 
-  modle::Simulation{c, false}.test_process_collisions(
-      chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
-      absl::MakeSpan(fwd_moves), barriers, absl::MakeSpan(rev_collisions),
-      absl::MakeSpan(fwd_collisions), rand_eng);
+  modle::Simulation{c, false}.test_process_collisions(chrom, lefs, rev_ranks, fwd_ranks, rev_moves,
+                                                      fwd_moves, barriers, rev_collisions,
+                                                      fwd_collisions, rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
                           rev_collisions, rev_collisions_expected, fwd_collisions,
@@ -149,13 +146,11 @@ TEST_CASE("Simulation 002", "[simulation][short]") {
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  Simulation::test_adjust_and_clamp_moves(chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks,
-                                          absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves));
+  Simulation::test_adjust_and_clamp_moves(chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves);
 
-  modle::Simulation{c, false}.test_process_collisions(
-      chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
-      absl::MakeSpan(fwd_moves), barriers, absl::MakeSpan(rev_collisions),
-      absl::MakeSpan(fwd_collisions), rand_eng);
+  modle::Simulation{c, false}.test_process_collisions(chrom, lefs, rev_ranks, fwd_ranks, rev_moves,
+                                                      fwd_moves, barriers, rev_collisions,
+                                                      fwd_collisions, rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
                           rev_collisions, rev_collisions_expected, fwd_collisions,
@@ -221,13 +216,11 @@ TEST_CASE("Simulation 003 - Soft collisions on", "[simulation][short]") {
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  Simulation::test_adjust_and_clamp_moves(chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks,
-                                          absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves));
+  Simulation::test_adjust_and_clamp_moves(chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves);
 
-  modle::Simulation{c, false}.test_process_collisions(
-      chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
-      absl::MakeSpan(fwd_moves), barriers, absl::MakeSpan(rev_collisions),
-      absl::MakeSpan(fwd_collisions), rand_eng);
+  modle::Simulation{c, false}.test_process_collisions(chrom, lefs, rev_ranks, fwd_ranks, rev_moves,
+                                                      fwd_moves, barriers, rev_collisions,
+                                                      fwd_collisions, rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
                           rev_collisions, rev_collisions_expected, fwd_collisions,
@@ -290,13 +283,11 @@ TEST_CASE("Simulation 004 - Inactive barriers", "[simulation][short]") {
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  Simulation::test_adjust_and_clamp_moves(chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks,
-                                          absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves));
+  Simulation::test_adjust_and_clamp_moves(chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves);
 
-  modle::Simulation{c, false}.test_process_collisions(
-      chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
-      absl::MakeSpan(fwd_moves), barriers, absl::MakeSpan(rev_collisions),
-      absl::MakeSpan(fwd_collisions), rand_eng);
+  modle::Simulation{c, false}.test_process_collisions(chrom, lefs, rev_ranks, fwd_ranks, rev_moves,
+                                                      fwd_moves, barriers, rev_collisions,
+                                                      fwd_collisions, rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
                           rev_collisions, rev_collisions_expected, fwd_collisions,
@@ -351,13 +342,11 @@ TEST_CASE("Simulation 005 - Multiple LEFs located at the same site", "[simulatio
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  Simulation::test_adjust_and_clamp_moves(chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks,
-                                          absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves));
+  Simulation::test_adjust_and_clamp_moves(chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves);
 
-  modle::Simulation{c, false}.test_process_collisions(
-      chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
-      absl::MakeSpan(fwd_moves), barriers, absl::MakeSpan(rev_collisions),
-      absl::MakeSpan(fwd_collisions), rand_eng);
+  modle::Simulation{c, false}.test_process_collisions(chrom, lefs, rev_ranks, fwd_ranks, rev_moves,
+                                                      fwd_moves, barriers, rev_collisions,
+                                                      fwd_collisions, rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
                           rev_collisions, rev_collisions_expected, fwd_collisions,
@@ -415,13 +404,11 @@ TEST_CASE("Simulation 006 - Few inactive LEFs", "[simulation][short]") {
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  Simulation::test_adjust_and_clamp_moves(chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks,
-                                          absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves));
+  Simulation::test_adjust_and_clamp_moves(chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves);
 
-  modle::Simulation{c, false}.test_process_collisions(
-      chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
-      absl::MakeSpan(fwd_moves), barriers, absl::MakeSpan(rev_collisions),
-      absl::MakeSpan(fwd_collisions), rand_eng);
+  modle::Simulation{c, false}.test_process_collisions(chrom, lefs, rev_ranks, fwd_ranks, rev_moves,
+                                                      fwd_moves, barriers, rev_collisions,
+                                                      fwd_collisions, rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
                           rev_collisions, rev_collisions_expected, fwd_collisions,
@@ -467,10 +454,9 @@ TEST_CASE("Simulation 007 - LEF-LEF collision overrides LEF-BAR collision 1",
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  modle::Simulation{c, false}.test_process_collisions(
-      chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
-      absl::MakeSpan(fwd_moves), barriers, absl::MakeSpan(rev_collisions),
-      absl::MakeSpan(fwd_collisions), rand_eng);
+  modle::Simulation{c, false}.test_process_collisions(chrom, lefs, rev_ranks, fwd_ranks, rev_moves,
+                                                      fwd_moves, barriers, rev_collisions,
+                                                      fwd_collisions, rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
                           rev_collisions, rev_collisions_expected, fwd_collisions,
@@ -517,10 +503,9 @@ TEST_CASE("Simulation 008 - LEF-LEF collision overrides LEF-BAR collision 2",
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  modle::Simulation{c, false}.test_process_collisions(
-      chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
-      absl::MakeSpan(fwd_moves), barriers, absl::MakeSpan(rev_collisions),
-      absl::MakeSpan(fwd_collisions), rand_eng);
+  modle::Simulation{c, false}.test_process_collisions(chrom, lefs, rev_ranks, fwd_ranks, rev_moves,
+                                                      fwd_moves, barriers, rev_collisions,
+                                                      fwd_collisions, rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
                           rev_collisions, rev_collisions_expected, fwd_collisions,
@@ -575,13 +560,11 @@ TEST_CASE("Simulation 009 - Ensure stacked LEFs do not interfere with surroundin
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  Simulation::test_adjust_and_clamp_moves(chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks,
-                                          absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves));
+  Simulation::test_adjust_and_clamp_moves(chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves);
 
-  modle::Simulation{c, false}.test_process_collisions(
-      chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
-      absl::MakeSpan(fwd_moves), barriers, absl::MakeSpan(rev_collisions),
-      absl::MakeSpan(fwd_collisions), rand_eng);
+  modle::Simulation{c, false}.test_process_collisions(chrom, lefs, rev_ranks, fwd_ranks, rev_moves,
+                                                      fwd_moves, barriers, rev_collisions,
+                                                      fwd_collisions, rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
                           rev_collisions, rev_collisions_expected, fwd_collisions,
@@ -639,13 +622,11 @@ TEST_CASE("Simulation 010 - Ensure stacked LEFs do not interfere with surroundin
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  Simulation::test_adjust_and_clamp_moves(chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks,
-                                          absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves));
+  Simulation::test_adjust_and_clamp_moves(chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves);
 
-  modle::Simulation{c, false}.test_process_collisions(
-      chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
-      absl::MakeSpan(fwd_moves), barriers, absl::MakeSpan(rev_collisions),
-      absl::MakeSpan(fwd_collisions), rand_eng);
+  modle::Simulation{c, false}.test_process_collisions(chrom, lefs, rev_ranks, fwd_ranks, rev_moves,
+                                                      fwd_moves, barriers, rev_collisions,
+                                                      fwd_collisions, rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
                           rev_collisions, rev_collisions_expected, fwd_collisions,
@@ -696,18 +677,14 @@ TEST_CASE("Simulation 011 - fix_secondary_lef_lef_collisions", "[simulation][sho
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  Simulation::test_adjust_and_clamp_moves(chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks,
-                                          absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves));
+  Simulation::test_adjust_and_clamp_moves(chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves);
 
-  modle::Simulation{c, false}.test_process_collisions(
-      chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
-      absl::MakeSpan(fwd_moves), barriers, absl::MakeSpan(rev_collisions),
-      absl::MakeSpan(fwd_collisions), rand_eng);
+  modle::Simulation{c, false}.test_process_collisions(chrom, lefs, rev_ranks, fwd_ranks, rev_moves,
+                                                      fwd_moves, barriers, rev_collisions,
+                                                      fwd_collisions, rand_eng);
 
   modle::Simulation::test_fix_secondary_lef_lef_collisions(
-      chrom, absl::MakeSpan(lefs), absl::MakeSpan(rev_ranks), absl::MakeSpan(fwd_ranks),
-      absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves), absl::MakeSpan(rev_collisions),
-      absl::MakeSpan(fwd_collisions));
+      chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves, rev_collisions, fwd_collisions);
 
   CHECK(rev_ranks[0] == 0);
   CHECK(rev_ranks[1] == 1);
@@ -759,18 +736,14 @@ TEST_CASE("Simulation 012 - fix_secondary_lef_lef_collisions", "[simulation][sho
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  Simulation::test_adjust_and_clamp_moves(chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks,
-                                          absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves));
+  Simulation::test_adjust_and_clamp_moves(chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves);
 
-  modle::Simulation{c, false}.test_process_collisions(
-      chrom, absl::MakeSpan(lefs), rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
-      absl::MakeSpan(fwd_moves), barriers, absl::MakeSpan(rev_collisions),
-      absl::MakeSpan(fwd_collisions), rand_eng);
+  modle::Simulation{c, false}.test_process_collisions(chrom, lefs, rev_ranks, fwd_ranks, rev_moves,
+                                                      fwd_moves, barriers, rev_collisions,
+                                                      fwd_collisions, rand_eng);
 
   modle::Simulation::test_fix_secondary_lef_lef_collisions(
-      chrom, absl::MakeSpan(lefs), absl::MakeSpan(rev_ranks), absl::MakeSpan(fwd_ranks),
-      absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves), absl::MakeSpan(rev_collisions),
-      absl::MakeSpan(fwd_collisions));
+      chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves, rev_collisions, fwd_collisions);
 
   CHECK(rev_ranks[0] == 1);
   CHECK(rev_ranks[1] == 0);

@@ -6,10 +6,9 @@
 #include "modle/simulation.hpp"
 // clang-format on
 
-#include <absl/types/span.h>
-
 #include <algorithm>
 #include <cassert>
+#include <span>
 
 #include "modle/common/common.hpp"
 #include "modle/common/genextreme_value_distribution.hpp"
@@ -63,7 +62,7 @@ struct PosPair {
   return {p1, p2};
 }
 
-[[nodiscard]] static const Lef& sample_lef_with_replacement(const absl::Span<const Lef> lefs,
+[[nodiscard]] static const Lef& sample_lef_with_replacement(const std::span<const Lef> lefs,
                                                             random::PRNG_t& rand_eng) noexcept {
   assert(!lefs.empty());
   const auto i = random::uniform_int_distribution<std::size_t>{0, lefs.size() - 1}(rand_eng);
@@ -122,7 +121,7 @@ void Simulation::sample_and_register_contacts(State& s, std::size_t num_sampling
 
 std::size_t Simulation::register_contacts_loop(const bp_t start_pos, const bp_t end_pos,
                                                ContactMatrixDense<contacts_t>& contacts,
-                                               const absl::Span<const Lef> lefs,
+                                               const std::span<const Lef> lefs,
                                                std::size_t num_sampling_events,
                                                random::PRNG_t& rand_eng) const {
   if (num_sampling_events == 0) {
@@ -159,7 +158,7 @@ std::size_t Simulation::register_contacts_loop(const bp_t start_pos, const bp_t 
 
 std::size_t Simulation::register_contacts_tad(bp_t start_pos, bp_t end_pos,
                                               ContactMatrixDense<contacts_t>& contacts,
-                                              absl::Span<const Lef> lefs,
+                                              std::span<const Lef> lefs,
                                               std::size_t num_sampling_events,
                                               random::PRNG_t& rand_eng) const {
   if (num_sampling_events == 0) {
@@ -199,7 +198,7 @@ std::size_t Simulation::register_contacts_tad(bp_t start_pos, bp_t end_pos,
 
 std::size_t Simulation::register_1d_lef_occupancy(
     bp_t start_pos, bp_t end_pos, std::vector<std::atomic<std::uint64_t>>& occupancy_buff,
-    absl::Span<const Lef> lefs, std::size_t num_sampling_events, random::PRNG_t& rand_eng) const {
+    std::span<const Lef> lefs, std::size_t num_sampling_events, random::PRNG_t& rand_eng) const {
   if (num_sampling_events == 0) {
     return 0;
   }
@@ -233,14 +232,14 @@ std::size_t Simulation::register_1d_lef_occupancy(
 }
 
 std::size_t Simulation::register_contacts_loop(GenomicInterval& interval,
-                                               const absl::Span<const Lef> lefs,
+                                               const std::span<const Lef> lefs,
                                                std::size_t num_sampling_events,
                                                random::PRNG_t& rand_eng) const {
   return register_contacts_loop(interval.start() + 1, interval.end() - 1, interval.contacts(), lefs,
                                 num_sampling_events, rand_eng);
 }
 
-std::size_t Simulation::register_contacts_tad(GenomicInterval& interval, absl::Span<const Lef> lefs,
+std::size_t Simulation::register_contacts_tad(GenomicInterval& interval, std::span<const Lef> lefs,
                                               std::size_t num_sampling_events,
                                               random::PRNG_t& rand_eng) const {
   return register_contacts_tad(interval.start() + 1, interval.end() - 1, interval.contacts(), lefs,
@@ -248,7 +247,7 @@ std::size_t Simulation::register_contacts_tad(GenomicInterval& interval, absl::S
 }
 
 std::size_t Simulation::register_1d_lef_occupancy(GenomicInterval& interval,
-                                                  absl::Span<const Lef> lefs,
+                                                  std::span<const Lef> lefs,
                                                   std::size_t num_sampling_events,
                                                   random::PRNG_t& rand_eng) const {
   return register_1d_lef_occupancy(interval.start() + 1, interval.end() - 1,

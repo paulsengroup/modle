@@ -630,8 +630,8 @@ modle::tools::modle_tools_config Cli::parse_arguments() {
 
   std::visit(
       [&, this](auto& config) {
-        if constexpr (!std::is_same_v<absl::remove_cvref_t<decltype(config)>, std::monostate>) {
-          config.args = absl::MakeSpan(_argv, static_cast<std::size_t>(_argc));
+        if constexpr (!std::is_same_v<std::remove_cvref_t<decltype(config)>, std::monostate>) {
+          config.args = std::span<char*>{_argv, static_cast<std::size_t>(_argc)};
           config.args_json = to_json();
         }
       },

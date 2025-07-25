@@ -4,14 +4,15 @@
 
 #pragma once
 
-#include <absl/types/span.h>
 #include <xxhash.h>
 
+#include <algorithm>
 #include <cassert>
 #include <exception>
 #include <functional>
 #include <future>
 #include <initializer_list>
+#include <span>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -156,7 +157,7 @@ constexpr std::future<T> make_ready_future(T &&v) {
 }
 
 template <class MutexT>
-LockRangeExclusive<MutexT>::LockRangeExclusive(const absl::Span<MutexT> mutexes) {
+LockRangeExclusive<MutexT>::LockRangeExclusive(const std::span<MutexT> mutexes) {
   std::size_t i = 0;
   try {
     for (; i < mutexes.size(); ++i) {
@@ -170,10 +171,6 @@ LockRangeExclusive<MutexT>::LockRangeExclusive(const absl::Span<MutexT> mutexes)
   }
   _mutexes = mutexes;
 }
-
-template <class MutexT>
-LockRangeExclusive<MutexT>::LockRangeExclusive(std::vector<MutexT> &mutexes)
-    : LockRangeExclusive(absl::MakeSpan(mutexes)) {}
 
 template <class MutexT>
 LockRangeExclusive<MutexT>::~LockRangeExclusive() noexcept {
@@ -181,7 +178,7 @@ LockRangeExclusive<MutexT>::~LockRangeExclusive() noexcept {
 }
 
 template <class MutexT>
-LockRangeShared<MutexT>::LockRangeShared(const absl::Span<MutexT> mutexes) {
+LockRangeShared<MutexT>::LockRangeShared(const std::span<MutexT> mutexes) {
   std::size_t i = 0;
   try {
     for (; i < mutexes.size(); ++i) {
@@ -197,8 +194,7 @@ LockRangeShared<MutexT>::LockRangeShared(const absl::Span<MutexT> mutexes) {
 }
 
 template <class MutexT>
-LockRangeShared<MutexT>::LockRangeShared(std::vector<MutexT> &mutexes)
-    : LockRangeShared(absl::MakeSpan(mutexes)) {}
+LockRangeShared<MutexT>::LockRangeShared(std::vector<MutexT> &mutexes) : LockRangeShared(mutexes) {}
 
 template <class MutexT>
 LockRangeShared<MutexT>::~LockRangeShared() noexcept {

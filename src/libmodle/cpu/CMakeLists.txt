@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-find_package(absl CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED COMPONENTS headers)
 find_package(bshoshany-thread-pool CONFIG REQUIRED)
 find_package(concurrentqueue CONFIG REQUIRED)
@@ -59,10 +58,8 @@ target_link_libraries(
 target_link_system_libraries(
   libmodle_cpu
   PRIVATE
-  absl::hash
   cpp-sort::cpp-sort
   PUBLIC
-  absl::span
   Boost::headers
   bshoshany-thread-pool::bshoshany-thread-pool
   phmap

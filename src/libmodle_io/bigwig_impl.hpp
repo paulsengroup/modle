@@ -6,11 +6,11 @@
 
 // IWYU pragma: private, include "modle/bigwig.hpp"
 
-#include <absl/types/span.h>
 #include <fmt/format.h>
 
 #include <cassert>
 #include <limits>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -124,12 +124,18 @@ inline void Writer::write_chromosomes(Chromosomes& chroms) {
 }
 
 template <class N, class>
-inline void Writer::write_range(std::string_view chrom_name, const absl::Span<N> values,
+inline void Writer::write_range(std::string_view chrom_name, const std::vector<N>& values,
+                                std::uint64_t span, std::uint64_t step, std::uint64_t offset) {
+  return write_range(chrom_name, std::span<const N>{values}, span, step, offset);
+}
+
+template <class N, class>
+inline void Writer::write_range(std::string_view chrom_name, const std::span<const N> values,
                                 std::uint64_t span, std::uint64_t step, std::uint64_t offset) {
   assert(_initialized);
   assert(_fp);
   std::vector<float> fvalues;
-  auto fvalues_span = [&]() {
+  const auto fvalues_span = [&]() -> std::span<const float> {
     if constexpr (std::is_same_v<N, float>) {
       return values;
     } else {
@@ -137,7 +143,7 @@ inline void Writer::write_range(std::string_view chrom_name, const absl::Span<N>
       std::transform(values.begin(), values.end(), fvalues.begin(),
                      [](const auto n) { return static_cast<float>(n); });
 
-      return absl::MakeSpan(fvalues);
+      return {fvalues};
     }
   }();
 

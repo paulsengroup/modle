@@ -421,8 +421,8 @@ phmap::btree_set<GenomicInterval> Genome::import_genomic_intervals(
 }
 
 [[nodiscard]] static std::vector<ExtrusionBarrier> generate_barriers_from_bed_records(
-    const absl::Span<const bed::BED> records, double default_barrier_pbb,
-    double default_barrier_puu, bool interpret_name_field_as_puu) {
+    const std::span<const bed::BED> records, double default_barrier_pbb, double default_barrier_puu,
+    bool interpret_name_field_as_puu) {
   std::vector<ExtrusionBarrier> buff;
   buff.reserve(records.size());
 

@@ -35,8 +35,8 @@ Reader::Reader(Reader&& other) noexcept
   const auto num_chroms = static_cast<std::size_t>(fp->cl->nKeys);
   Reader::Chromosomes chroms;
 
-  const auto chrom_names = absl::MakeConstSpan(fp->cl->chrom, num_chroms);
-  const auto chrom_sizes = absl::MakeConstSpan(fp->cl->len, num_chroms);
+  const std::span<const char*> chrom_names{const_cast<const char**>(fp->cl->chrom), num_chroms};
+  const std::span<const std::uint32_t> chrom_sizes{fp->cl->len, num_chroms};
 
   for (std::size_t i = 0; i < num_chroms; ++i) {
     chroms.emplace(chrom_names[i], utils::conditional_static_cast<bp_t>(chrom_sizes[i]));

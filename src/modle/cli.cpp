@@ -4,7 +4,6 @@
 
 #include "./cli.hpp"
 
-#include <absl/types/span.h>
 #include <fmt/format.h>
 #include <fmt/std.h>
 #include <spdlog/spdlog.h>
@@ -20,6 +19,7 @@
 #include <filesystem>
 #include <hictk/cooler.hpp>
 #include <limits>
+#include <span>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -639,7 +639,7 @@ const Config& Cli::parse_arguments() {
 
   validate_args();
   transform_args();
-  _config.args = absl::MakeSpan(_argv, static_cast<std::size_t>(_argc));
+  _config.args = std::span<char*>{_argv, static_cast<std::size_t>(_argc)};
 
   _config.args_json = to_json();
   return _config;

@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-find_package(absl CONFIG REQUIRED)
 find_package(cpp-sort CONFIG REQUIRED)
 
 add_library(interval_tree INTERFACE)
@@ -23,6 +22,5 @@ target_link_libraries(
 target_link_system_libraries(
   interval_tree
   INTERFACE
-  absl::span
   cpp-sort::cpp-sort
 )

@@ -70,7 +70,7 @@ void setup_logger_file(const std::filesystem::path& path_to_log_file) {
   logger_ready = true;
 }
 
-static std::string concat_args(absl::Span<char*> args) {
+static std::string concat_args(std::span<char*> args) {
   assert(!args.empty());
   std::string s{args.front()};
   for (std::size_t i = 1; i < args.size(); ++i) {

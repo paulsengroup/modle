@@ -6,10 +6,9 @@
 
 #pragma once
 
-#include <absl/types/span.h>
-
 #include <iterator>
 #include <limits>
+#include <span>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -99,9 +98,9 @@ class IITree {
   [[nodiscard]] inline N get_overlap_end(std::size_t i) const;
   [[nodiscard]] inline const T &get_overlap_data(std::size_t i) const;
 
-  [[nodiscard]] inline const absl::Span<const N> starts() const;
-  [[nodiscard]] inline const absl::Span<const N> ends() const;
-  [[nodiscard]] inline const absl::Span<const T> data() const;
+  [[nodiscard]] inline const std::span<const N> starts() const;
+  [[nodiscard]] inline const std::span<const N> ends() const;
+  [[nodiscard]] inline const std::span<const T> data() const;
 
   [[nodiscard]] inline I_iterator starts_begin();
   [[nodiscard]] inline I_iterator starts_end();

@@ -112,7 +112,7 @@ TEST_CASE("bigwig::Writer", "[bigwig][io][short]") {
       std::vector<float> values(chrom_sizes[i] / bin_size);
       std::iota(values.begin(), values.end(), 0.0F);
 
-      w.write_range(chrom_names[i], absl::MakeConstSpan(values), bin_size, bin_size);
+      w.write_range(chrom_names[i], std::span<const float>{values}, bin_size, bin_size);
     }
   }
 

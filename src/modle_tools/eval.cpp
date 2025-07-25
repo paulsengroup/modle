@@ -2,7 +2,6 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/types/span.h>
 #include <cpp-sort/comparators/natural_less.h>
 #include <fmt/compile.h>
 #include <fmt/format.h>
@@ -22,6 +21,7 @@
 #include <iosfwd>
 #include <iterator>
 #include <memory>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -631,7 +631,7 @@ static void run_task(const enum eval_config::Metric metric, const bed::BED &inte
     t0 = std::chrono::steady_clock::now();
     auto &writer =
         stripe_direction == StripeDirection::horizontal ? writers.horizontal : writers.vertical;
-    writer.bwig->write_range(interval.chrom, absl::MakeSpan(metrics.metric1), bin_size, bin_size,
+    writer.bwig->write_range(interval.chrom, metrics.metric1, bin_size, bin_size,
                              interval.chrom_start);
 
     std::string buff;

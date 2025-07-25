@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <absl/types/span.h>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
@@ -14,6 +13,7 @@
 #include <filesystem>
 #include <memory>
 #include <numeric>
+#include <span>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -90,7 +90,7 @@ std::pair<iterator_t<K, I>, bool> BED_tree<K, I>::emplace(const K& chrom_name, v
 }
 
 template <typename K, typename I>
-void BED_tree<K, I>::insert(const absl::Span<const BED> intervals) {
+void BED_tree<K, I>::insert(const std::span<const BED> intervals) {
   for (const auto& interval : intervals) {
     [[maybe_unused]] auto [node, inserted] = _trees.try_emplace(interval.chrom, IITree_t{});
     node->second.insert(I(interval.chrom_start), I(interval.chrom_end), interval);
@@ -163,24 +163,23 @@ std::size_t BED_tree<K, I>::count_overlaps(const K& chrom_name, std::uint64_t ch
 }
 
 template <typename K, typename I>
-absl::Span<const BED> BED_tree<K, I>::find_overlaps(const K& chrom_name, std::uint64_t chrom_start,
-                                                    std::uint64_t chrom_end) const {
+std::span<const BED> BED_tree<K, I>::find_overlaps(const K& chrom_name, std::uint64_t chrom_start,
+                                                   std::uint64_t chrom_end) const {
   auto it = _trees.find(chrom_name);
   if (it == _trees.end()) {
-    return absl::Span<const BED>{};
+    return std::span<const BED>{};
   }
   assert(it->second.is_BST());
 
   const auto [overlap_begin, overlap_end] = it->second.find_overlaps(chrom_start, chrom_end);
   if (overlap_begin == it->second.data_end()) {
-    return absl::Span<const BED>{};
+    return std::span<const BED>{};
   }
-  return absl::MakeConstSpan(&(*overlap_begin),
-                             static_cast<std::size_t>(overlap_end - overlap_begin));
+  return {&(*overlap_begin), static_cast<std::size_t>(overlap_end - overlap_begin)};
 }
 
 template <typename K, typename I>
-absl::Span<const BED> BED_tree<K, I>::find_overlaps(const BED& interval) const {
+std::span<const BED> BED_tree<K, I>::find_overlaps(const BED& interval) const {
   return find_overlaps(interval.chrom, interval.chrom_start, interval.chrom_end);
 }
 

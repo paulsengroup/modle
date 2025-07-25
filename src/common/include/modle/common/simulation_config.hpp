@@ -4,12 +4,11 @@
 
 #pragma once
 
-#include <absl/types/span.h>
-
 #include <bitflags/bitflags.hpp>
 #include <cmath>
 #include <filesystem>
 #include <limits>
+#include <span>
 #include <string>
 #include <thread>
 #include <vector>
@@ -121,7 +120,7 @@ struct Config {
       "num_stalls_both\tnum_lef_bar_collisions\tnum_primary_lef_lef_collisions\t"
       "num_secondary_lef_lef_collisions\tavg_loop_size\n";
 
-  absl::Span<char*> args;
+  std::span<char*> args;
   std::string args_json{};
 };
 

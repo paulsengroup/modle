@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <absl/types/span.h>
 #include <fmt/format.h>
 #include <parallel_hashmap/btree.h>
 #include <xxhash.h>
@@ -13,6 +12,7 @@
 #include <filesystem>
 #include <limits>
 #include <memory>
+#include <span>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -178,7 +178,7 @@ class BED_tree {
   inline std::pair<iterator, bool> emplace(BED&& interval);
   inline std::pair<iterator, bool> emplace(const K& chrom_name, value_type&& tree);
 
-  inline void insert(absl::Span<const BED> intervals);
+  inline void insert(std::span<const BED> intervals);
   inline void emplace(std::vector<BED>&& intervals);
 
   [[nodiscard]] inline const value_type& at(const K& chrom) const;
@@ -195,10 +195,10 @@ class BED_tree {
   [[nodiscard]] inline std::size_t count_overlaps(const K& chrom_name, std::uint64_t chrom_start,
                                                   std::uint64_t chrom_end) const;
 
-  [[nodiscard]] inline absl::Span<const BED> find_overlaps(const BED& interval) const;
-  [[nodiscard]] inline absl::Span<const BED> find_overlaps(const K& chrom_name,
-                                                           std::uint64_t chrom_start,
-                                                           std::uint64_t chrom_end) const;
+  [[nodiscard]] inline std::span<const BED> find_overlaps(const BED& interval) const;
+  [[nodiscard]] inline std::span<const BED> find_overlaps(const K& chrom_name,
+                                                          std::uint64_t chrom_start,
+                                                          std::uint64_t chrom_end) const;
 
   [[nodiscard]] inline bool empty() const;
   [[nodiscard]] inline std::size_t size() const;

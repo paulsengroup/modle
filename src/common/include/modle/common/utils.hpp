@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <absl/types/span.h>
 #include <xxhash.h>
 
 #include <array>
@@ -12,6 +11,7 @@
 #include <functional>
 #include <future>
 #include <initializer_list>
+#include <span>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -98,12 +98,11 @@ void concatenate_files(const std::filesystem::path& path_to_dest,
 
 template <class MutexT>
 class LockRangeExclusive {
-  absl::Span<MutexT> _mutexes{};
+  std::span<MutexT> _mutexes{};
 
  public:
   LockRangeExclusive() = default;
-  explicit LockRangeExclusive(absl::Span<MutexT> mutexes);
-  explicit LockRangeExclusive(std::vector<MutexT>& mutexes);
+  explicit LockRangeExclusive(std::span<MutexT> mutexes);
   ~LockRangeExclusive() noexcept;
 
   LockRangeExclusive(const LockRangeExclusive& other) = delete;
@@ -114,11 +113,11 @@ class LockRangeExclusive {
 
 template <class MutexT>
 class LockRangeShared {
-  absl::Span<MutexT> _mutexes{};
+  std::span<MutexT> _mutexes{};
 
  public:
   LockRangeShared() = default;
-  explicit LockRangeShared(absl::Span<MutexT> mutexes);
+  explicit LockRangeShared(std::span<MutexT> mutexes);
   explicit LockRangeShared(std::vector<MutexT>& mutexes);
   ~LockRangeShared() noexcept;
 

@@ -4,7 +4,6 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include <absl/types/span.h>
 #include <cpp-sort/sorters/pdq_sorter.h>
 
 #include <algorithm>
@@ -12,6 +11,7 @@
 #include <cassert>
 #include <iterator>
 #include <numeric>
+#include <span>
 #include <utility>
 #include <vector>
 
@@ -360,17 +360,17 @@ const T &IITree<N, T>::get_overlap_data(const std::size_t i) const {
 }
 
 template <class N, class T>
-const absl::Span<const N> IITree<N, T>::starts() const {
+const std::span<const N> IITree<N, T>::starts() const {
   return _start;
 }
 
 template <class N, class T>
-const absl::Span<const N> IITree<N, T>::ends() const {
+const std::span<const N> IITree<N, T>::ends() const {
   return _data;
 }
 
 template <class N, class T>
-const absl::Span<const T> IITree<N, T>::data() const {
+const std::span<const T> IITree<N, T>::data() const {
   return _data;
 }
 

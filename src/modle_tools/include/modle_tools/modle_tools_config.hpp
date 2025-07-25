@@ -52,7 +52,7 @@ struct eval_config {
   bool exclude_zero_pxls{false};
   std::string weight_column_name{"balanced.sum"};
   bool reciprocal_weights{false};
-  absl::Span<char*> args;
+  std::span<char*> args;
   std::string args_json{};
 };
 
@@ -97,7 +97,7 @@ struct transform_config {
 
   // Other
   std::size_t nthreads{std::thread::hardware_concurrency()};
-  absl::Span<char*> args;
+  std::span<char*> args;
   std::string args_json{};
 };
 
@@ -114,7 +114,7 @@ struct annotate_barriers_config {
   double scaling_factor{20 - 3};
 
   // Other
-  absl::Span<char*> args;
+  std::span<char*> args;
   std::string args_json{};
 };
 

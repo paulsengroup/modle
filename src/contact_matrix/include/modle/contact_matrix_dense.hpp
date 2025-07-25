@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <absl/types/span.h>
-
 #include <BS_thread_pool.hpp>
 #include <atomic>
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>
@@ -13,6 +11,7 @@
 #include <iostream>
 #include <limits>
 #include <mutex>
+#include <span>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -58,7 +57,7 @@ class ContactMatrixDense {
   inline ContactMatrixDense(const ContactMatrixDense<N>& other);
   inline ContactMatrixDense(std::size_t nrows_, std::size_t ncols_);
   inline ContactMatrixDense(bp_t length, bp_t diagonal_width, bp_t bin_size);
-  inline ContactMatrixDense(absl::Span<const N> contacts, std::size_t nrows_, std::size_t ncols_,
+  inline ContactMatrixDense(std::span<const N> contacts, std::size_t nrows_, std::size_t ncols_,
                             std::size_t tot_contacts = 0, std::size_t updates_missed = 0);
   ~ContactMatrixDense() = default;
 
@@ -127,8 +126,8 @@ class ContactMatrixDense {
   inline void unsafe_resize(bp_t length, bp_t diagonal_width, bp_t bin_size);
   [[nodiscard]] inline bool empty() const;
   [[nodiscard]] inline bool unsafe_empty() const;
-  [[nodiscard]] inline absl::Span<const N> get_raw_count_vector() const;
-  [[nodiscard]] inline absl::Span<N> get_raw_count_vector();
+  [[nodiscard]] inline std::span<const N> get_raw_count_vector() const;
+  [[nodiscard]] inline std::span<N> get_raw_count_vector();
 
   [[nodiscard]] inline ContactMatrixDense<double> blur(
       double sigma, double truncate = 3.5, BS::light_thread_pool* tpool = nullptr) const;

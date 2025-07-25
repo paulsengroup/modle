@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <absl/types/span.h>
 #include <fmt/format.h>
 #include <xxhash.h>
 
@@ -15,6 +14,7 @@
 #include <limits>
 #include <mutex>
 #include <shared_mutex>
+#include <span>
 #include <stdexcept>
 #include <utility>
 
@@ -50,7 +50,7 @@ ContactMatrixDense<N>::ContactMatrixDense(const bp_t length, const bp_t diagonal
                          (length + bin_size - 1) / bin_size) {}
 
 template <class N>
-ContactMatrixDense<N>::ContactMatrixDense(const absl::Span<const N> contacts,
+ContactMatrixDense<N>::ContactMatrixDense(const std::span<const N> contacts,
                                           const std::size_t nrows_, const std::size_t ncols_,
                                           const std::size_t tot_contacts,
                                           const std::size_t updates_missed)
@@ -135,13 +135,13 @@ void ContactMatrixDense<N>::clear_missed_updates_counter() {
 }
 
 template <class N>
-absl::Span<const N> ContactMatrixDense<N>::get_raw_count_vector() const {
-  return absl::MakeConstSpan(_contacts);
+std::span<const N> ContactMatrixDense<N>::get_raw_count_vector() const {
+  return {_contacts};
 }
 
 template <class N>
-absl::Span<N> ContactMatrixDense<N>::get_raw_count_vector() {
-  return absl::MakeSpan(_contacts);
+std::span<N> ContactMatrixDense<N>::get_raw_count_vector() {
+  return {_contacts};
 }
 
 template <class N>

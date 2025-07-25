@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-find_package(absl CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED)
 find_package(BigWig CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
@@ -41,8 +40,6 @@ target_link_libraries(
 target_link_system_libraries(
   libmodle_io_bed
   PUBLIC
-  absl::hash
-  absl::span
   phmap
   xxHash::xxhash
 )
@@ -80,7 +77,6 @@ target_link_libraries(
 target_link_system_libraries(
   libmodle_io_bigwig
   PUBLIC
-  absl::span
   BigWig::BigWig
   phmap
 )

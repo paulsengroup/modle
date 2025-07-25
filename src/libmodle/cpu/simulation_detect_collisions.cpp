@@ -6,11 +6,10 @@
 #include "modle/simulation.hpp"
 // clang-format on
 
-#include <absl/types/span.h>
-
 #include <algorithm>
 #include <cassert>
 #include <limits>
+#include <span>
 #include <utility>
 
 #include "modle/collision_encoding.hpp"
@@ -24,10 +23,10 @@ namespace modle {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 std::pair<std::size_t, std::size_t> Simulation::detect_units_at_interval_boundaries(
-    const GenomicInterval& interval, absl::Span<const Lef> lefs,
-    absl::Span<const std::size_t> rev_lef_ranks, absl::Span<const std::size_t> fwd_lef_ranks,
-    absl::Span<const bp_t> rev_moves, absl::Span<const bp_t> fwd_moves,
-    absl::Span<CollisionT> rev_collisions, absl::Span<CollisionT> fwd_collisions) {
+    const GenomicInterval& interval, std::span<const Lef> lefs,
+    std::span<const std::size_t> rev_lef_ranks, std::span<const std::size_t> fwd_lef_ranks,
+    std::span<const bp_t> rev_moves, std::span<const bp_t> fwd_moves,
+    std::span<CollisionT> rev_collisions, std::span<CollisionT> fwd_collisions) {
   {
     assert(lefs.size() == fwd_lef_ranks.size());
     assert(lefs.size() == rev_lef_ranks.size());
@@ -122,10 +121,10 @@ std::pair<std::size_t, std::size_t> Simulation::detect_units_at_interval_boundar
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::detect_lef_bar_collisions(
-    const absl::Span<const Lef> lefs, const absl::Span<const std::size_t> rev_lef_ranks,
-    const absl::Span<const std::size_t> fwd_lef_ranks, const absl::Span<const bp_t> rev_moves,
-    const absl::Span<const bp_t> fwd_moves, const ExtrusionBarriers& barriers,
-    const absl::Span<CollisionT> rev_collisions, const absl::Span<CollisionT> fwd_collisions,
+    const std::span<const Lef> lefs, const std::span<const std::size_t> rev_lef_ranks,
+    const std::span<const std::size_t> fwd_lef_ranks, const std::span<const bp_t> rev_moves,
+    const std::span<const bp_t> fwd_moves, const ExtrusionBarriers& barriers,
+    const std::span<CollisionT> rev_collisions, const std::span<CollisionT> fwd_collisions,
     random::PRNG_t& rand_eng, std::size_t num_rev_units_at_5prime,
     std::size_t num_fwd_units_at_3prime) const noexcept(utils::ndebug_defined()) {
   {
@@ -249,11 +248,11 @@ process_fwd_unit:
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::detect_primary_lef_lef_collisions(
-    const absl::Span<const Lef> lefs, const ExtrusionBarriers& barriers,
-    const absl::Span<const std::size_t> rev_lef_ranks,
-    const absl::Span<const std::size_t> fwd_lef_ranks, const absl::Span<const bp_t> rev_moves,
-    const absl::Span<const bp_t> fwd_moves, const absl::Span<CollisionT> rev_collisions,
-    const absl::Span<CollisionT> fwd_collisions, random::PRNG_t& rand_eng,
+    const std::span<const Lef> lefs, const ExtrusionBarriers& barriers,
+    const std::span<const std::size_t> rev_lef_ranks,
+    const std::span<const std::size_t> fwd_lef_ranks, const std::span<const bp_t> rev_moves,
+    const std::span<const bp_t> fwd_moves, const std::span<CollisionT> rev_collisions,
+    const std::span<CollisionT> fwd_collisions, random::PRNG_t& rand_eng,
     std::size_t num_rev_units_at_5prime, std::size_t num_fwd_units_at_3prime) const
     noexcept(utils::ndebug_defined()) {
   {
@@ -399,11 +398,11 @@ void Simulation::detect_primary_lef_lef_collisions(
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::process_secondary_lef_lef_collisions(
-    [[maybe_unused]] const GenomicInterval& interval, const absl::Span<const Lef> lefs,
-    const absl::Span<const std::size_t> rev_lef_ranks,
-    const absl::Span<const std::size_t> fwd_lef_ranks, const absl::Span<bp_t> rev_moves,
-    const absl::Span<bp_t> fwd_moves, const absl::Span<CollisionT> rev_collisions,
-    const absl::Span<CollisionT> fwd_collisions, random::PRNG_t& rand_eng,
+    [[maybe_unused]] const GenomicInterval& interval, const std::span<const Lef> lefs,
+    const std::span<const std::size_t> rev_lef_ranks,
+    const std::span<const std::size_t> fwd_lef_ranks, const std::span<bp_t> rev_moves,
+    const std::span<bp_t> fwd_moves, const std::span<CollisionT> rev_collisions,
+    const std::span<CollisionT> fwd_collisions, random::PRNG_t& rand_eng,
     std::size_t num_rev_units_at_5prime, std::size_t num_fwd_units_at_3prime) const
     noexcept(utils::ndebug_defined()) {
   {
@@ -516,10 +515,10 @@ void Simulation::process_secondary_lef_lef_collisions(
 }
 
 void Simulation::fix_secondary_lef_lef_collisions(
-    [[maybe_unused]] const GenomicInterval& interval, const absl::Span<Lef> lefs,
-    const absl::Span<std::size_t> rev_lef_ranks, const absl::Span<std::size_t> fwd_lef_ranks,
-    const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
-    const absl::Span<CollisionT> rev_collisions, const absl::Span<CollisionT> fwd_collisions,
+    [[maybe_unused]] const GenomicInterval& interval, const std::span<Lef> lefs,
+    const std::span<std::size_t> rev_lef_ranks, const std::span<std::size_t> fwd_lef_ranks,
+    const std::span<bp_t> rev_moves, const std::span<bp_t> fwd_moves,
+    const std::span<CollisionT> rev_collisions, const std::span<CollisionT> fwd_collisions,
     const std::size_t num_rev_units_at_5prime,
     const std::size_t num_fwd_units_at_3prime) noexcept(utils::ndebug_defined()) {
   // Let us consider the following scenario:

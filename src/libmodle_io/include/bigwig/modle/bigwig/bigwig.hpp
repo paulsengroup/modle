@@ -6,11 +6,11 @@
 
 // IWYU pragma: no_include "modle/src/libio/bigwig_impl.hpp"
 
-#include <absl/types/span.h>
 #include <fmt/std.h>
 #include <parallel_hashmap/btree.h>
 
 #include <filesystem>
+#include <span>
 #include <string_view>
 #include <type_traits>
 
@@ -99,7 +99,11 @@ class Writer {
                          std::size_t num_chroms);
 
   template <class N, class = std::enable_if<std::is_arithmetic_v<N>>>
-  void write_range(std::string_view chrom_name, absl::Span<N> values, std::uint64_t span,
+  void write_range(std::string_view chrom_name, const std::vector<N>& values, std::uint64_t span,
+                   std::uint64_t step, std::uint64_t offset = 0);
+
+  template <class N, class = std::enable_if<std::is_arithmetic_v<N>>>
+  void write_range(std::string_view chrom_name, std::span<const N> values, std::uint64_t span,
                    std::uint64_t step, std::uint64_t offset = 0);
 };
 

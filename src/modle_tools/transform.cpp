@@ -2,7 +2,6 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/types/span.h>
 #include <cpp-sort/comparators/natural_less.h>
 #include <fmt/format.h>
 #include <parallel_hashmap/btree.h>
@@ -22,6 +21,7 @@
 #include <iosfwd>
 #include <iterator>
 #include <memory>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>

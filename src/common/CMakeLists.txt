@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-find_package(absl CONFIG REQUIRED)
 find_package(bitflags CONFIG REQUIRED)
 find_package(
   Boost
@@ -54,7 +53,6 @@ target_link_libraries(
 target_link_system_libraries(
   modle_common
   INTERFACE
-  absl::span
   bitflags::bitflags
   Boost::headers
   Boost::random

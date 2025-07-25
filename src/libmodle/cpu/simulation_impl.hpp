@@ -6,13 +6,13 @@
 
 // IWYU pragma: private, include "modle/simulation.hpp"
 
-#include <absl/types/span.h>
 #include <fmt/format.h>
 
 #include <BS_thread_pool.hpp>
 #include <algorithm>
 #include <cassert>
 #include <limits>
+#include <span>
 #include <thread>
 #include <type_traits>
 
@@ -28,9 +28,9 @@ constexpr const Config& Simulation::config() const noexcept { return _config; }
 constexpr const Config& Simulation::c() const noexcept { return config(); }
 
 template <typename MaskT>
-void Simulation::bind_lefs(const bp_t start_pos, const bp_t end_pos, const absl::Span<Lef> lefs,
-                           const absl::Span<std::size_t> rev_lef_ranks,
-                           const absl::Span<std::size_t> fwd_lef_ranks, const MaskT& mask,
+void Simulation::bind_lefs(const bp_t start_pos, const bp_t end_pos, const std::span<Lef> lefs,
+                           const std::span<std::size_t> rev_lef_ranks,
+                           const std::span<std::size_t> fwd_lef_ranks, const MaskT& mask,
                            random::PRNG_t& rand_eng,
                            std::size_t current_epoch) noexcept(utils::ndebug_defined()) {
   using T = std::decay_t<decltype(std::declval<MaskT&>().operator[](std::declval<std::size_t>()))>;
@@ -69,9 +69,9 @@ void Simulation::bind_lefs(const bp_t start_pos, const bp_t end_pos, const absl:
 }
 
 template <typename MaskT>
-void Simulation::bind_lefs(const GenomicInterval& interval, const absl::Span<Lef> lefs,
-                           const absl::Span<std::size_t> rev_lef_ranks,
-                           const absl::Span<std::size_t> fwd_lef_ranks, const MaskT& mask,
+void Simulation::bind_lefs(const GenomicInterval& interval, const std::span<Lef> lefs,
+                           const std::span<std::size_t> rev_lef_ranks,
+                           const std::span<std::size_t> fwd_lef_ranks, const MaskT& mask,
                            random::PRNG_t& rand_eng,
                            std::size_t current_epoch) noexcept(utils::ndebug_defined()) {
   Simulation::bind_lefs(interval.start(), interval.end(), lefs, rev_lef_ranks, fwd_lef_ranks, mask,
@@ -79,7 +79,7 @@ void Simulation::bind_lefs(const GenomicInterval& interval, const absl::Span<Lef
 }
 
 template <typename MaskT>
-void Simulation::select_lefs_to_bind(const absl::Span<const Lef> lefs,
+void Simulation::select_lefs_to_bind(const std::span<const Lef> lefs,
                                      MaskT& mask) noexcept(utils::ndebug_defined()) {
   using T = std::decay_t<decltype(std::declval<MaskT&>().operator[](std::declval<std::size_t>()))>;
   static_assert(std::is_integral_v<T> || std::is_same_v<MaskT, boost::dynamic_bitset<>>,
