@@ -50,7 +50,7 @@ permissions:
 jobs:
   cache-test-dataset:
     name: Cache test dataset
-    uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@b623f2e9dc50771a9d6697a4f29fb2bf9b76f535
+    uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@75f936a00588191e1c59c66b789f6a8dc1f1beb9
 
   build-dockerfile:
     name: Build Dockerfile

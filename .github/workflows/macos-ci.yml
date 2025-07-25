@@ -52,7 +52,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-result.outputs.result }}
     steps:
-      - uses: actions/github-script@v6
+      - uses: actions/github-script@v7
         id: set-result
         with:
           script: |
@@ -73,7 +73,7 @@ jobs:
 
   cache-test-dataset:
     name: Cache test dataset
-    uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@b623f2e9dc50771a9d6697a4f29fb2bf9b76f535
+    uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@75f936a00588191e1c59c66b789f6a8dc1f1beb9
 
   build-conan-deps-x86:
     name: Build Conan deps
@@ -99,7 +99,7 @@ jobs:
       matrix: ${{ fromJSON(needs.matrix-factory.outputs.matrix) }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Generate requirements.txt for pip
         run: echo 'cmake==${{ matrix.cmake }}' > requirements.txt
@@ -322,7 +322,7 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Restore test dataset
         uses: actions/cache/restore@v4
@@ -377,7 +377,7 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Download binary artifact
         uses: actions/download-artifact@v4
@@ -407,7 +407,7 @@ jobs:
           echo 'numpy' >> requirements.txt  # required to avoid errors when importing pyBigWig
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.13'
 
@@ -432,7 +432,7 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Download binary artifact
         uses: actions/download-artifact@v4
