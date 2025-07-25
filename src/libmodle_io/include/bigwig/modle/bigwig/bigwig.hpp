@@ -7,7 +7,7 @@
 // IWYU pragma: no_include "modle/src/libio/bigwig_impl.hpp"
 
 #include <fmt/std.h>
-#include <parallel_hashmap/btree.h>
+#include <parallel_hashmap/phmap.h>
 
 #include <filesystem>
 #include <span>
@@ -29,9 +29,7 @@ namespace modle::io::bigwig {
 
 class Reader {
  public:
-  // TODO replace with flat_hash after issues with ASAN and abseil have been addressed
-  // using Chromosomes = phmap::flat_hash_map<std::string, bp_t>;
-  using Chromosomes = phmap::btree_map<std::string, bp_t>;
+  using Chromosomes = phmap::flat_hash_map<std::string, bp_t>;
   using Intervals =
       std::unique_ptr<bwOverlappingIntervals_t, decltype(&bwDestroyOverlappingIntervals)>;
   using StatsType = bwStatsType;
