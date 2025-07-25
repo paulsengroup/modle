@@ -1028,7 +1028,7 @@ void Cli::write_config_file(bool write_default_args) const {
     fs.open(_config.path_to_config_file);
 
     fmt::print(fs, "# Config created by {} on {}\n{}\n", modle::config::version::str_long(),
-               std::chrono::utc_clock::now(), _cli.config_to_str(write_default_args, true));
+               std::chrono::system_clock::now(), _cli.config_to_str(write_default_args, true));
   } catch (const std::exception& e) {
     throw std::runtime_error(fmt::format("failed to write config file \"{}\": {}",
                                          _config.path_to_config_file, e.what()));

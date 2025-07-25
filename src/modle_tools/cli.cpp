@@ -646,7 +646,8 @@ int Cli::exit(const CLI::ParseError& e) const { return _cli.exit(e); }
 std::string Cli::to_json() const {
   const auto prefix = std::string{get_printable_subcommand()} + ".";
   std::string buff;
-  for (const auto& line : str_split(_cli.config_to_str(true, false), '\n')) {
+  const auto config = _cli.config_to_str(true, false);
+  for (const auto line : str_split(config, '\n')) {
     if (line.empty() || line.front() == '[') {
       continue;
     }

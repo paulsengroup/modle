@@ -14,11 +14,7 @@
 namespace modle {
 namespace internal {
 
-#ifdef __cpp_lib_constexpr_string
-[[nodiscard]] constexpr std::string strip_leading_zero(std::string s) {
-#else
 [[nodiscard]] inline std::string strip_leading_zero(std::string s) {
-#endif
   assert(!s.empty());
   if (s.front() != '0') {
     return s;
@@ -28,11 +24,7 @@ namespace internal {
 }  // namespace internal
 
 template <typename Duration>
-#ifdef __cpp_lib_constexpr_string
-[[nodiscard]] constexpr std::string format_duration(const Duration& duration) {
-#else
 [[nodiscard]] inline std::string format_duration(const Duration& duration) {
-#endif
   if (duration < std::chrono::microseconds(1)) {
     return fmt::to_string(std::chrono::duration_cast<std::chrono::nanoseconds>(duration));
   }

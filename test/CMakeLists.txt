@@ -25,6 +25,7 @@ target_sources(
     ${CMAKE_CURRENT_SOURCE_DIR}/units/common/cli_utils_test.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/units/common/const_map_test.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/units/common/dna_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/units/common/string_utils_test.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/units/contact_matrix/contact_matrix_dense_test.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/units/contact_matrix/contact_matrix_internal_test.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/units/contact_matrix/contact_matrix_sparse_test.cpp

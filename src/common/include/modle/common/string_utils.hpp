@@ -21,21 +21,20 @@ namespace modle {
   return buff;
 }
 
-inline void lower_inplace(std::string& s) {
-  std::ranges::transform(s, s.begin(), [&](char c) { return std::tolower(c); });
-}
-
-[[nodiscard]] inline std::string_view strip_trailing_whitespace(std::string_view s) {
+[[nodiscard]] constexpr std::string_view strip_trailing_whitespace(std::string_view s) {
   const auto it = std::find_if_not(s.rbegin(), s.rend(), [](char c) { return std::isspace(c); });
   return s.substr(0, static_cast<size_t>(s.rend() - it));
 }
 
-[[nodiscard]] inline bool str_contains(std::string_view s, std::string_view query) noexcept {
+[[nodiscard]] constexpr bool str_contains(std::string_view s, std::string_view query) noexcept {
+  if (s.empty() || query.empty()) {
+    return false;
+  }
   return s.find(query) != std::string_view::npos;
 }
 
-[[nodiscard]] inline std::string_view str_strip_suffix(std::string_view s,
-                                                       std::string_view suffix) {
+[[nodiscard]] constexpr std::string_view str_strip_suffix(std::string_view s,
+                                                          std::string_view suffix) {
   if (s.ends_with(suffix)) {
     s.remove_suffix(suffix.size());
   }
@@ -53,9 +52,7 @@ inline void lower_inplace(std::string& s) {
   std::size_t i1 = s.find(delim, 0);
 
   while (i1 != std::string_view::npos) {
-    if (i1 > i0) {
-      toks.emplace_back(s.substr(i0, i1 - i0));
-    }
+    toks.emplace_back(s.substr(i0, i1 - i0));
     i0 = i1 + 1;
     i1 = s.find(delim, i0);
   }
@@ -63,10 +60,6 @@ inline void lower_inplace(std::string& s) {
   if (i0 < s.size()) {
     // deal with the last token
     toks.emplace_back(s.substr(i0));
-  } else if (i0 == s.size() && toks.empty()) {
-    // string only contains delimiters
-    toks.resize(s.size());
-    std::ranges::generate(toks, []() -> std::string_view { return {}; });
   }
 
   return toks;
@@ -74,12 +67,16 @@ inline void lower_inplace(std::string& s) {
 
 [[nodiscard]] inline std::vector<std::string_view> str_split(std::string_view s,
                                                              std::string_view delimiters) {
+  if (s.empty()) {
+    return {};
+  }
+
   if (delimiters.empty()) {
     return {s};
   }
 
-  if (s.empty()) {
-    return {};
+  if (delimiters.size() == 1) {
+    return str_split(s, delimiters.front());
   }
 
   std::vector<std::string_view> toks;
@@ -88,9 +85,7 @@ inline void lower_inplace(std::string& s) {
   std::size_t i1 = s.find_first_of(delimiters, 0);
 
   while (i1 != std::string_view::npos) {
-    if (i1 > i0) {
-      toks.emplace_back(s.substr(i0, i1 - i0));
-    }
+    toks.emplace_back(s.substr(i0, i1 - i0));
     i0 = i1 + 1;
     i1 = s.find_first_of(delimiters, i0);
   }
@@ -98,10 +93,6 @@ inline void lower_inplace(std::string& s) {
   if (i0 < s.size()) {
     // deal with the last token
     toks.emplace_back(s.substr(i0));
-  } else if (i0 == s.size() && toks.empty()) {
-    // string only contains delimiters
-    toks.resize(s.size());
-    std::ranges::generate(toks, []() -> std::string_view { return {}; });
   }
 
   return toks;
@@ -139,7 +130,8 @@ inline void lower_inplace(std::string& s) {
   while (i1 != std::string_view::npos) {
     buff.append(s.substr(i0, i1 - i0));
     buff.append(replace);
-    i1 = std::string_view{s}.find(query, i0 + query.size());
+    i0 = i1 + query.size();
+    i1 = std::string_view{s}.find(query, i0);
   }
 
   if (i0 < s.size()) {
