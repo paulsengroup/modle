@@ -35,7 +35,6 @@ class MoDLEConan(ConanFile):
         return 17
 
     def requirements(self):
-        self.requires("abseil/20250127.0#9e8e8cfc89a1324139fc0ee3bd4d8c8c")  # Drop
         self.requires("bitflags/1.5.0#626da9d1913161321841f30caf9b994e")
         self.requires("boost/1.88.0#7bc0bdd001de6abe470e5e41d3c44686")
         self.requires("bshoshany-thread-pool/5.0.0#d94da300363f0c35b8f41b2c5490c94d")

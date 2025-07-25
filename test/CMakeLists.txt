@@ -6,7 +6,6 @@ if(MODLE_DOWNLOAD_TEST_DATASET)
   include("${PROJECT_SOURCE_DIR}/cmake/FetchTestDataset.cmake")
 endif()
 
-find_package(absl CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED)
 find_package(bshoshany-thread-pool CONFIG REQUIRED)
 find_package(Catch2 CONFIG REQUIRED)
@@ -70,8 +69,6 @@ target_link_libraries(
 target_link_system_libraries(
   test_main
   PRIVATE
-  absl::hash
-  absl::span
   Boost::headers
   bshoshany-thread-pool::bshoshany-thread-pool
   Catch2::Catch2WithMain
