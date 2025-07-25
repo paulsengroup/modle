@@ -4,8 +4,6 @@
 
 #include "modle/genome.hpp"
 
-#include <absl/time/clock.h>
-#include <absl/time/time.h>
 #include <fmt/format.h>
 #include <fmt/std.h>
 #include <parallel_hashmap/btree.h>
@@ -13,6 +11,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <chrono>
 #include <cmath>
 #include <exception>
 #include <filesystem>
@@ -26,6 +25,7 @@
 
 #include "modle/bed/bed.hpp"
 #include "modle/chrom_sizes/chrom_sizes.hpp"
+#include "modle/common/chrono.hpp"
 #include "modle/common/common.hpp"
 #include "modle/common/fmt_helpers.hpp"
 #include "modle/common/suppress_compiler_warnings.hpp"
@@ -314,7 +314,7 @@ Genome::Genome(const std::filesystem::path& path_to_chrom_sizes,
           _intervals.begin(), _intervals.end(), std::size_t(0),
           [&](auto accumulator, const GenomicInterval& gi) { return accumulator + gi.size(); })) {
   assert(!path_to_extr_barriers.empty());
-  const auto t0 = absl::Now();
+  const auto t0 = std::chrono::steady_clock::now();
   SPDLOG_INFO("importing extrusion barriers from {}...", path_to_extr_barriers);
   // Parse all the records from the BED file. The parser will throw in case of duplicates.
   const auto barriers_gw =
@@ -325,7 +325,7 @@ Genome::Genome(const std::filesystem::path& path_to_chrom_sizes,
     SPDLOG_WARN("imported 0 barriers from {}. Is this intended?", path_to_extr_barriers);
   } else {
     SPDLOG_INFO("imported {} barriers from {} in {}.", _num_barriers, path_to_extr_barriers,
-                absl::FormatDuration(absl::Now() - t0));
+                format_duration(std::chrono::steady_clock::now() - t0));
   }
 }
 
@@ -333,7 +333,7 @@ std::vector<std::shared_ptr<const Chromosome>> Genome::import_chromosomes(
     const std::filesystem::path& path_to_chrom_sizes) {
   assert(!path_to_chrom_sizes.empty());
 
-  const auto t0 = absl::Now();
+  const auto t0 = std::chrono::steady_clock::now();
   SPDLOG_INFO("importing chromosomes from {}...", path_to_chrom_sizes);
 
   phmap::btree_map<std::string, std::size_t> chrom_names;
@@ -358,7 +358,7 @@ std::vector<std::shared_ptr<const Chromosome>> Genome::import_chromosomes(
   }
 
   SPDLOG_INFO("imported {} chromosomes in {}.", buffer.size(),
-              absl::FormatDuration(absl::Now() - t0));
+              format_duration(std::chrono::steady_clock::now() - t0));
   return buffer;
 }
 
@@ -380,7 +380,7 @@ phmap::btree_set<GenomicInterval> Genome::import_genomic_intervals(
     return buffer;
   }
 
-  const auto t0 = absl::Now();
+  const auto t0 = std::chrono::steady_clock::now();
   SPDLOG_INFO("importing genomic intervals from {}...", path_to_bed);
 
   phmap::btree_map<std::string_view, std::shared_ptr<const Chromosome>> chrom_names;
@@ -415,7 +415,7 @@ phmap::btree_set<GenomicInterval> Genome::import_genomic_intervals(
   }
 
   SPDLOG_INFO("imported {} intervals in {}.", buffer.size(),
-              absl::FormatDuration(absl::Now() - t0));
+              format_duration(std::chrono::steady_clock::now() - t0));
 
   return buffer;
 }

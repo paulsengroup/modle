@@ -60,7 +60,6 @@ target_link_system_libraries(
   libmodle_cpu
   PRIVATE
   absl::hash
-  absl::time
   cpp-sort::cpp-sort
   PUBLIC
   absl::span

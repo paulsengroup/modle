@@ -2,8 +2,6 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/time/clock.h>
-#include <absl/time/time.h>
 #include <absl/types/span.h>
 #include <cpp-sort/comparators/natural_less.h>
 #include <fmt/format.h>
@@ -15,6 +13,7 @@
 #include <BS_thread_pool.hpp>
 #include <algorithm>
 #include <cassert>
+#include <chrono>
 #include <cstdio>
 #include <exception>
 #include <filesystem>
@@ -32,6 +31,7 @@
 
 #include "modle/bed/bed.hpp"
 #include "modle/bigwig/bigwig.hpp"
+#include "modle/common/chrono.hpp"
 #include "modle/common/common.hpp"
 #include "modle/common/fmt_helpers.hpp"
 #include "modle/common/string_utils.hpp"
@@ -139,7 +139,7 @@ template <class N>
     BS::light_thread_pool& tpool, const std::string_view chrom_name,
     const hictk::cooler::File& cooler, const modle::tools::transform_config& c,
     const modle::IITree<double, double>& discretization_ranges) {
-  auto t0 = absl::Now();
+  auto t0 = std::chrono::steady_clock::now();
   SPDLOG_INFO("processing contacts for {}...", chrom_name);
   auto matrix = [&]() {
     auto m = io::read_contact_matrix_from_cooler<double>(cooler, chrom_name, bp_t(0),
@@ -164,7 +164,8 @@ template <class N>
     matrix.discretize_inplace(discretization_ranges);
   }
 
-  SPDLOG_INFO("{} processing took {}", chrom_name, absl::FormatDuration(absl::Now() - t0));
+  SPDLOG_INFO("{} processing took {}", chrom_name,
+              format_duration(std::chrono::steady_clock::now() - t0));
   return matrix;
 }
 
@@ -209,7 +210,7 @@ void transform_subcmd(const modle::tools::transform_config& c) {
       init_output_cooler(c.output_cooler_uri, input_cooler, c.floating_point, c.args_json, c.force);
 
   BS::light_thread_pool tpool(c.nthreads);
-  const auto t0 = absl::Now();
+  const auto t0 = std::chrono::steady_clock::now();
   SPDLOG_INFO("transforming contacts from Cooler at URI \"{}\"...", input_cooler.uri());
   for (const auto& chrom : input_cooler.chromosomes()) {
     if (input_cooler.fetch(chrom.name()).empty()) {
@@ -228,7 +229,7 @@ void transform_subcmd(const modle::tools::transform_config& c) {
 
   tpool.wait();
   SPDLOG_INFO("DONE! Processed {} chromosomes in {}!", input_cooler.chromosomes().size(),
-              absl::FormatDuration(absl::Now() - t0));
+              format_duration(std::chrono::steady_clock::now() - t0));
   SPDLOG_INFO("Transformed contacts have been saved to file {}", c.output_cooler_uri);
 }
 

@@ -6,7 +6,6 @@
 
 #include "modle/simulation.hpp"
 
-#include <absl/time/clock.h>
 #include <absl/types/span.h>
 #include <cpp-sort/sorters/insertion_sorter.h>
 #include <cpp-sort/sorters/pdq_sorter.h>
@@ -35,6 +34,7 @@
 #include <vector>
 
 #include "modle/bigwig/bigwig.hpp"
+#include "modle/common/chrono.hpp"
 #include "modle/common/common.hpp"
 #include "modle/common/dna.hpp"
 #include "modle/common/random.hpp"
@@ -148,7 +148,7 @@ static void write_contact_matrix_to_cooler(hictk::cooler::File& cf,
 
   const auto& matrix = interval.contacts();
   if (matrix.npixels() != 0) {
-    const auto t0 = absl::Now();
+    const auto t0 = std::chrono::steady_clock::now();
     SPDLOG_INFO("[io] writing contacts for {} to file \"{}\"...", interval, cf.uri());
     const auto missing_interactions = matrix.get_fraction_of_missed_updates();
     if (missing_interactions >= 0.01) {
@@ -160,7 +160,8 @@ static void write_contact_matrix_to_cooler(hictk::cooler::File& cf,
     SPDLOG_INFO(
         "[io]: written {} contacts for {} to file \"{}\" in {} ({:.2f}M nnz out of "
         "{:.2f}M pixels).",
-        matrix.get_tot_contacts(), interval, cf.uri(), absl::FormatDuration(absl::Now() - t0),
+        matrix.get_tot_contacts(), interval, cf.uri(),
+        format_duration(std::chrono::steady_clock::now() - t0),
         static_cast<double>(matrix.get_nnz()) / 1.0e6,
         static_cast<double>(matrix.npixels()) / 1.0e6);
   }
@@ -173,7 +174,7 @@ static void write_lef_occupancy_to_bwig(io::bigwig::Writer& bw, const GenomicInt
   }
 
   try {
-    const auto t0 = absl::Now();
+    const auto t0 = std::chrono::steady_clock::now();
     SPDLOG_INFO("[io]: writing 1D LEF occupancy profile for {} to file {}...", interval, bw.path());
     buff.resize(interval.lef_1d_occupancy().size());
     const auto max_element =
@@ -188,7 +189,7 @@ static void write_lef_occupancy_to_bwig(io::bigwig::Writer& bw, const GenomicInt
     bw.write_range(interval.chrom().name(), absl::MakeSpan(buff), resolution, resolution,
                    interval.start());
     SPDLOG_INFO("[io]: writing 1D LEF occupancy profile for {} to file {} took {}", interval,
-                bw.path(), absl::FormatDuration(absl::Now() - t0));
+                bw.path(), format_duration(std::chrono::steady_clock::now() - t0));
   } catch (const std::exception& e) {
     throw std::runtime_error(
         fmt::format("An error occurred while writing LEF 1D occupancy profile to file {}: {}",

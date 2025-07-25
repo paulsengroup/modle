@@ -4,7 +4,6 @@
 
 #include "./cli.hpp"
 
-#include <absl/time/clock.h>
 #include <absl/types/span.h>
 #include <fmt/format.h>
 #include <fmt/std.h>
@@ -14,6 +13,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <exception>
@@ -1028,8 +1028,7 @@ void Cli::write_config_file(bool write_default_args) const {
     fs.open(_config.path_to_config_file);
 
     fmt::print(fs, "# Config created by {} on {}\n{}\n", modle::config::version::str_long(),
-               absl::FormatTime(absl::Now(), absl::UTCTimeZone()),
-               _cli.config_to_str(write_default_args, true));
+               std::chrono::utc_clock::now(), _cli.config_to_str(write_default_args, true));
   } catch (const std::exception& e) {
     throw std::runtime_error(fmt::format("failed to write config file \"{}\": {}",
                                          _config.path_to_config_file, e.what()));

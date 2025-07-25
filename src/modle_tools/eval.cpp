@@ -2,8 +2,6 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/time/clock.h>
-#include <absl/time/time.h>
 #include <absl/types/span.h>
 #include <cpp-sort/comparators/natural_less.h>
 #include <fmt/compile.h>
@@ -15,6 +13,7 @@
 #include <BS_thread_pool.hpp>
 #include <algorithm>
 #include <cassert>
+#include <chrono>
 #include <cstdio>
 #include <exception>
 #include <filesystem>
@@ -32,6 +31,7 @@
 #include "modle/bed/bed.hpp"
 #include "modle/bigwig/bigwig.hpp"
 #include "modle/chrom_sizes/chrom_sizes.hpp"
+#include "modle/common/chrono.hpp"
 #include "modle/common/common.hpp"
 #include "modle/common/fmt_helpers.hpp"
 #include "modle/common/string_utils.hpp"
@@ -616,7 +616,7 @@ static void run_task(const enum eval_config::Metric metric, const bed::BED &inte
                      const std::size_t bin_size,
                      const phmap::flat_hash_map<std::string, std::vector<double>> &weights) {
   try {
-    auto t0 = absl::Now();
+    auto t0 = std::chrono::steady_clock::now();
     const auto metrics =
         weights.empty()
             ? compute_metric<stripe_direction>(metric, ref_contacts, tgt_contacts,
@@ -627,8 +627,8 @@ static void run_task(const enum eval_config::Metric metric, const bed::BED &inte
     SPDLOG_INFO("{} for {} stripes from interval {}:{}-{} computed in {}.",
                 corr_method_to_str(metric, true), to_lower(direction_to_str(stripe_direction)),
                 interval.chrom, interval.chrom_start, interval.chrom_end,
-                absl::FormatDuration(absl::Now() - t0));
-    t0 = absl::Now();
+                format_duration(std::chrono::steady_clock::now() - t0));
+    t0 = std::chrono::steady_clock::now();
     auto &writer =
         stripe_direction == StripeDirection::horizontal ? writers.horizontal : writers.vertical;
     writer.bwig->write_range(interval.chrom, absl::MakeSpan(metrics.metric1), bin_size, bin_size,
@@ -644,7 +644,7 @@ static void run_task(const enum eval_config::Metric metric, const bed::BED &inte
     }
     SPDLOG_INFO("{} values have been written to files \"{}.{{tsv.gz,bw}}\" in {}.",
                 metrics.metric1.size(), writer.bwig->path().stem().string(),
-                absl::FormatDuration(absl::Now() - t0));
+                format_duration(std::chrono::steady_clock::now() - t0));
   } catch (const std::exception &e) {
     throw std::runtime_error(fmt::format(
         "The following error occurred while computing {} on {} stripes for {}:{}-{}: {}",
@@ -673,7 +673,7 @@ static void log_regions_for_evaluation(const std::vector<bed::BED> &intervals) {
 }
 
 void eval_subcmd(const modle::tools::eval_config &c) {
-  const auto t0 = absl::Now();
+  const auto t0 = std::chrono::steady_clock::now();
   hictk::cooler::File ref_cooler(c.reference_cooler_uri.string());
   hictk::cooler::File tgt_cooler(c.input_cooler_uri.string());
 
@@ -707,7 +707,7 @@ void eval_subcmd(const modle::tools::eval_config &c) {
   std::array<std::future<void>, 2> return_codes;
 
   for (const auto &interval : intervals) {
-    const auto t1 = absl::Now();
+    const auto t1 = std::chrono::steady_clock::now();
     const auto coord_str = [&]() {
       if (interval.chrom_start == 0) {
         return fmt::format("{}:{}", interval.chrom, interval.chrom_end);
@@ -732,11 +732,11 @@ void eval_subcmd(const modle::tools::eval_config &c) {
         static_cast<bp_t>(c.diagonal_width));
     SPDLOG_INFO("Read {} contacts for {} in {}",
                 ref_matrix.get_tot_contacts() + tgt_matrix.get_tot_contacts(), coord_str,
-                absl::FormatDuration(absl::Now() - t1));
+                format_duration(std::chrono::steady_clock::now() - t1));
 
     // Normalize contact matrix before computing the correlation/distance metrics
     if (c.normalize) {
-      const auto t00 = absl::Now();
+      const auto t00 = std::chrono::steady_clock::now();
       SPDLOG_INFO("Normalizing contact matrices for {}...", coord_str);
       return_codes[0] = tpool.submit_task([&]() { ref_matrix.normalize_inplace(); });
       return_codes[1] = tpool.submit_task([&]() { tgt_matrix.normalize_inplace(); });
@@ -750,7 +750,8 @@ void eval_subcmd(const modle::tools::eval_config &c) {
             "The following error occurred while normalizing contact matrices for {}: {}", coord_str,
             e.what()));
       }
-      SPDLOG_INFO("DONE! Normalization took {}.", absl::FormatDuration(absl::Now() - t00));
+      SPDLOG_INFO("DONE! Normalization took {}.",
+                  format_duration(std::chrono::steady_clock::now() - t00));
     }
 
     using d = StripeDirection;
@@ -767,7 +768,7 @@ void eval_subcmd(const modle::tools::eval_config &c) {
     std::ignore = return_codes[0];
     std::ignore = return_codes[1];
   }
-  SPDLOG_INFO("DONE in {}!", absl::FormatDuration(absl::Now() - t0));
+  SPDLOG_INFO("DONE in {}!", format_duration(std::chrono::steady_clock::now() - t0));
 }
 
 }  // namespace modle::tools

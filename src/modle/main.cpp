@@ -2,8 +2,6 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/time/clock.h>
-#include <absl/time/time.h>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 #include <fmt/std.h>
@@ -17,6 +15,7 @@
 #include <CLI/CLI.hpp>
 #include <algorithm>
 #include <cassert>
+#include <chrono>
 #include <cstdio>
 #include <cstring>
 #include <exception>
@@ -30,6 +29,7 @@
 #include <vector>
 
 #include "./cli.hpp"
+#include "modle/common/chrono.hpp"
 #include "modle/common/common.hpp"
 #include "modle/common/fmt_helpers.hpp"
 #include "modle/common/simulation_config.hpp"
@@ -166,14 +166,14 @@ int main(int argc, char** argv) noexcept {
 
     assert(spdlog::default_logger());
     write_param_summary_to_log(config);
-    const auto t0 = absl::Now();
+    const auto t0 = std::chrono::steady_clock::now();
     modle::Simulation sim(config);
 
     assert(subcmd == modle::Cli::subcommand::simulate);
     sim.run_simulate();
 
     SPDLOG_INFO("simulation terminated without errors in {}!\n\nBye.",
-                absl::FormatDuration(absl::Now() - t0));
+                modle::format_duration(std::chrono::steady_clock::now() - t0));
   } catch (const std::bad_alloc& e) {
     try_log_fatal_error("FAILURE! Unable to allocate enough memory: {}.", e.what());
     return 1;

@@ -44,8 +44,6 @@ target_link_libraries(
 
 target_link_system_libraries(
   libmodle_internal
-  PRIVATE
-  absl::time
   PUBLIC
   absl::span
   Boost::headers

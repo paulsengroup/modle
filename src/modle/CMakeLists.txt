@@ -35,7 +35,6 @@ target_link_system_libraries(
   modle
   PRIVATE
   absl::span
-  absl::time
   Boost::headers
   CLI11::CLI11
   phmap
