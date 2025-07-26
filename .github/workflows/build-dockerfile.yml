@@ -50,7 +50,7 @@ permissions:
 jobs:
   cache-test-dataset:
     name: Cache test dataset
-    uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@75f936a00588191e1c59c66b789f6a8dc1f1beb9
+    uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@657bab2c0e7ea97a9836a7f0f90ca81b94e14158
 
   build-dockerfile:
     name: Build Dockerfile
@@ -154,7 +154,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
 
       - name: Build Docker image (${{ matrix.platform }})
         id: build-image
@@ -274,7 +274,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
 
       - name: Create manifest list and push (DockerHub)
         working-directory: ${{ runner.temp }}/digests
