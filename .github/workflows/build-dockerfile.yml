@@ -229,6 +229,34 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+      - name: Extract binaries
+        id: extract-binaries
+        run: |
+          arch="$(echo ${{ matrix.platform }} | tr / -)"
+          outdir="modle-$arch"
+          mkdir "$outdir"
+          docker run -v "$PWD/$outdir:/data/" \
+            --entrypoint=bash \
+            ${{ github.repository }} \
+            -c 'cp -r /usr/local/* /data/'
+
+          find "$outdir" -type f
+
+          tar -cf - \
+            "$outdir/bin/" \
+            "$outdir/share/licenses" |
+          xz -9 --extreme > "$outdir.tar.xz"
+
+          echo "name=$outdir" | tee -a $GITHUB_OUTPUT
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.extract-binaries.outputs.name }}
+          path: ${{ steps.extract-binaries.outputs.name }}.tar.xz
+          if-no-files-found: error
+          retention-days: 7
+
   merge-images:
     name: Merge images
     runs-on: ubuntu-latest
