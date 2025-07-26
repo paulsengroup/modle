@@ -6,34 +6,34 @@
 
 // IWYU pragma: private, include "modle/simulation.hpp"
 
-#include <absl/types/span.h>  // for Span
-#include <fmt/format.h>       // for format_parse_context, format_error
+#include <fmt/format.h>
 
-#include <BS_thread_pool.hpp>  // for BS::thread_pool
-#include <algorithm>           // for min
-#include <cassert>             // for assert
-#include <limits>              // for numeric_limits
-#include <thread>              // for thread
-#include <type_traits>         // for declval, decay_t
+#include <BS_thread_pool.hpp>
+#include <algorithm>
+#include <cassert>
+#include <limits>
+#include <span>
+#include <thread>
+#include <type_traits>
 
-#include "modle/common/common.hpp"                      // for usize, bp_t, i64, u32
-#include "modle/common/random.hpp"                      // for PRNG_t
-#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
-#include "modle/common/utils.hpp"                       // for ndebug_defined, ndebug_not_defined
-#include "modle/extrusion_factors.hpp"                  // for Lef, ExtrusionUnit
-#include "modle/genome.hpp"                             // for GenomicInterval
+#include "modle/common/common.hpp"
+#include "modle/common/random.hpp"
+#include "modle/common/suppress_compiler_warnings.hpp"
+#include "modle/common/utils.hpp"
+#include "modle/extrusion_factors.hpp"
+#include "modle/genome.hpp"
 
 namespace modle {
-constexpr const Config& Simulation::config() const noexcept { return this->_config; }
-constexpr const Config& Simulation::c() const noexcept { return this->config(); }
+constexpr const Config& Simulation::config() const noexcept { return _config; }
+constexpr const Config& Simulation::c() const noexcept { return config(); }
 
 template <typename MaskT>
-void Simulation::bind_lefs(const bp_t start_pos, const bp_t end_pos, const absl::Span<Lef> lefs,
-                           const absl::Span<usize> rev_lef_ranks,
-                           const absl::Span<usize> fwd_lef_ranks, const MaskT& mask,
+void Simulation::bind_lefs(const bp_t start_pos, const bp_t end_pos, const std::span<Lef> lefs,
+                           const std::span<std::size_t> rev_lef_ranks,
+                           const std::span<std::size_t> fwd_lef_ranks, const MaskT& mask,
                            random::PRNG_t& rand_eng,
-                           usize current_epoch) noexcept(utils::ndebug_defined()) {
-  using T = std::decay_t<decltype(std::declval<MaskT&>().operator[](std::declval<usize>()))>;
+                           std::size_t current_epoch) noexcept(utils::ndebug_defined()) {
+  using T = std::decay_t<decltype(std::declval<MaskT&>().operator[](std::declval<std::size_t>()))>;
   static_assert(std::is_integral_v<T> || std::is_same_v<MaskT, boost::dynamic_bitset<>>,
                 "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
   {
@@ -45,14 +45,14 @@ void Simulation::bind_lefs(const bp_t start_pos, const bp_t end_pos, const absl:
   }
 
   chrom_pos_generator_t pos_generator{start_pos, end_pos - 1};
-  for (usize i = 0; i < lefs.size(); ++i) {
+  for (std::size_t i = 0; i < lefs.size(); ++i) {
     if (mask.empty() || mask[i]) {  // Bind all LEFs when mask is empty
       lefs[i].bind_at_pos(current_epoch, pos_generator(rand_eng));
     }
   }
 
   if constexpr (utils::ndebug_not_defined()) {
-    for (usize i = 0; i < lefs.size(); ++i) {
+    for (std::size_t i = 0; i < lefs.size(); ++i) {
       if (mask.empty() || mask[i]) {
         assert(lefs[i].rev_unit >= start_pos && lefs[i].rev_unit < end_pos);
         assert(lefs[i].fwd_unit >= start_pos && lefs[i].fwd_unit < end_pos);
@@ -69,23 +69,23 @@ void Simulation::bind_lefs(const bp_t start_pos, const bp_t end_pos, const absl:
 }
 
 template <typename MaskT>
-void Simulation::bind_lefs(const GenomicInterval& interval, const absl::Span<Lef> lefs,
-                           const absl::Span<usize> rev_lef_ranks,
-                           const absl::Span<usize> fwd_lef_ranks, const MaskT& mask,
+void Simulation::bind_lefs(const GenomicInterval& interval, const std::span<Lef> lefs,
+                           const std::span<std::size_t> rev_lef_ranks,
+                           const std::span<std::size_t> fwd_lef_ranks, const MaskT& mask,
                            random::PRNG_t& rand_eng,
-                           usize current_epoch) noexcept(utils::ndebug_defined()) {
+                           std::size_t current_epoch) noexcept(utils::ndebug_defined()) {
   Simulation::bind_lefs(interval.start(), interval.end(), lefs, rev_lef_ranks, fwd_lef_ranks, mask,
                         rand_eng, current_epoch);
 }
 
 template <typename MaskT>
-void Simulation::select_lefs_to_bind(const absl::Span<const Lef> lefs,
+void Simulation::select_lefs_to_bind(const std::span<const Lef> lefs,
                                      MaskT& mask) noexcept(utils::ndebug_defined()) {
-  using T = std::decay_t<decltype(std::declval<MaskT&>().operator[](std::declval<usize>()))>;
+  using T = std::decay_t<decltype(std::declval<MaskT&>().operator[](std::declval<std::size_t>()))>;
   static_assert(std::is_integral_v<T> || std::is_same_v<MaskT, boost::dynamic_bitset<>>,
                 "mask should be a vector of integral numbers or a boost::dynamic_bitset.");
   assert(lefs.size() == mask.size());
-  for (usize i = 0; i < lefs.size(); ++i) {
+  for (std::size_t i = 0; i < lefs.size(); ++i) {
     mask[i] = !lefs[i].is_bound();
   }
 }
@@ -115,9 +115,9 @@ auto fmt::formatter<modle::Simulation::Task>::format(const modle::Simulation::Ta
                                                      FormatContext& ctx) const
     -> decltype(ctx.out()) {
   assert(t.interval);
-  return fmt::format_to(ctx.out(), FMT_STRING("{}\t{}\t{}\t{}\t{}\t{}\t{}"), t.id,
-                        t.interval->chrom(), t.cell_id, t.num_target_epochs, t.num_target_contacts,
-                        t.num_lefs, !!t.interval ? t.interval->barriers().size() : 0);
+  return fmt::format_to(ctx.out(), "{}\t{}\t{}\t{}\t{}\t{}\t{}", t.id, t.interval->chrom(),
+                        t.cell_id, t.num_target_epochs, t.num_target_contacts, t.num_lefs,
+                        !!t.interval ? t.interval->barriers().size() : 0);
 }
 
 constexpr auto fmt::formatter<modle::Simulation::State>::parse(format_parse_context& ctx)
@@ -136,19 +136,19 @@ auto fmt::formatter<modle::Simulation::State>::format(const modle::Simulation::S
   // clang-format off
   return fmt::format_to(
       ctx.out(),
-      FMT_STRING("State:\n"
-                 " - TaskID: {:d}\n"
-                 " - CellID: {:d}\n"
-                 " - Interval: {}\n"
-                 " - Current epoch: {:d}\n"
-                 " - Burn-in completed: {}\n"
-                 " - Target epochs: {:d}\n"
-                 " - Target contacts: {:d}\n"
-                 " - # of LEFs: {:d}\n"
-                 " - # of active LEFs: {:d}\n"
-                 " - # Extrusion barriers: {:d}\n"
-                 " - # of contacts registered: {:d}\n"
-                 " - seed: {:d}"),
+      "State:\n"
+      " - TaskID: {:d}\n"
+      " - CellID: {:d}\n"
+      " - Interval: {}\n"
+      " - Current epoch: {:d}\n"
+      " - Burn-in completed: {}\n"
+      " - Target epochs: {:d}\n"
+      " - Target contacts: {:d}\n"
+      " - # of LEFs: {:d}\n"
+      " - # of active LEFs: {:d}\n"
+      " - # Extrusion barriers: {:d}\n"
+      " - # of contacts registered: {:d}\n"
+      " - seed: {:d}",
       s.id,
       s.cell_id,
       *s.interval,

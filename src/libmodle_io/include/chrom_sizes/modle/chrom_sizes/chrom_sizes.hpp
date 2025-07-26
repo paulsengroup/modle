@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <filesystem>  // for filesystem::path
-#include <vector>      // for vector
+#include <filesystem>
+#include <vector>
 
-#include "modle/compressed_io/compressed_io.hpp"  // for Reader
+#include "modle/compressed_io/compressed_io.hpp"
 
 namespace modle::bed {
 struct BED;

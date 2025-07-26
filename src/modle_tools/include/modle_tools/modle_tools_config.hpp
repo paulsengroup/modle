@@ -4,18 +4,17 @@
 
 #pragma once
 
-#include <absl/types/variant.h>  // for monostate, variant
-
-#include <filesystem>  // for path
+#include <filesystem>
 #include <hictk/cooler/uri.hpp>
-#include <string>  // for string, allocator, basic_string
-#include <thread>  // for thread
-#include <vector>  // for vector
+#include <string>
+#include <thread>
+#include <variant>
+#include <vector>
 
-#include "modle/bed/bed.hpp"           // for BED, BED::Dialect, BED::BED6
-#include "modle/common/cli_utils.hpp"  // for CliEnumMappings
-#include "modle/common/common.hpp"     // for usize, bp_t, u64
-#include "modle/common/utils.hpp"      // for ConstMap
+#include "modle/bed/bed.hpp"
+#include "modle/common/cli_utils.hpp"
+#include "modle/common/common.hpp"
+#include "modle/common/utils.hpp"
 
 namespace modle::tools {
 
@@ -31,7 +30,7 @@ struct eval_config {
   bool normalize{false};
 
   // Metrics
-  enum class Metric : u8f { custom, eucl_dist, pearson, rmse, spearman };
+  enum class Metric : std::uint_fast8_t { custom, eucl_dist, pearson, rmse, spearman };
   Metric metric{Metric::custom};
 
   // NOLINTNEXTLINE(cert-err58-cpp)
@@ -46,14 +45,14 @@ struct eval_config {
   };
 
   // Matrix options
-  usize diagonal_width;
+  std::size_t diagonal_width;
 
   // Other
-  usize nthreads{std::thread::hardware_concurrency()};
+  std::size_t nthreads{std::thread::hardware_concurrency()};
   bool exclude_zero_pxls{false};
   std::string weight_column_name{"balanced.sum"};
   bool reciprocal_weights{false};
-  absl::Span<char*> args;
+  std::span<char*> args;
   std::string args_json{};
 };
 
@@ -64,7 +63,12 @@ struct transform_config {
   bool force{false};
 
   // Transformation methods
-  enum class Transformation : u8f { normalize, gaussian_blur, difference_of_gaussians, discretize };
+  enum class Transformation : std::uint_fast8_t {
+    normalize,
+    gaussian_blur,
+    difference_of_gaussians,
+    discretize
+  };
   Transformation method;
 
   // NOLINTNEXTLINE(cert-err58-cpp)
@@ -89,11 +93,11 @@ struct transform_config {
   bool floating_point{true};
 
   // Matrix options
-  usize diagonal_width;
+  std::size_t diagonal_width;
 
   // Other
-  usize nthreads{std::thread::hardware_concurrency()};
-  absl::Span<char*> args;
+  std::size_t nthreads{std::thread::hardware_concurrency()};
+  std::span<char*> args;
   std::string args_json{};
 };
 
@@ -110,15 +114,15 @@ struct annotate_barriers_config {
   double scaling_factor{20 - 3};
 
   // Other
-  absl::Span<char*> args;
+  std::span<char*> args;
   std::string args_json{};
 };
 
 // clang-format off
-using modle_tools_config = absl::variant<absl::monostate,
-                                         annotate_barriers_config,
-                                         eval_config,
-                                         transform_config>;
+using modle_tools_config = std::variant<std::monostate,
+                                        annotate_barriers_config,
+                                        eval_config,
+                                        transform_config>;
 // clang-format on
 
 }  // namespace modle::tools

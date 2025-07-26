@@ -32,7 +32,9 @@ def make_cli() -> argparse.ArgumentParser:
         help="Path to a bigWig file with CTCF fold-change over control from ChIP-seq (e.g. https://www.encodeproject.org/files/ENCFF851FYN/).",
     )
     cli.add_argument(
-        "--narrow-peaks", type=pathlib.Path, help="Path to a narrowPeak file (e.g. https://www.encodeproject.org/files/ENCFF330SHG/)."
+        "--narrow-peaks",
+        type=pathlib.Path,
+        help="Path to a narrowPeak file (e.g. https://www.encodeproject.org/files/ENCFF330SHG/).",
     )
     cli.add_argument(
         "--output-prefix",
@@ -62,9 +64,7 @@ def handle_path_collisions(*paths: pathlib.Path) -> None:
     if len(collisions) != 0:
         collisions = "\n - ".join((str(p) for p in collisions))
         raise RuntimeError(
-            "Refusing to overwrite file(s):\n"
-            f" - {collisions}\n"
-            "Pass --force to overwrite existing file(s)."
+            "Refusing to overwrite file(s):\n" f" - {collisions}\n" "Pass --force to overwrite existing file(s)."
         )
 
 
@@ -95,9 +95,7 @@ def run_meme(
         "/data/motif.meme",
         "/data/ref.fa",
     ]
-    with sp.Popen(
-        " ".join(cmd), stdin=None, stderr=None, stdout=sp.PIPE, shell=True
-    ) as mast:
+    with sp.Popen(" ".join(cmd), stdin=None, stderr=None, stdout=sp.PIPE, shell=True) as mast:
         df = pd.read_table(
             mast.stdout,
             delim_whitespace=True,
@@ -115,31 +113,23 @@ def run_meme(
     return df
 
 
-def filter_candidate_binding_sites(
-    path_to_narrowpeak: Union[pathlib.Path, None], df: pd.DataFrame
-) -> pd.DataFrame:
+def filter_candidate_binding_sites(path_to_narrowpeak: Union[pathlib.Path, None], df: pd.DataFrame) -> pd.DataFrame:
     if path_to_narrowpeak is None:
         return df
 
     cols = df.columns.tolist()
-    df = bf.overlap(
-        df, bf.read_table(path_to_narrowpeak, schema="narrowPeak"), suffixes=("", "__")
-    )
+    df = bf.overlap(df, bf.read_table(path_to_narrowpeak, schema="narrowPeak"), suffixes=("", "__"))
 
     return df.dropna()[cols]
 
 
-def generate_bwig(
-    path_to_bigwig: pathlib.Path, output_name: pathlib.Path, coords: Union[str, None]
-):
+def generate_bwig(path_to_bigwig: pathlib.Path, output_name: pathlib.Path, coords: Union[str, None]):
     if coords is None:
         shutil.copyfile(path_to_bigwig, output_name)
         return
 
     chrom, start, end = bf.parse_region(coords)
-    with pyBigWig.open(str(path_to_bigwig), "r") as bwin, pyBigWig.open(
-        str(output_name), "w"
-    ) as bwout:
+    with pyBigWig.open(str(path_to_bigwig), "r") as bwin, pyBigWig.open(str(output_name), "w") as bwout:
         chrom_size = bwin.chroms()[chrom]
         bwout.addHeader([(chrom, chrom_size)])
 
@@ -160,9 +150,7 @@ def main():
     out_prefix = args["output_prefix"]
 
     if not args["force"]:
-        handle_path_collisions(
-            out_prefix.with_suffix(".bed.gz"), out_prefix.with_suffix(".bw")
-        )
+        handle_path_collisions(out_prefix.with_suffix(".bed.gz"), out_prefix.with_suffix(".bw"))
 
     out_prefix.parent.mkdir(exist_ok=True, parents=True)
 

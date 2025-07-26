@@ -7,7 +7,6 @@
 #include "modle/config/version.hpp"
 // clang-format on
 
-#include <absl/strings/strip.h>
 #include <fmt/format.h>
 
 #include <cassert>
@@ -54,9 +53,9 @@ static void generate_suffix(std::string* buff) {
 }  // namespace internal
 
 // clang-format off
-u8f major() noexcept { return @MODLE_PROJECT_VERSION_MAJOR@; }
-u8f minor() noexcept { return @MODLE_PROJECT_VERSION_MINOR@; }
-u8f patch() noexcept { return @MODLE_PROJECT_VERSION_PATCH@; }
+std::uint_fast8_t major() noexcept { return @MODLE_PROJECT_VERSION_MAJOR@; }
+std::uint_fast8_t minor() noexcept { return @MODLE_PROJECT_VERSION_MINOR@; }
+std::uint_fast8_t patch() noexcept { return @MODLE_PROJECT_VERSION_PATCH@; }
 // clang-format on
 
 std::string_view suffix() noexcept {

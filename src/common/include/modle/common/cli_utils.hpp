@@ -4,14 +4,12 @@
 
 #pragma once
 
-#include <absl/container/fixed_array.h>
-
 #include <CLI/Formatter.hpp>
-#include <filesystem>  // for path
+#include <filesystem>
 #include <initializer_list>
-#include <range/v3/view/map.hpp>
-#include <string>       // for string
-#include <string_view>  // for string_view
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include "modle/common/common.hpp"
 #include "modle/common/const_map.hpp"
@@ -46,8 +44,7 @@ template <class EnumT, class StringT = std::string>
 class CliEnumMappings {
   static_assert(std::is_convertible_v<StringT, std::string>);
 
- private:
-  absl::FixedArray<std::pair<StringT, EnumT>> _mappings;
+  std::vector<std::pair<StringT, EnumT>> _mappings;
 
  public:
   using key_type = StringT;
@@ -77,8 +74,8 @@ class CliEnumMappings {
   [[nodiscard]] inline const StringT& at(EnumT key) const;
   [[nodiscard]] inline EnumT at(const StringT& key) const;
 
-  [[nodiscard]] inline auto keys_view() const -> decltype(ranges::views::keys(this->_mappings));
-  [[nodiscard]] inline auto values_view() const -> decltype(ranges::views::values(this->_mappings));
+  [[nodiscard]] inline std::vector<std::string> keys() const;
+  [[nodiscard]] inline std::vector<std::string> values() const;
 };
 
 namespace cli {

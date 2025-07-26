@@ -54,8 +54,8 @@ if __name__ == "__main__":
 
     # Generate ranges
     ranges = []
-    for (i, chrom) in enumerate(chroms):
-        for (center, range_) in zip(
+    for i, chrom in enumerate(chroms):
+        for center, range_ in zip(
             rng.uniform(0, 250e6, num_samples_per_chrom), rng.normal(3e6, 500e3, num_samples_per_chrom)
         ):
             center = int(center + int(rng.uniform() > 0.5))
@@ -65,6 +65,6 @@ if __name__ == "__main__":
     records = pd.read_table(bed_features, usecols=range(0, 3), names=["chrom", "start", "end"])
 
     # Count the number of features for each range
-    for (chrom, start, end) in ranges:
+    for chrom, start, end in ranges:
         num_features = ((records["chrom"] == chrom) & (records["end"] >= start) & (records["start"] < end)).sum()
         print(f"{chrom}\t{start}\t{end}\t{num_features}")

@@ -3,34 +3,46 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include <archive.h>  // for archive_read_free, la_susize
 
-#include <array>                                 // for array
-#include <boost/iostreams/filtering_stream.hpp>  // for filtering_ostream
-#include <filesystem>                            // for path
-#include <fstream>                               // for ofstream
-#include <memory>                                // for unique_ptr
-#include <string>                                // for string
-#include <string_view>                           // for operator""sv, basic_string_view
-#include <utility>                               // for make_pair, pair
+#include <archive.h>
 
-#include "modle/common/common.hpp"                      // for u8
-#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_PADDED, DISABLE_W...
+#include <filesystem>
+#include <memory>
+#include <string>
+#include <string_view>
 
-struct archive;
-struct archive_entry;
+#include "modle/common/common.hpp"
+#include "modle/common/suppress_compiler_warnings.hpp"
 
 namespace modle::compressed_io {
+
+namespace detail {
+
+struct ArchiveReaderDeleter {
+  void operator()(archive* arch) const noexcept;
+};
+
+struct ArchiveWriterDeleter {
+  void operator()(archive* arch) const noexcept;
+};
+
+struct ArchiveEntryDeleter {
+  void operator()(archive_entry* entry) const noexcept;
+};
+
+}  // namespace detail
+
 using namespace std::literals::string_view_literals;
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_PADDED
 class Reader {
   DISABLE_WARNING_POP
-  using archive_ptr_t = std::unique_ptr<archive, decltype(&archive_read_free)>;
-
  public:
+  using archive_ptr_t = std::unique_ptr<archive, detail::ArchiveReaderDeleter>;
+  using archive_entry_ptr_t = std::unique_ptr<archive_entry, detail::ArchiveEntryDeleter>;
+
   Reader() = default;
-  explicit Reader(const std::filesystem::path& path, usize buff_capacity = 512 * 1024);
+  explicit Reader(const std::filesystem::path& path, std::size_t buff_capacity = 512 * 1024);
 
   bool getline(std::string& buff, char sep = '\n');
   [[nodiscard]] std::string_view getline(char sep = '\n');
@@ -51,15 +63,13 @@ class Reader {
 
  private:
   std::filesystem::path _path{};
-  archive_ptr_t _arc{nullptr, archive_read_free};
-  std::unique_ptr<archive_entry*> _arc_entry{new archive_entry* };
+  archive_ptr_t _arc{};
+  archive_entry_ptr_t _arc_entry{};
   std::string _buff{};
   std::string _tok_tmp_buff{};
-  usize _idx{0};
+  std::size_t _idx{0};
   bool _eof{false};
 
-  void handle_libarchive_errors(la_ssize_t errcode) const;
-  void handle_libarchive_errors() const;
   // Returns false when reaching eof
   [[nodiscard]] bool read_next_chunk();
   // Return false when unable to find the next token occurrence
@@ -72,7 +82,10 @@ DISABLE_WARNING_PADDED
 class Writer {
   DISABLE_WARNING_POP
  public:
-  enum Compression : u8f { AUTO = 0, NONE = 1, GZIP = 2, BZIP2 = 3, LZMA = 4, ZSTD = 5 };
+  enum Compression : std::uint_fast8_t { AUTO, NONE, GZIP, BZIP2, LZMA, XZ, ZSTD };
+
+  using archive_ptr_t = std::unique_ptr<archive, detail::ArchiveWriterDeleter>;
+  using archive_entry_ptr_t = std::unique_ptr<archive_entry, detail::ArchiveEntryDeleter>;
 
   Writer() = default;
   explicit Writer(const std::filesystem::path& path, Compression compression = AUTO);
@@ -94,14 +107,9 @@ class Writer {
 
  private:
   std::filesystem::path _path{};
-  std::ofstream _fp{};
-  boost::iostreams::filtering_ostream _out{};
+  archive_ptr_t _arc{};
+  archive_entry_ptr_t _arc_entry{};
   Compression _compression{AUTO};
-
-  static constexpr std::array<std::pair<std::string_view, Compression>, 6> ext_mappings{
-      std::make_pair(".gz"sv, GZIP),  std::make_pair(".bz2"sv, BZIP2),
-      std::make_pair(".xz"sv, LZMA),  std::make_pair(".lzma"sv, LZMA),
-      std::make_pair(".zst"sv, ZSTD), std::make_pair(".zstd"sv, ZSTD)};
 };
 
 }  // namespace modle::compressed_io

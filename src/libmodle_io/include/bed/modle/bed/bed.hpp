@@ -4,32 +4,32 @@
 
 #pragma once
 
-#include <absl/container/btree_map.h>  // for btree_map
-#include <absl/types/span.h>           // for Span
-#include <fmt/format.h>                // for format_parse_context, formatter
-#include <xxhash.h>                    // for XXH3_state_t, XXH_INLINE_XXH3_state_t
+#include <fmt/format.h>
+#include <parallel_hashmap/btree.h>
+#include <xxhash.h>
 
-#include <array>        // for array
-#include <filesystem>   // for path
-#include <limits>       // for numeric_limits
-#include <memory>       // for unique_ptr
-#include <string>       // for string
-#include <string_view>  // for operator""sv, string_view, basic_string_view, stri...
-#include <type_traits>  // for __strip_reference_wrapper<>::__type
-#include <utility>      // for make_pair, pair
-#include <vector>       // for vector
+#include <array>
+#include <filesystem>
+#include <limits>
+#include <memory>
+#include <span>
+#include <string>
+#include <string_view>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
-#include "modle/common/common.hpp"     // for bp_t, u64, u8
-#include "modle/common/const_map.hpp"  // for ConstMap, ConstMap::ConstMap<Key, Value, Size>
-#include "modle/compressed_io/compressed_io.hpp"  // for Reader
-#include "modle/interval_tree.hpp"                // for IITree, IITree::IITree<I, T>
+#include "modle/common/common.hpp"
+#include "modle/common/const_map.hpp"
+#include "modle/compressed_io/compressed_io.hpp"
+#include "modle/interval_tree.hpp"
 
 namespace modle::bed {
 
 struct RGB {
-  u8 r;
-  u8 g;
-  u8 b;
+  std::uint8_t r;
+  std::uint8_t g;
+  std::uint8_t b;
 
   bool operator==(const RGB& other) const noexcept;
   bool operator!=(const RGB& other) const noexcept;
@@ -38,7 +38,7 @@ struct RGB {
 
 struct BED {
   friend class Parser;
-  enum Dialect : u8f {
+  enum Dialect : std::uint_fast8_t {
     BED3 = 3U,
     BED4 = 4U,
     BED5 = 5U,
@@ -52,7 +52,7 @@ struct BED {
   [[nodiscard]] static Dialect str_to_dialect(std::string_view s);
   [[nodiscard]] static std::string dialect_to_str(Dialect d);
 
-  enum FieldsIdx : u8f {
+  enum FieldsIdx : std::uint_fast8_t {
     BED_CHROM_IDX = 0U,
     BED_CHROM_START_IDX = 1U,
     BED_CHROM_END_IDX = 2U,
@@ -67,7 +67,7 @@ struct BED {
     BED_BLOCK_STARTS_IDX = 11U
   };
 
-  enum Fields : u8f {
+  enum Fields : std::uint_fast8_t {
     BED_CHROM = BED_CHROM_IDX + 1,
     BED_CHROM_START = BED_CHROM_START_IDX + 1,
     BED_CHROM_END = BED_CHROM_END_IDX + 1,
@@ -84,8 +84,8 @@ struct BED {
 
   BED() = default;
   explicit BED(Dialect d);
-  explicit BED(std::string_view record, usize id_ = null_id, Dialect bed_standard = autodetect,
-               bool validate = true);
+  explicit BED(std::string_view record, std::size_t id_ = null_id,
+               Dialect bed_standard = autodetect, bool validate = true);
   BED(std::string_view chrom_, bp_t chrom_start_, bp_t chrom_end_);
   BED(const BED& other);
   BED(BED&& other) = default;
@@ -103,17 +103,17 @@ struct BED {
   bp_t thick_start{(std::numeric_limits<bp_t>::max)()};
   bp_t thick_end{(std::numeric_limits<bp_t>::max)()};
   std::unique_ptr<RGB> rgb{nullptr};
-  u64 block_count{(std::numeric_limits<u64>::max)()};
-  std::vector<u64> block_sizes{};
-  std::vector<u64> block_starts{};
+  std::uint64_t block_count{(std::numeric_limits<std::uint64_t>::max)()};
+  std::vector<std::uint64_t> block_sizes{};
+  std::vector<std::uint64_t> block_starts{};
   std::string extra_tokens{};
 
   [[nodiscard]] constexpr explicit operator bool() const noexcept;
   [[nodiscard]] bool operator==(const BED& other) const noexcept;
   [[nodiscard]] bool operator<(const BED& other) const noexcept;
-  [[nodiscard]] constexpr usize id() const noexcept;
-  [[nodiscard]] constexpr usize size() const noexcept;
-  [[nodiscard]] usize num_fields() const noexcept;
+  [[nodiscard]] constexpr std::size_t id() const noexcept;
+  [[nodiscard]] constexpr std::size_t size() const noexcept;
+  [[nodiscard]] std::size_t num_fields() const noexcept;
   [[nodiscard]] constexpr Dialect get_standard() const noexcept;
   [[nodiscard]] bool empty() const;
   template <typename H>
@@ -122,12 +122,15 @@ struct BED {
   }
 
  private:
-  static constexpr auto null_id = (std::numeric_limits<usize>::max)();
-  usize _id{null_id};
+  static constexpr auto null_id = (std::numeric_limits<std::size_t>::max)();
+  std::size_t _id{null_id};
   Dialect _standard{none};
-  static void parse_rgb_or_throw(const std::vector<std::string_view>& toks, u8 idx, RGB& field);
-  [[nodiscard]] static RGB parse_rgb_or_throw(const std::vector<std::string_view>& toks, u8 idx);
-  static void parse_strand_or_throw(const std::vector<std::string_view>& toks, u8 idx, char& field);
+  static void parse_rgb_or_throw(const std::vector<std::string_view>& toks, std::uint8_t idx,
+                                 RGB& field);
+  [[nodiscard]] static RGB parse_rgb_or_throw(const std::vector<std::string_view>& toks,
+                                              std::uint8_t idx);
+  static void parse_strand_or_throw(const std::vector<std::string_view>& toks, std::uint8_t idx,
+                                    char& field);
   [[nodiscard]] static Dialect detect_standard(std::string_view line);
   [[nodiscard]] static Dialect detect_standard(const std::vector<std::string_view>& toks);
   static void validate_record(const std::vector<std::string_view>& toks, Dialect standard);
@@ -147,13 +150,14 @@ struct BED {
   bool parse_block_starts(const std::vector<std::string_view>& toks);
   void parse_extra_tokens(const std::vector<std::string_view>& toks);
 
-  [[nodiscard]] u64 hash(XXH3_state_t* state, u64 seed = 17039577131913730910ULL) const;
+  [[nodiscard]] std::uint64_t hash(XXH3_state_t* state,
+                                   std::uint64_t seed = 17039577131913730910ULL) const;
 };
 
 template <typename K = std::string, typename I = bp_t>
 class BED_tree {
   using IITree_t = IITree<I, BED>;
-  using BED_tree_t = absl::btree_map<K, IITree<I, BED>>;
+  using BED_tree_t = phmap::btree_map<K, IITree<I, BED>>;
 
   friend IITree_t;
 
@@ -174,7 +178,7 @@ class BED_tree {
   inline std::pair<iterator, bool> emplace(BED&& interval);
   inline std::pair<iterator, bool> emplace(const K& chrom_name, value_type&& tree);
 
-  inline void insert(absl::Span<const BED> intervals);
+  inline void insert(std::span<const BED> intervals);
   inline void emplace(std::vector<BED>&& intervals);
 
   [[nodiscard]] inline const value_type& at(const K& chrom) const;
@@ -184,20 +188,21 @@ class BED_tree {
 
   [[nodiscard]] inline bool contains(const K& chrom_name) const;
   [[nodiscard]] inline bool contains_overlap(const BED& interval) const;
-  [[nodiscard]] inline bool contains_overlap(const K& chrom_name, u64 chrom_start,
-                                             u64 chrom_end) const;
+  [[nodiscard]] inline bool contains_overlap(const K& chrom_name, std::uint64_t chrom_start,
+                                             std::uint64_t chrom_end) const;
 
-  [[nodiscard]] inline usize count_overlaps(const BED& interval) const;
-  [[nodiscard]] inline usize count_overlaps(const K& chrom_name, u64 chrom_start,
-                                            u64 chrom_end) const;
+  [[nodiscard]] inline std::size_t count_overlaps(const BED& interval) const;
+  [[nodiscard]] inline std::size_t count_overlaps(const K& chrom_name, std::uint64_t chrom_start,
+                                                  std::uint64_t chrom_end) const;
 
-  [[nodiscard]] inline absl::Span<const BED> find_overlaps(const BED& interval) const;
-  [[nodiscard]] inline absl::Span<const BED> find_overlaps(const K& chrom_name, u64 chrom_start,
-                                                           u64 chrom_end) const;
+  [[nodiscard]] inline std::span<const BED> find_overlaps(const BED& interval) const;
+  [[nodiscard]] inline std::span<const BED> find_overlaps(const K& chrom_name,
+                                                          std::uint64_t chrom_start,
+                                                          std::uint64_t chrom_end) const;
 
   [[nodiscard]] inline bool empty() const;
-  [[nodiscard]] inline usize size() const;
-  [[nodiscard]] inline usize size(const K& chrom_name) const;
+  [[nodiscard]] inline std::size_t size() const;
+  [[nodiscard]] inline std::size_t size(const K& chrom_name) const;
 
   inline void clear();
   inline void clear(const K& chrom_name);
@@ -222,9 +227,9 @@ class Parser {
                   bool enforce_std_compliance = true);
 
   [[nodiscard]] BED parse_next();
-  [[nodiscard]] std::vector<BED> parse_n(usize num_records);
-  [[nodiscard]] BED_tree<> parse_n_in_interval_tree(usize num_records);
-  [[nodiscard]] std::string validate(usize nrecords = 100);
+  [[nodiscard]] std::vector<BED> parse_n(std::size_t num_records);
+  [[nodiscard]] BED_tree<> parse_n_in_interval_tree(std::size_t num_records);
+  [[nodiscard]] std::string validate(std::size_t nrecords = 100);
   [[nodiscard]] std::vector<BED> parse_all();
   [[nodiscard]] BED_tree<> parse_all_in_interval_tree();
   void reset();
@@ -234,10 +239,10 @@ class Parser {
   BED::Dialect _dialect;
   bool _enforce_std_compliance;
   std::string _buff{};
-  usize _num_records_parsed{0};
-  usize _num_lines_read{0};
+  std::size_t _num_records_parsed{0};
+  std::size_t _num_lines_read{0};
 
-  usize skip_header();
+  std::size_t skip_header();
 };
 
 using namespace std::literals::string_view_literals;

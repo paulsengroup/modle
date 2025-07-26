@@ -4,22 +4,22 @@
 
 #pragma once
 
-#include <absl/strings/match.h>  // for StartsWithIgnoreCase
-#include <absl/types/span.h>     // for MakeSpan, Span
-#include <xxhash.h>              // for XXH_INLINE_XXH3_freeState, XXH3_f...
+#include <xxhash.h>
 
-#include <cassert>           // for assert
-#include <exception>         // for exception
-#include <functional>        // for reference_wrapper
-#include <future>            // for future, promise
-#include <initializer_list>  // for initializer_list
-#include <string_view>       // for string_view, basic_string_view
+#include <algorithm>
+#include <cassert>
+#include <exception>
+#include <functional>
+#include <future>
+#include <initializer_list>
+#include <span>
+#include <string_view>
 #include <type_traits>
-#include <utility>  // for pair, make_pair, forward
-#include <vector>   // for vector
+#include <utility>
+#include <vector>
 
-#include "modle/common/common.hpp"                      // for usize, i64, u64
-#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_POP, DISABLE_WARN...
+#include "modle/common/common.hpp"
+#include "modle/common/suppress_compiler_warnings.hpp"
 
 namespace modle::utils {
 
@@ -58,11 +58,11 @@ RepeatIterator<T>::RepeatIterator(T value) : _value(std::move(value)) {}
 
 template <class T>
 constexpr const T &RepeatIterator<T>::operator*() const {
-  return this->_value;
+  return _value;
 }
 
 template <class T>
-constexpr const T &RepeatIterator<T>::operator[]([[maybe_unused]] usize i) const {
+constexpr const T &RepeatIterator<T>::operator[]([[maybe_unused]] std::size_t i) const {
   return *this;
 }
 
@@ -143,7 +143,8 @@ constexpr I next_pow2(const I n) noexcept {
     // https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html
 
     return utils::conditional_static_cast<I>(
-        m <= 1 ? m : u64(1) << (u64(64) - u64(__builtin_clzll(m - 1))));
+        m <= 1 ? m
+               : std::uint64_t(1) << (std::uint64_t(64) - std::uint64_t(__builtin_clzll(m - 1))));
 #endif
   }
 }
@@ -156,8 +157,8 @@ constexpr std::future<T> make_ready_future(T &&v) {
 }
 
 template <class MutexT>
-LockRangeExclusive<MutexT>::LockRangeExclusive(const absl::Span<MutexT> mutexes) {
-  usize i = 0;
+LockRangeExclusive<MutexT>::LockRangeExclusive(const std::span<MutexT> mutexes) {
+  std::size_t i = 0;
   try {
     for (; i < mutexes.size(); ++i) {
       mutexes[i].lock();
@@ -168,21 +169,17 @@ LockRangeExclusive<MutexT>::LockRangeExclusive(const absl::Span<MutexT> mutexes)
     }
     throw;
   }
-  this->_mutexes = mutexes;
+  _mutexes = mutexes;
 }
-
-template <class MutexT>
-LockRangeExclusive<MutexT>::LockRangeExclusive(std::vector<MutexT> &mutexes)
-    : LockRangeExclusive(absl::MakeSpan(mutexes)) {}
 
 template <class MutexT>
 LockRangeExclusive<MutexT>::~LockRangeExclusive() noexcept {
-  std::for_each(this->_mutexes.begin(), this->_mutexes.end(), [](auto &m) { m.unlock(); });
+  std::for_each(_mutexes.begin(), _mutexes.end(), [](auto &m) { m.unlock(); });
 }
 
 template <class MutexT>
-LockRangeShared<MutexT>::LockRangeShared(const absl::Span<MutexT> mutexes) {
-  usize i = 0;
+LockRangeShared<MutexT>::LockRangeShared(const std::span<MutexT> mutexes) {
+  std::size_t i = 0;
   try {
     for (; i < mutexes.size(); ++i) {
       mutexes[i].lock();
@@ -193,16 +190,15 @@ LockRangeShared<MutexT>::LockRangeShared(const absl::Span<MutexT> mutexes) {
     }
     throw;
   }
-  this->_mutexes = mutexes;
+  _mutexes = mutexes;
 }
 
 template <class MutexT>
-LockRangeShared<MutexT>::LockRangeShared(std::vector<MutexT> &mutexes)
-    : LockRangeShared(absl::MakeSpan(mutexes)) {}
+LockRangeShared<MutexT>::LockRangeShared(std::vector<MutexT> &mutexes) : LockRangeShared(mutexes) {}
 
 template <class MutexT>
 LockRangeShared<MutexT>::~LockRangeShared() noexcept {
-  std::for_each(this->_mutexes.begin(), this->_mutexes.end(), [](auto &m) { m.unlock_shared(); });
+  std::for_each(_mutexes.begin(), _mutexes.end(), [](auto &m) { m.unlock_shared(); });
 }
 
 constexpr std::string_view strip_quote_pairs(std::string_view s) noexcept {

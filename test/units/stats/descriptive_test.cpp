@@ -4,14 +4,14 @@
 
 #include "modle/stats/descriptive.hpp"
 
-#include <algorithm>  // for transform
+#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
-#include <string_view>  // for string_view_literals
-#include <vector>       // for vector
+#include <string_view>
+#include <vector>
 
-#include "modle/common/common.hpp"  // for u8, usize
-#include "modle/common/utils.hpp"   // for identity::operator(), identity
+#include "modle/common/common.hpp"
+#include "modle/common/utils.hpp"
 
 namespace modle::stats::test {
 
@@ -25,7 +25,7 @@ struct FP {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Mean", "[stats][short]") {
-  const std::vector<u8> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  const std::vector<std::uint8_t> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   std::vector<FP> v2(v1.size());
   std::transform(v1.begin(), v1.end(), v2.begin(),
                  [](const auto n) { return FP{static_cast<float>(n)}; });
@@ -38,8 +38,8 @@ TEST_CASE("Mean", "[stats][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Moving average", "[stats][short]") {
-  const usize window_size = 3;
-  const std::vector<u8> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  const std::size_t window_size = 3;
+  const std::vector<std::uint8_t> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   std::vector<FP> v2(v1.size());
   std::transform(v1.begin(), v1.end(), v2.begin(),
                  [](const auto n) { return FP{static_cast<float>(n)}; });
@@ -50,7 +50,7 @@ TEST_CASE("Moving average", "[stats][short]") {
   REQUIRE(stats::moving_average(v1.begin(), v1.end(), output.begin(), window_size) ==
           v1.size() - window_size);
 
-  for (usize i = 0; i < results.size(); ++i) {
+  for (std::size_t i = 0; i < results.size(); ++i) {
     CHECK_THAT(results[i], Catch::Matchers::WithinRel(output[i], DEFAULT_FP_TOLERANCE));
   }
 
@@ -59,7 +59,7 @@ TEST_CASE("Moving average", "[stats][short]") {
   REQUIRE(stats::moving_average(v2.begin(), v2.end(), output.begin(), window_size,
                                 [](const auto& fp) { return fp.n; }) == v1.size() - window_size);
 
-  for (usize i = 0; i < results.size(); ++i) {
+  for (std::size_t i = 0; i < results.size(); ++i) {
     CHECK_THAT(results[i], Catch::Matchers::WithinRel(output[i], DEFAULT_FP_TOLERANCE));
   }
 
@@ -72,7 +72,7 @@ TEST_CASE("Moving average", "[stats][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Sum of squared deviations", "[stats][short]") {
-  const std::vector<u8> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  const std::vector<std::uint8_t> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   std::vector<FP> v2(v1.size());
   std::transform(v1.begin(), v1.end(), v2.begin(),
                  [](const auto n) { return FP{static_cast<float>(n)}; });
@@ -86,7 +86,7 @@ TEST_CASE("Sum of squared deviations", "[stats][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Variance", "[stats][short]") {
-  const std::vector<u8> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  const std::vector<std::uint8_t> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   std::vector<FP> v2(v1.size());
   std::transform(v1.begin(), v1.end(), v2.begin(),
                  [](const auto n) { return FP{static_cast<float>(n)}; });
@@ -99,7 +99,7 @@ TEST_CASE("Variance", "[stats][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Standard Deviation", "[stats][short]") {
-  const std::vector<u8> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  const std::vector<std::uint8_t> v1{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   std::vector<FP> v2(v1.size());
   std::transform(v1.begin(), v1.end(), v2.begin(),
                  [](const auto n) { return FP{static_cast<float>(n)}; });

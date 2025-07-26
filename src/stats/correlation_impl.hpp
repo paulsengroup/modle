@@ -4,25 +4,25 @@
 
 #pragma once
 
-#include <cpp-sort/sorters/pdq_sorter.h>  // for pdq_sorter
+#include <cpp-sort/sorters/pdq_sorter.h>
 
-#include <algorithm>                                    // for min, all_of, max, clamp
-#include <boost/math/distributions/beta.hpp>            // for cdf, beta_distribution
-#include <boost/math/distributions/complement.hpp>      // for complement
-#include <boost/math/distributions/students_t.hpp>      // for cdf, students_t_distribution
-#include <boost/math/special_functions/fpclassify.hpp>  // for isinf, isnan
-#include <cassert>                                      // for assert
-#include <cmath>                                        // for sqrt, isnan
-#include <iterator>                                     // for begin, end, distance
-#include <limits>                                       // for numeric_limits
+#include <algorithm>
+#include <boost/math/distributions/beta.hpp>
+#include <boost/math/distributions/complement.hpp>
+#include <boost/math/distributions/students_t.hpp>
+#include <boost/math/special_functions/fpclassify.hpp>
+#include <cassert>
+#include <cmath>
+#include <iterator>
+#include <limits>
 #include <numeric>
-#include <type_traits>  // for is_arithmetic
-#include <vector>       // for vector
+#include <type_traits>
+#include <vector>
 
-#include "modle/common/common.hpp"                      // for u64
-#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_CONVERSION, DISAB...
-#include "modle/common/utils.hpp"                       // for RepeatIterator
-#include "modle/stats/descriptive.hpp"                  // for mean
+#include "modle/common/common.hpp"
+#include "modle/common/suppress_compiler_warnings.hpp"
+#include "modle/common/utils.hpp"
+#include "modle/stats/descriptive.hpp"
 
 namespace modle::stats {
 
@@ -95,7 +95,7 @@ FP Pearson<FP>::compute_pcc(It1 first1, It1 last1, It2 first2) {
 template <class FP>
 template <class I, class>
 FP Pearson<FP>::compute_significance(const FP pcc, const I n) {
-  if (MODLE_UNLIKELY(std::isnan(pcc))) {
+  if (std::isnan(pcc)) [[unlikely]] {
     return std::numeric_limits<FP>::quiet_NaN();
   }
   assert(n > I(2));
@@ -106,26 +106,25 @@ FP Pearson<FP>::compute_significance(const FP pcc, const I n) {
 }
 
 template <class FP>
-Spearman<FP>::Spearman(const usize n) : _rank_buff1(n), _rank_buff2(n), _idx_buff(n) {}
+Spearman<FP>::Spearman(const std::size_t n) : _rank_buff1(n), _rank_buff2(n), _idx_buff(n) {}
 
 template <class FP>
 template <class It1, class It2>
 FP Spearman<FP>::compute_rho(It1 first1, It1 last1, It2 first2) {
   assert(std::distance(first1, last1) >= 0);
 
-  const auto size = static_cast<usize>(std::distance(first1, last1));
-  auto last2 = first2 + static_cast<isize>(size);
-  if (MODLE_UNLIKELY(std::all_of(first1, last1, [](const auto n) { return n == FP(0); }) ||
-                     std::all_of(first2, last2, [](const auto n) { return n == FP(0); }))) {
+  const auto size = static_cast<std::size_t>(std::distance(first1, last1));
+  auto last2 = first2 + static_cast<std::ptrdiff_t>(size);
+  if (std::all_of(first1, last1, [](const auto n) { return n == FP(0); }) ||
+      std::all_of(first2, last2, [](const auto n) { return n == FP(0); })) [[unlikely]] {
     return FP(1);
   }
 
-  this->_rank_buff1.resize(size);
-  this->_rank_buff2.resize(size);
-  internal::compute_element_ranks(first1, last1, this->_rank_buff1, this->_idx_buff);
-  internal::compute_element_ranks(first2, last2, this->_rank_buff2, this->_idx_buff);
-  return Pearson<FP>::compute_pcc(this->_rank_buff1.begin(), this->_rank_buff1.end(),
-                                  this->_rank_buff2.begin());
+  _rank_buff1.resize(size);
+  _rank_buff2.resize(size);
+  internal::compute_element_ranks(first1, last1, _rank_buff1, _idx_buff);
+  internal::compute_element_ranks(first2, last2, _rank_buff2, _idx_buff);
+  return Pearson<FP>::compute_pcc(_rank_buff1.begin(), _rank_buff1.end(), _rank_buff2.begin());
 }
 
 template <class FP>
@@ -133,28 +132,26 @@ template <class It1, class It2, class It3>
 FP Spearman<FP>::compute_weighted_rho(It1 first1, It1 last1, It2 first2, It3 weight_first) {
   assert(std::distance(first1, last1) >= 0);
 
-  const auto size = static_cast<usize>(std::distance(first1, last1));
-  auto last2 = first2 + static_cast<isize>(size);
-  if (MODLE_UNLIKELY(std::all_of(first1, last1, [](const auto n) { return n == FP(0); }) ||
-                     std::all_of(first2, last2, [](const auto n) { return n == FP(0); }))) {
+  const auto size = static_cast<std::size_t>(std::distance(first1, last1));
+  auto last2 = first2 + static_cast<std::ptrdiff_t>(size);
+  if (std::all_of(first1, last1, [](const auto n) { return n == FP(0); }) ||
+      std::all_of(first2, last2, [](const auto n) { return n == FP(0); })) [[unlikely]] {
     return FP(1);
   }
 
-  this->_rank_buff1.resize(size);
-  this->_rank_buff2.resize(size);
-  internal::compute_weighted_element_ranks(first1, last1, weight_first, this->_rank_buff1,
-                                           this->_idx_buff);
-  internal::compute_weighted_element_ranks(first2, last2, weight_first, this->_rank_buff2,
-                                           this->_idx_buff);
-  return Pearson<FP>::compute_weighted_pcc(this->_rank_buff1.begin(), this->_rank_buff1.end(),
-                                           this->_rank_buff2.begin(), weight_first);
+  _rank_buff1.resize(size);
+  _rank_buff2.resize(size);
+  internal::compute_weighted_element_ranks(first1, last1, weight_first, _rank_buff1, _idx_buff);
+  internal::compute_weighted_element_ranks(first2, last2, weight_first, _rank_buff2, _idx_buff);
+  return Pearson<FP>::compute_weighted_pcc(_rank_buff1.begin(), _rank_buff1.end(),
+                                           _rank_buff2.begin(), weight_first);
 }
 
 template <class FP>
 template <class I, class>
 FP Spearman<FP>::compute_significance(const FP rho, const I n) {
   assert(n > I(2));
-  if (MODLE_UNLIKELY(std::isnan(rho))) {
+  if (std::isnan(rho)) [[unlikely]] {
     return std::numeric_limits<FP>::quiet_NaN();
   }
   const auto dof = static_cast<FP>(n - 2);
@@ -172,10 +169,10 @@ typename Spearman<FP>::Result Spearman<FP>::operator()(It1 first1, It1 last1, It
   Result result;
   using weight_t = std::decay_t<decltype(*weight_first)>;
   if constexpr (std::is_same_v<utils::RepeatIterator<weight_t>, It3>) {
-    result.rho = this->compute_rho(first1, last1, first2);
+    result.rho = compute_rho(first1, last1, first2);
     result.pvalue = Spearman<FP>::compute_significance(result.rho, std::distance(first1, last1));
   } else {
-    result.rho = this->compute_weighted_rho(first1, last1, first2, weight_first);
+    result.rho = compute_weighted_rho(first1, last1, first2, weight_first);
     result.pvalue = std::numeric_limits<FP>::quiet_NaN();
   }
   return result;
@@ -203,9 +200,9 @@ typename Spearman<FP>::Result Spearman<FP>::operator()(const Range1& r1, const R
 namespace internal {
 
 template <class It>
-void sort_by_index(It first, It last, std::vector<usize>& idx_buff) {
+void sort_by_index(It first, It last, std::vector<std::size_t>& idx_buff) {
   assert(std::distance(first, last) >= 0);
-  idx_buff.resize(static_cast<usize>(std::distance(first, last)));
+  idx_buff.resize(static_cast<std::size_t>(std::distance(first, last)));
   std::iota(idx_buff.begin(), idx_buff.end(), 0);
 
   cppsort::pdq_sort(idx_buff.begin(), idx_buff.end(), [&](auto i1, auto i2) {
@@ -218,26 +215,26 @@ void sort_by_index(It first, It last, std::vector<usize>& idx_buff) {
 
 template <class It, class FP, class>
 void compute_element_ranks(It first, It last, std::vector<FP>& rank_buff,
-                           std::vector<usize>& idx_buff) {
+                           std::vector<std::size_t>& idx_buff) {
   assert(std::distance(first, last) >= 0);
-  const auto size = static_cast<usize>(std::distance(first, last));
+  const auto size = static_cast<std::size_t>(std::distance(first, last));
   rank_buff.resize(size);
   idx_buff.resize(size);
   sort_by_index(first, last, idx_buff);
 
   rank_buff[idx_buff.front()] = FP(0);
-  for (usize i = 1; i < size; ++i) {
+  for (std::size_t i = 1; i < size; ++i) {
     DISABLE_WARNING_PUSH
     DISABLE_WARNING_SIGN_CONVERSION
     const auto& prev = *(first + idx_buff[i - 1]);
     const auto& current = *(first + idx_buff[i]);
     DISABLE_WARNING_POP
 
-    if (MODLE_UNLIKELY(prev == current)) {   // Process ties
-      const usize lower_bound_idx = i - 1;   // first tied-element
-      const usize upper_bound_idx = [&]() {  // last tied-element
+    if (prev == current) [[unlikely]] {            // Process ties
+      const std::size_t lower_bound_idx = i - 1;   // first tied-element
+      const std::size_t upper_bound_idx = [&]() {  // last tied-element
         for (auto j = lower_bound_idx + 1; j < size; ++j) {
-          const auto& next = *(first + static_cast<isize>(idx_buff[j]));
+          const auto& next = *(first + static_cast<std::ptrdiff_t>(idx_buff[j]));
           if (current != next) {
             return j;
           }
@@ -250,7 +247,7 @@ void compute_element_ranks(It first, It last, std::vector<FP>& rank_buff,
         rank_buff[idx_buff[i]] = avg_rank;
       }
       // Deal with the remote possibility that the last element in the collection is tied
-      if (MODLE_UNLIKELY(i == size)) {
+      if (i == size) [[unlikely]] {
         return;
       }
     }
@@ -261,16 +258,17 @@ void compute_element_ranks(It first, It last, std::vector<FP>& rank_buff,
 // https://rdrr.io/cran/wCorr/f/inst/doc/wCorrFormulas.pdf
 template <class It1, class It2, class FP, class>
 void compute_weighted_element_ranks(It1 first, It1 last, It2 weight_first,
-                                    std::vector<FP>& rank_buff, std::vector<usize>& idx_buff) {
+                                    std::vector<FP>& rank_buff,
+                                    std::vector<std::size_t>& idx_buff) {
   assert(std::distance(first, last) >= 0);
-  const auto size = static_cast<usize>(std::distance(first, last));
+  const auto size = static_cast<std::size_t>(std::distance(first, last));
   rank_buff.resize(size);
   idx_buff.resize(size);
   sort_by_index(first, last, idx_buff);
 
   double weight_sum = *weight_first;
   rank_buff[idx_buff.front()] = FP(weight_sum);
-  for (usize i = 1; i < size; ++i) {
+  for (std::size_t i = 1; i < size; ++i) {
     DISABLE_WARNING_PUSH
     DISABLE_WARNING_SIGN_CONVERSION
     const auto& prev = *(first + idx_buff[i - 1]);
@@ -278,11 +276,11 @@ void compute_weighted_element_ranks(It1 first, It1 last, It2 weight_first,
     const auto& prev_weight = *(weight_first + idx_buff[i - 1]);
     DISABLE_WARNING_POP
 
-    if (MODLE_UNLIKELY(prev == current)) {   // Process ties
-      const usize lower_bound_idx = i - 1;   // first tied-element
-      const usize upper_bound_idx = [&]() {  // last tied-element
+    if (prev == current) [[unlikely]] {            // Process ties
+      const std::size_t lower_bound_idx = i - 1;   // first tied-element
+      const std::size_t upper_bound_idx = [&]() {  // last tied-element
         for (auto j = lower_bound_idx + 1; j < size; ++j) {
-          const auto& next = *(first + static_cast<isize>(idx_buff[j]));
+          const auto& next = *(first + static_cast<std::ptrdiff_t>(idx_buff[j]));
           if (current != next) {
             return j;
           }
@@ -312,12 +310,12 @@ void compute_weighted_element_ranks(It1 first, It1 last, It2 weight_first,
       // This is equivalent to adding n * avg_tie_weight
       weight_sum += weight_sum_ties;
       // Deal with the remote possibility that the last element in the collection is tied
-      if (MODLE_UNLIKELY(i == size)) {
+      if (i == size) [[unlikely]] {
         return;
       }
     }
     // Here aj = weight_sum + current_weight; bj = 0;
-    const auto& current_weight = *(weight_first + static_cast<isize>(idx_buff[i]));
+    const auto& current_weight = *(weight_first + static_cast<std::ptrdiff_t>(idx_buff[i]));
     rank_buff[idx_buff[i]] = (weight_sum += current_weight);
   }
 }

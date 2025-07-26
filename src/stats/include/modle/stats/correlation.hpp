@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <type_traits>  // for enable_if, enable_if_t
-#include <vector>       // for vector
+#include <type_traits>
+#include <vector>
 
-#include "modle/common/common.hpp"  // for u8f
-#include "modle/common/utils.hpp"   // for RepeatIterator
+#include "modle/common/common.hpp"
+#include "modle/common/utils.hpp"
 
 namespace modle::stats {
 
@@ -58,11 +58,11 @@ class Spearman {
 
   std::vector<FP> _rank_buff1{};
   std::vector<FP> _rank_buff2{};
-  std::vector<usize> _idx_buff{};
+  std::vector<std::size_t> _idx_buff{};
 
  public:
   inline Spearman() = default;
-  inline explicit Spearman(usize n);
+  inline explicit Spearman(std::size_t n);
 
   struct Result {
     FP rho{0};
@@ -92,19 +92,19 @@ namespace internal {
 
 // Return the indices corresponding to the sorted vector
 template <class It>
-inline void sort_by_index(It first, It last, std::vector<usize>& idx_buff);
+inline void sort_by_index(It first, It last, std::vector<std::size_t>& idx_buff);
 
 // This returns a vector of floating point numbers corresponding to the rank of the values from
 // the collection delimited by \p first and \p last
 template <class It, class FP, class = std::enable_if_t<std::is_floating_point_v<FP>>>
 inline void compute_element_ranks(It first, It last, std::vector<FP>& rank_buff,
-                                  std::vector<usize>& idx_buff);
+                                  std::vector<std::size_t>& idx_buff);
 
 // https://rdrr.io/cran/wCorr/f/inst/doc/wCorrFormulas.pdf
 template <class It1, class It2, class FP, class = std::enable_if_t<std::is_floating_point_v<FP>>>
 inline void compute_weighted_element_ranks(It1 first, It1 last, It2 weight_first,
                                            std::vector<FP>& rank_buff,
-                                           std::vector<usize>& idx_buff);
+                                           std::vector<std::size_t>& idx_buff);
 }  // namespace internal
 
 }  // namespace modle::stats

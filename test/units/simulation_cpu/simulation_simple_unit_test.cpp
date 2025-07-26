@@ -2,42 +2,41 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/types/span.h>  // for MakeSpan, Span, MakeConstSpan
-
-#include <algorithm>  // for all_of, equal, copy, for_each, gene...
-#include <cassert>    // for assert
+#include <algorithm>
+#include <cassert>
 #include <catch2/catch_test_macros.hpp>
-#include <iterator>     // for back_insert_iterator, back_inserter
-#include <memory>       // for allocator, allocator_traits<>::valu...
-#include <numeric>      // for iota
-#include <string_view>  // for string_view
-#include <vector>       // for vector
+#include <iterator>
+#include <memory>
+#include <numeric>
+#include <span>
+#include <string_view>
+#include <vector>
 
-#include "./common.hpp"                        // for construct_lef, NO_COLLISION, requir...
-#include "modle/common/common.hpp"             // for usize, bp_t
-#include "modle/common/random.hpp"             // for PRNG, bernoulli_trial, uniform_int_...
-#include "modle/common/simulation_config.hpp"  // for Config
-#include "modle/extrusion_barriers.hpp"        // for ExtrusionBarrier, OCCUPIED, State
-#include "modle/extrusion_factors.hpp"         // for Lef, ExtrusionUnit
-#include "modle/genome.hpp"                    // for GenomicInterval
-#include "modle/simulation.hpp"                // for Simulation
+#include "./common.hpp"
+#include "modle/common/common.hpp"
+#include "modle/common/random.hpp"
+#include "modle/common/simulation_config.hpp"
+#include "modle/extrusion_barriers.hpp"
+#include "modle/extrusion_factors.hpp"
+#include "modle/genome.hpp"
+#include "modle/simulation.hpp"
 
 namespace modle::libmodle::test {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Bind LEFs 001", "[bind-lefs][simulation][short]") {
   const auto chrom = init_interval("chr1", 1000);
-  const usize nlefs = 10;
+  const std::size_t nlefs = 10;
   std::array<Lef, nlefs> lefs;
-  std::array<usize, nlefs> rank1;
-  std::array<usize, nlefs> rank2;
+  std::array<std::size_t, nlefs> rank1;
+  std::array<std::size_t, nlefs> rank2;
   std::iota(rank1.begin(), rank1.end(), 0);
   std::copy(rank1.begin(), rank1.end(), rank2.begin());
-  std::array<usize, nlefs> mask{};
+  std::array<std::size_t, nlefs> mask{};
   std::fill(mask.begin(), mask.end(), 1);
   auto rand_eng = DEFAULT_PRNG;
 
-  for (usize i = 0; i < nlefs; ++i) {  // NOLINTNEXTLINE(readability-implicit-bool-conversion)
+  for (std::size_t i = 0; i < nlefs; ++i) {  // NOLINTNEXTLINE(readability-implicit-bool-conversion)
     mask[i] = random::bernoulli_trial{0.50}(rand_eng);
   }
 
@@ -50,7 +49,7 @@ TEST_CASE("Bind LEFs 001", "[bind-lefs][simulation][short]") {
   CHECK(mask.size() == nlefs);
   check_that_lefs_are_sorted_by_idx(lefs, rank1, rank2);
 
-  for (usize i = 0; i < nlefs; ++i) {
+  for (std::size_t i = 0; i < nlefs; ++i) {
     const auto& lef = lefs[i];
     if (mask[i]) {  // NOLINT(readability-implicit-bool-conversion)
       CHECK(lef.is_bound());
@@ -67,7 +66,7 @@ TEST_CASE("Bind LEFs 001", "[bind-lefs][simulation][short]") {
 TEST_CASE("Bind LEFs 002 - No LEFs to bind", "[bind-lefs][simulation][short]") {
   const auto chrom = init_interval("chr1", 1000);
   std::vector<Lef> lefs;
-  std::vector<usize> rank1, rank2;
+  std::vector<std::size_t> rank1, rank2;
   boost::dynamic_bitset<> mask1;
   std::vector<int> mask2;
   auto rand_eng = DEFAULT_PRNG;
@@ -87,7 +86,7 @@ TEST_CASE("Bind LEFs 002 - No LEFs to bind", "[bind-lefs][simulation][short]") {
   CHECK(rank2.empty());
   CHECK(mask2.empty());
 
-  const usize nlefs = 10;
+  const std::size_t nlefs = 10;
   lefs = std::vector<Lef>(nlefs, Lef{});
   rank1.resize(nlefs);
   std::iota(rank1.begin(), rank1.end(), 0);
@@ -109,10 +108,10 @@ TEST_CASE("Bind LEFs 002 - No LEFs to bind", "[bind-lefs][simulation][short]") {
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Bind LEFs 003 - Empty mask (i.e. bind all LEFs)", "[bind-lefs][simulation][short]") {
   const auto chrom = init_interval("chr1", 1000);
-  const usize nlefs = 10;
+  const std::size_t nlefs = 10;
   std::array<Lef, nlefs> lefs{};
-  std::array<usize, nlefs> rank1{};
-  std::array<usize, nlefs> rank2{};
+  std::array<std::size_t, nlefs> rank1{};
+  std::array<std::size_t, nlefs> rank2{};
   std::iota(rank1.begin(), rank1.end(), 0);
   std::copy(rank1.begin(), rank1.end(), rank2.begin());
   boost::dynamic_bitset<> mask;
@@ -131,15 +130,15 @@ TEST_CASE("Bind LEFs 003 - Empty mask (i.e. bind all LEFs)", "[bind-lefs][simula
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Adjust LEF moves 001", "[adjust-lef-moves][simulation][short]") {
   const auto chrom = init_interval("chr1", 101);
-  const usize nlefs = 3;
+  const std::size_t nlefs = 3;
   // clang-format off
   const std::array<Lef, nlefs> lefs{construct_lef(5, 25, 1),
                                     construct_lef(10, 20, 2),
                                     construct_lef(90, 90, 3)};
 
   // clang-format on
-  const std::array<usize, nlefs> rev_ranks{0, 1, 2};
-  const std::array<usize, nlefs> fwd_ranks{1, 0, 2};
+  const std::array<std::size_t, nlefs> rev_ranks{0, 1, 2};
+  const std::array<std::size_t, nlefs> fwd_ranks{1, 0, 2};
 
   std::array<bp_t, nlefs> rev_moves{5, 10, 15};
   std::array<bp_t, nlefs> fwd_moves{10, 20, 10};
@@ -152,10 +151,9 @@ TEST_CASE("Adjust LEF moves 001", "[adjust-lef-moves][simulation][short]") {
   auto c = Config{};
   c.rev_extrusion_speed_std = 1;
   c.fwd_extrusion_speed_std = 1;
-  Simulation::test_adjust_and_clamp_moves(chrom, lefs, rev_ranks, fwd_ranks,
-                                          absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves));
+  Simulation::test_adjust_and_clamp_moves(chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves);
 
-  for (usize i = 0; i < lefs.size(); ++i) {
+  for (std::size_t i = 0; i < lefs.size(); ++i) {
     CHECK(rev_moves[i] == rev_moves_adjusted[i]);
     CHECK(fwd_moves[i] == fwd_moves_adjusted[i]);
   }
@@ -164,7 +162,7 @@ TEST_CASE("Adjust LEF moves 001", "[adjust-lef-moves][simulation][short]") {
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Adjust LEF moves 002", "[adjust-lef-moves][simulation][short]") {
   const auto chrom = init_interval("chr1", 400, 10);
-  const usize nlefs = 6;
+  const std::size_t nlefs = 6;
   // clang-format off
   const std::array<Lef, nlefs> lefs{construct_lef(20, 50, 0),
                                     construct_lef(60, 60, 1),
@@ -174,8 +172,8 @@ TEST_CASE("Adjust LEF moves 002", "[adjust-lef-moves][simulation][short]") {
                                     construct_lef(125, 305, 5)};
 
   // clang-format on
-  const std::array<usize, nlefs> rev_ranks{0, 1, 5, 2, 3, 4};
-  const std::array<usize, nlefs> fwd_ranks{0, 1, 4, 3, 5, 2};
+  const std::array<std::size_t, nlefs> rev_ranks{0, 1, 5, 2, 3, 4};
+  const std::array<std::size_t, nlefs> fwd_ranks{0, 1, 4, 3, 5, 2};
 
   std::array<bp_t, nlefs> rev_moves{10, 10, 5, 25, 50, 10};
   std::array<bp_t, nlefs> fwd_moves{25, 10, 5, 20, 20, 0};
@@ -188,10 +186,9 @@ TEST_CASE("Adjust LEF moves 002", "[adjust-lef-moves][simulation][short]") {
   auto c = Config{};
   c.rev_extrusion_speed_std = 1;
   c.fwd_extrusion_speed_std = 1;
-  Simulation::test_adjust_and_clamp_moves(chrom, lefs, rev_ranks, fwd_ranks,
-                                          absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves));
+  Simulation::test_adjust_and_clamp_moves(chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves);
 
-  for (usize i = 0; i < nlefs; ++i) {
+  for (std::size_t i = 0; i < nlefs; ++i) {
     CHECK(rev_moves[i] == rev_moves_adjusted[i]);
     CHECK(fwd_moves[i] == fwd_moves_adjusted[i]);
   }
@@ -200,12 +197,12 @@ TEST_CASE("Adjust LEF moves 002", "[adjust-lef-moves][simulation][short]") {
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][medium]") {
   const auto chrom = init_interval("chr1", 2000, 1000);
-  const usize nlefs = 100;
-  const usize iters = 1000;
+  const std::size_t nlefs = 100;
+  const std::size_t iters = 1000;
   auto rand_eng = DEFAULT_PRNG;
   std::array<Lef, nlefs> lefs{};
-  std::array<usize, nlefs> rev_ranks{};
-  std::array<usize, nlefs> fwd_ranks{};
+  std::array<std::size_t, nlefs> rev_ranks{};
+  std::array<std::size_t, nlefs> fwd_ranks{};
   std::array<bp_t, nlefs> rev_moves{};
   std::array<bp_t, nlefs> fwd_moves{};
   auto c = Config{};
@@ -217,18 +214,16 @@ TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][medium]") 
 
   Simulation simulation{c, false};
 
-  for (usize i = 0; i < iters; ++i) {
+  for (std::size_t i = 0; i < iters; ++i) {
     std::generate(lefs.begin(), lefs.end(), [&]() {
       const auto pos =
           random::uniform_int_distribution<bp_t>{chrom.start(), chrom.end() - 1}(rand_eng);
       return construct_lef(pos, pos, i);
     });
-    Simulation::test_rank_lefs(lefs, absl::MakeSpan(rev_ranks), absl::MakeSpan(fwd_ranks), false,
-                               true);
+    Simulation::test_rank_lefs(lefs, rev_ranks, fwd_ranks, false, true);
 
-    simulation.test_generate_moves(chrom, absl::MakeConstSpan(lefs), absl::MakeConstSpan(rev_ranks),
-                                   absl::MakeConstSpan(fwd_ranks), absl::MakeSpan(rev_moves),
-                                   absl::MakeSpan(fwd_moves), rand_eng);
+    simulation.test_generate_moves(chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves,
+                                   rand_eng);
 
     std::for_each(rev_moves.begin(), rev_moves.end(), [&, j = 0UL](const auto n) mutable {
       CHECK(lefs[j].rev_unit.pos() >= chrom.start() + n);
@@ -246,7 +241,7 @@ TEST_CASE("Generate LEF moves 001", "[generate-lef-moves][simulation][medium]") 
 TEST_CASE("Detect LEF-LEF collisions 001", "[lef-lef-collisions][simulation][short]") {
   const auto c = init_config(3, 2);
   const auto chrom = init_interval("chr1", 30);
-  [[maybe_unused]] const usize nlefs = 4;
+  [[maybe_unused]] const std::size_t nlefs = 4;
   auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
@@ -261,8 +256,8 @@ TEST_CASE("Detect LEF-LEF collisions 001", "[lef-lef-collisions][simulation][sho
     construct_lef(18, 23, 3)
   };
   // clang-format on
-  const std::array<usize, nlefs> rev_ranks{0, 1, 2, 3};
-  const std::array<usize, nlefs> fwd_ranks{0, 1, 2, 3};
+  const std::array<std::size_t, nlefs> rev_ranks{0, 1, 2, 3};
+  const std::array<std::size_t, nlefs> fwd_ranks{0, 1, 2, 3};
 
   const ExtrusionBarriers barriers{};
 
@@ -285,12 +280,11 @@ TEST_CASE("Detect LEF-LEF collisions 001", "[lef-lef-collisions][simulation][sho
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   modle::Simulation::test_detect_units_at_interval_boundaries(
-      chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves, absl::MakeSpan(rev_collisions),
-      absl::MakeSpan(fwd_collisions));
+      chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves, rev_collisions, fwd_collisions);
 
   modle::Simulation{c, false}.test_detect_primary_lef_lef_collisions(
-      lefs, barriers, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves),
-      absl::MakeSpan(rev_collisions), absl::MakeSpan(fwd_collisions), rand_eng);
+      lefs, barriers, rev_ranks, fwd_ranks, rev_moves, fwd_moves, rev_collisions, fwd_collisions,
+      rand_eng);
 
   check_collisions(lefs, rev_collisions, rev_collisions_expected, fwd_collisions,
                    fwd_collisions_expected);
@@ -300,7 +294,7 @@ TEST_CASE("Detect LEF-LEF collisions 001", "[lef-lef-collisions][simulation][sho
 TEST_CASE("Process LEF-LEF collisions 001", "[lef-lef-collisions][simulation][short]") {
   const auto c = init_config(3, 2);
   const auto chrom = init_interval("chr1", 30);
-  [[maybe_unused]] const usize nlefs = 4;
+  [[maybe_unused]] const std::size_t nlefs = 4;
   auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
@@ -315,8 +309,8 @@ TEST_CASE("Process LEF-LEF collisions 001", "[lef-lef-collisions][simulation][sh
     construct_lef(18, 23, 3)
   };
   // clang-format on
-  const std::array<usize, nlefs> rev_ranks{0, 1, 2, 3};
-  const std::array<usize, nlefs> fwd_ranks{0, 1, 2, 3};
+  const std::array<std::size_t, nlefs> rev_ranks{0, 1, 2, 3};
+  const std::array<std::size_t, nlefs> fwd_ranks{0, 1, 2, 3};
 
   const ExtrusionBarriers barriers{};
 
@@ -342,13 +336,11 @@ TEST_CASE("Process LEF-LEF collisions 001", "[lef-lef-collisions][simulation][sh
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   modle::Simulation::test_detect_units_at_interval_boundaries(
-      chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves, absl::MakeSpan(rev_collisions),
-      absl::MakeSpan(fwd_collisions));
+      chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves, rev_collisions, fwd_collisions);
 
   modle::Simulation{c, false}.test_process_lef_lef_collisions(
-      chrom, lefs, barriers, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
-      absl::MakeSpan(fwd_moves), absl::MakeSpan(rev_collisions), absl::MakeSpan(fwd_collisions),
-      rand_eng);
+      chrom, lefs, barriers, rev_ranks, fwd_ranks, rev_moves, fwd_moves, rev_collisions,
+      fwd_collisions, rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
                           rev_collisions, rev_collisions_expected, fwd_collisions,
@@ -359,7 +351,7 @@ TEST_CASE("Process LEF-LEF collisions 001", "[lef-lef-collisions][simulation][sh
 TEST_CASE("Detect LEF-LEF collisions 002", "[lef-lef-collisions][simulation][short]") {
   const auto c = init_config(3, 2);
   const auto chrom = init_interval("chr1", 16);
-  [[maybe_unused]] const usize nlefs = 4;
+  [[maybe_unused]] const std::size_t nlefs = 4;
   auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
@@ -377,8 +369,8 @@ std::vector<Lef> lefs{
     construct_lef(11, 15, 3)
 };
   // clang-format on
-  const std::array<usize, nlefs> rev_ranks{0, 1, 2, 3};
-  const std::array<usize, nlefs> fwd_ranks{0, 1, 2, 3};
+  const std::array<std::size_t, nlefs> rev_ranks{0, 1, 2, 3};
+  const std::array<std::size_t, nlefs> fwd_ranks{0, 1, 2, 3};
 
   const ExtrusionBarriers barriers{};
 
@@ -404,13 +396,11 @@ std::vector<Lef> lefs{
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   modle::Simulation::test_detect_units_at_interval_boundaries(
-      chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves, absl::MakeSpan(rev_collisions),
-      absl::MakeSpan(fwd_collisions));
+      chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves, rev_collisions, fwd_collisions);
 
   modle::Simulation{c, false}.test_process_lef_lef_collisions(
-      chrom, lefs, barriers, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
-      absl::MakeSpan(fwd_moves), absl::MakeSpan(rev_collisions), absl::MakeSpan(fwd_collisions),
-      rand_eng);
+      chrom, lefs, barriers, rev_ranks, fwd_ranks, rev_moves, fwd_moves, rev_collisions,
+      fwd_collisions, rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
                           rev_collisions, rev_collisions_expected, fwd_collisions,
@@ -421,7 +411,7 @@ std::vector<Lef> lefs{
 TEST_CASE("Detect LEF-LEF collisions 003", "[lef-lef-collisions][simulation][short]") {
   const auto c = init_config(3, 2);
   const auto chrom = init_interval("chr1", 201, 100);
-  const usize nlefs = 3;
+  const std::size_t nlefs = 3;
   auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
@@ -439,8 +429,8 @@ std::vector<Lef> lefs{
     construct_lef(140, 141, 2)
 };
   // clang-format on
-  const std::array<usize, nlefs> rev_ranks{0, 1, 2};
-  const std::array<usize, nlefs> fwd_ranks{2, 1, 0};
+  const std::array<std::size_t, nlefs> rev_ranks{0, 1, 2};
+  const std::array<std::size_t, nlefs> fwd_ranks{2, 1, 0};
 
   const ExtrusionBarriers barriers{};
 
@@ -464,13 +454,11 @@ std::vector<Lef> lefs{
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
   modle::Simulation::test_detect_units_at_interval_boundaries(
-      chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves, absl::MakeSpan(rev_collisions),
-      absl::MakeSpan(fwd_collisions));
+      chrom, lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves, rev_collisions, fwd_collisions);
 
   modle::Simulation{c, false}.test_process_lef_lef_collisions(
-      chrom, lefs, barriers, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves),
-      absl::MakeSpan(fwd_moves), absl::MakeSpan(rev_collisions), absl::MakeSpan(fwd_collisions),
-      rand_eng);
+      chrom, lefs, barriers, rev_ranks, fwd_ranks, rev_moves, fwd_moves, rev_collisions,
+      fwd_collisions, rand_eng);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
                           rev_collisions, rev_collisions_expected, fwd_collisions,
@@ -481,8 +469,8 @@ std::vector<Lef> lefs{
 TEST_CASE("Detect LEF-BAR collisions 001 - wo soft collisions fwd CTCFs",
           "[lef-bar-collisions][simulation][short]") {
   const auto c = init_config(2, 2);
-  constexpr usize nlefs = 3;
-  constexpr usize nbarriers = 3;
+  constexpr std::size_t nlefs = 3;
+  constexpr std::size_t nbarriers = 3;
   auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
@@ -497,8 +485,8 @@ TEST_CASE("Detect LEF-BAR collisions 001 - wo soft collisions fwd CTCFs",
   // clang-format on
   REQUIRE(barriers.size() == nbarriers);
 
-  const std::array<usize, nlefs> rev_ranks{0, 1, 2};
-  const std::array<usize, nlefs> fwd_ranks{0, 1, 2};
+  const std::array<std::size_t, nlefs> rev_ranks{0, 1, 2};
+  const std::array<std::size_t, nlefs> fwd_ranks{0, 1, 2};
 
   std::array<bp_t, nlefs> rev_moves{0, 2, 2};
   std::array<bp_t, nlefs> fwd_moves{2, 2, 2};
@@ -520,12 +508,11 @@ TEST_CASE("Detect LEF-BAR collisions 001 - wo soft collisions fwd CTCFs",
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  Simulation{c, false}.test_detect_lef_bar_collisions(
-      lefs, rev_ranks, fwd_ranks, rev_moves, fwd_moves, barriers, absl::MakeSpan(rev_collisions),
-      absl::MakeSpan(fwd_collisions), rand_eng);
-  Simulation::test_correct_moves_for_lef_bar_collisions(lefs, barriers, absl::MakeSpan(rev_moves),
-                                                        absl::MakeSpan(fwd_moves), rev_collisions,
-                                                        fwd_collisions);
+  Simulation{c, false}.test_detect_lef_bar_collisions(lefs, rev_ranks, fwd_ranks, rev_moves,
+                                                      fwd_moves, barriers, rev_collisions,
+                                                      fwd_collisions, rand_eng);
+  Simulation::test_correct_moves_for_lef_bar_collisions(lefs, barriers, rev_moves, fwd_moves,
+                                                        rev_collisions, fwd_collisions);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
                           rev_collisions, rev_collisions_expected, fwd_collisions,
@@ -536,8 +523,8 @@ TEST_CASE("Detect LEF-BAR collisions 001 - wo soft collisions fwd CTCFs",
 TEST_CASE("Detect LEF-BAR collisions 002 - wo soft-collisions rev CTCFs",
           "[lef-bar-collisions][simulation][short]") {
   const auto c = init_config(2, 2);
-  constexpr usize nlefs = 3;
-  constexpr usize nbarriers = 3;
+  constexpr std::size_t nlefs = 3;
+  constexpr std::size_t nbarriers = 3;
   auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
@@ -552,8 +539,8 @@ TEST_CASE("Detect LEF-BAR collisions 002 - wo soft-collisions rev CTCFs",
   // clang-format on
   REQUIRE(barriers.size() == nbarriers);
 
-  const std::array<usize, nlefs> rev_ranks{0, 1, 2};
-  const std::array<usize, nlefs> fwd_ranks{0, 1, 2};
+  const std::array<std::size_t, nlefs> rev_ranks{0, 1, 2};
+  const std::array<std::size_t, nlefs> fwd_ranks{0, 1, 2};
 
   std::array<bp_t, nlefs> rev_moves{0, 2, 2};
   std::array<bp_t, nlefs> fwd_moves{2, 2, 2};
@@ -575,12 +562,11 @@ TEST_CASE("Detect LEF-BAR collisions 002 - wo soft-collisions rev CTCFs",
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  Simulation{c, false}.test_detect_lef_bar_collisions(
-      lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves), barriers,
-      absl::MakeSpan(rev_collisions), absl::MakeSpan(fwd_collisions), rand_eng);
-  Simulation::test_correct_moves_for_lef_bar_collisions(lefs, barriers, absl::MakeSpan(rev_moves),
-                                                        absl::MakeSpan(fwd_moves), rev_collisions,
-                                                        fwd_collisions);
+  Simulation{c, false}.test_detect_lef_bar_collisions(lefs, rev_ranks, fwd_ranks, rev_moves,
+                                                      fwd_moves, barriers, rev_collisions,
+                                                      fwd_collisions, rand_eng);
+  Simulation::test_correct_moves_for_lef_bar_collisions(lefs, barriers, rev_moves, fwd_moves,
+                                                        rev_collisions, fwd_collisions);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
                           rev_collisions, rev_collisions_expected, fwd_collisions,
@@ -593,8 +579,8 @@ TEST_CASE("Detect LEF-BAR collisions 003 - w soft-collisions fwd CTCFs",
   auto c = init_config(2, 2);
   c.lef_bar_major_collision_pblock = 1;
   c.lef_bar_minor_collision_pblock = 1;
-  constexpr usize nlefs = 3;
-  constexpr usize nbarriers = 3;
+  constexpr std::size_t nlefs = 3;
+  constexpr std::size_t nbarriers = 3;
   auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
@@ -609,8 +595,8 @@ TEST_CASE("Detect LEF-BAR collisions 003 - w soft-collisions fwd CTCFs",
   // clang-format on
   REQUIRE(barriers.size() == nbarriers);
 
-  const std::array<usize, nlefs> rev_ranks{0, 1, 2};
-  const std::array<usize, nlefs> fwd_ranks{0, 1, 2};
+  const std::array<std::size_t, nlefs> rev_ranks{0, 1, 2};
+  const std::array<std::size_t, nlefs> fwd_ranks{0, 1, 2};
 
   std::array<bp_t, nlefs> rev_moves{0, 2, 2};
   std::array<bp_t, nlefs> fwd_moves{2, 2, 2};
@@ -632,12 +618,11 @@ TEST_CASE("Detect LEF-BAR collisions 003 - w soft-collisions fwd CTCFs",
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  Simulation{c, false}.test_detect_lef_bar_collisions(
-      lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves), barriers,
-      absl::MakeSpan(rev_collisions), absl::MakeSpan(fwd_collisions), rand_eng);
-  Simulation::test_correct_moves_for_lef_bar_collisions(lefs, barriers, absl::MakeSpan(rev_moves),
-                                                        absl::MakeSpan(fwd_moves), rev_collisions,
-                                                        fwd_collisions);
+  Simulation{c, false}.test_detect_lef_bar_collisions(lefs, rev_ranks, fwd_ranks, rev_moves,
+                                                      fwd_moves, barriers, rev_collisions,
+                                                      fwd_collisions, rand_eng);
+  Simulation::test_correct_moves_for_lef_bar_collisions(lefs, barriers, rev_moves, fwd_moves,
+                                                        rev_collisions, fwd_collisions);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
                           rev_collisions, rev_collisions_expected, fwd_collisions,
@@ -648,8 +633,8 @@ TEST_CASE("Detect LEF-BAR collisions 003 - w soft-collisions fwd CTCFs",
 TEST_CASE("Detect LEF-BAR collisions 004 - wo soft-collisions mixed CTCFs",
           "[lef-bar-collisions][simulation][short]") {
   const auto c = init_config(5, 5);
-  const usize nlefs = 5;
-  const usize nbarriers = 4;
+  const std::size_t nlefs = 5;
+  const std::size_t nbarriers = 4;
   auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
@@ -668,8 +653,8 @@ TEST_CASE("Detect LEF-BAR collisions 004 - wo soft-collisions mixed CTCFs",
   // clang-format on
   REQUIRE(barriers.size() == nbarriers);
 
-  const std::array<usize, nlefs> rev_ranks{0, 1, 2, 3, 4};
-  const std::array<usize, nlefs> fwd_ranks{0, 1, 2, 3, 4};
+  const std::array<std::size_t, nlefs> rev_ranks{0, 1, 2, 3, 4};
+  const std::array<std::size_t, nlefs> fwd_ranks{0, 1, 2, 3, 4};
 
   std::array<bp_t, nlefs> rev_moves{5, 5, 5, 5, 5};
   std::array<bp_t, nlefs> fwd_moves{5, 5, 5, 5, 5};
@@ -695,12 +680,11 @@ TEST_CASE("Detect LEF-BAR collisions 004 - wo soft-collisions mixed CTCFs",
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  Simulation{c, false}.test_detect_lef_bar_collisions(
-      lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves), barriers,
-      absl::MakeSpan(rev_collisions), absl::MakeSpan(fwd_collisions), rand_eng);
-  Simulation::test_correct_moves_for_lef_bar_collisions(lefs, barriers, absl::MakeSpan(rev_moves),
-                                                        absl::MakeSpan(fwd_moves), rev_collisions,
-                                                        fwd_collisions);
+  Simulation{c, false}.test_detect_lef_bar_collisions(lefs, rev_ranks, fwd_ranks, rev_moves,
+                                                      fwd_moves, barriers, rev_collisions,
+                                                      fwd_collisions, rand_eng);
+  Simulation::test_correct_moves_for_lef_bar_collisions(lefs, barriers, rev_moves, fwd_moves,
+                                                        rev_collisions, fwd_collisions);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
                           rev_collisions, rev_collisions_expected, fwd_collisions,
@@ -711,8 +695,8 @@ TEST_CASE("Detect LEF-BAR collisions 004 - wo soft-collisions mixed CTCFs",
 TEST_CASE("Detect LEF-BAR collisions 005 - wo soft-collisions mixed CTCFs, different extr. speeds",
           "[lef-bar-collisions][simulation][short]") {
   const auto c = init_config(2, 5);
-  const usize nlefs = 5;
-  const usize nbarriers = 4;
+  const std::size_t nlefs = 5;
+  const std::size_t nbarriers = 4;
   auto rand_eng = DEFAULT_PRNG;
 
   // clang-format off
@@ -731,8 +715,8 @@ TEST_CASE("Detect LEF-BAR collisions 005 - wo soft-collisions mixed CTCFs, diffe
   // clang-format on
   REQUIRE(barriers.size() == nbarriers);
 
-  const std::array<usize, nlefs> rev_ranks{0, 1, 2, 3, 4};
-  const std::array<usize, nlefs> fwd_ranks{0, 1, 2, 3, 4};
+  const std::array<std::size_t, nlefs> rev_ranks{0, 1, 2, 3, 4};
+  const std::array<std::size_t, nlefs> fwd_ranks{0, 1, 2, 3, 4};
 
   std::array<bp_t, nlefs> rev_moves{2, 2, 2, 2, 2};
   std::array<bp_t, nlefs> fwd_moves{5, 5, 5, 5, 5};
@@ -758,12 +742,11 @@ TEST_CASE("Detect LEF-BAR collisions 005 - wo soft-collisions mixed CTCFs, diffe
 
   require_that_lefs_are_sorted_by_idx(lefs, rev_ranks, fwd_ranks);
 
-  Simulation{c, false}.test_detect_lef_bar_collisions(
-      lefs, rev_ranks, fwd_ranks, absl::MakeSpan(rev_moves), absl::MakeSpan(fwd_moves), barriers,
-      absl::MakeSpan(rev_collisions), absl::MakeSpan(fwd_collisions), rand_eng);
-  Simulation::test_correct_moves_for_lef_bar_collisions(lefs, barriers, absl::MakeSpan(rev_moves),
-                                                        absl::MakeSpan(fwd_moves), rev_collisions,
-                                                        fwd_collisions);
+  Simulation{c, false}.test_detect_lef_bar_collisions(lefs, rev_ranks, fwd_ranks, rev_moves,
+                                                      fwd_moves, barriers, rev_collisions,
+                                                      fwd_collisions, rand_eng);
+  Simulation::test_correct_moves_for_lef_bar_collisions(lefs, barriers, rev_moves, fwd_moves,
+                                                        rev_collisions, fwd_collisions);
 
   check_simulation_result(lefs, rev_moves, fwd_moves, rev_moves_expected, fwd_moves_expected,
                           rev_collisions, rev_collisions_expected, fwd_collisions,
@@ -773,7 +756,7 @@ TEST_CASE("Detect LEF-BAR collisions 005 - wo soft-collisions mixed CTCFs, diffe
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("LEFs ranking 001 - Rev extr. unit tied", "[simulation][short]") {
   modle::Config c{};
-  constexpr usize nlefs = 6;
+  constexpr std::size_t nlefs = 6;
 
   // clang-format off
   const std::array<Lef, nlefs> lefs1{
@@ -794,25 +777,23 @@ TEST_CASE("LEFs ranking 001 - Rev extr. unit tied", "[simulation][short]") {
   };
   // clang-format on
 
-  std::array<usize, nlefs> rev_ranks{};
-  std::array<usize, nlefs> fwd_ranks{};
+  std::array<std::size_t, nlefs> rev_ranks{};
+  std::array<std::size_t, nlefs> fwd_ranks{};
 
-  const std::array<usize, nlefs> rev_ranks_expected1{0, 1, 2, 5, 3, 4};
-  const std::array<usize, nlefs> fwd_ranks_expected1{0, 5, 1, 2, 3, 4};
+  const std::array<std::size_t, nlefs> rev_ranks_expected1{0, 1, 2, 5, 3, 4};
+  const std::array<std::size_t, nlefs> fwd_ranks_expected1{0, 5, 1, 2, 3, 4};
 
-  const std::array<usize, nlefs> rev_ranks_expected2{0, 1, 3, 2, 4, 5};
-  const std::array<usize, nlefs> fwd_ranks_expected2{0, 2, 1, 3, 4, 5};
+  const std::array<std::size_t, nlefs> rev_ranks_expected2{0, 1, 3, 2, 4, 5};
+  const std::array<std::size_t, nlefs> fwd_ranks_expected2{0, 2, 1, 3, 4, 5};
 
-  Simulation::test_rank_lefs(lefs1, absl::MakeSpan(rev_ranks), absl::MakeSpan(fwd_ranks), false,
-                             true);
-  for (usize i = 0; i < lefs1.size(); ++i) {
+  Simulation::test_rank_lefs(lefs1, rev_ranks, fwd_ranks, false, true);
+  for (std::size_t i = 0; i < lefs1.size(); ++i) {
     CHECK(rev_ranks[i] == rev_ranks_expected1[i]);
     CHECK(fwd_ranks[i] == fwd_ranks_expected1[i]);
   }
 
-  Simulation::test_rank_lefs(lefs2, absl::MakeSpan(rev_ranks), absl::MakeSpan(fwd_ranks), false,
-                             true);
-  for (usize i = 0; i < lefs2.size(); ++i) {
+  Simulation::test_rank_lefs(lefs2, rev_ranks, fwd_ranks, false, true);
+  for (std::size_t i = 0; i < lefs2.size(); ++i) {
     CHECK(rev_ranks[i] == rev_ranks_expected2[i]);
     CHECK(fwd_ranks[i] == fwd_ranks_expected2[i]);
   }
@@ -821,7 +802,7 @@ TEST_CASE("LEFs ranking 001 - Rev extr. unit tied", "[simulation][short]") {
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("LEFs ranking 002 - Fwd extr. unit tied", "[simulation][short]") {
   modle::Config c{};
-  constexpr usize nlefs = 6;
+  constexpr std::size_t nlefs = 6;
 
   // clang-format off
   const std::array<Lef, nlefs> lefs1{
@@ -842,25 +823,23 @@ TEST_CASE("LEFs ranking 002 - Fwd extr. unit tied", "[simulation][short]") {
   };
   // clang-format on
 
-  std::array<usize, nlefs> rev_ranks{};
-  std::array<usize, nlefs> fwd_ranks{};
+  std::array<std::size_t, nlefs> rev_ranks{};
+  std::array<std::size_t, nlefs> fwd_ranks{};
 
-  const std::array<usize, nlefs> rev_ranks_expected1{0, 1, 2, 3, 5, 4};
-  const std::array<usize, nlefs> fwd_ranks_expected1{0, 5, 1, 2, 3, 4};
+  const std::array<std::size_t, nlefs> rev_ranks_expected1{0, 1, 2, 3, 5, 4};
+  const std::array<std::size_t, nlefs> fwd_ranks_expected1{0, 5, 1, 2, 3, 4};
 
-  const std::array<usize, nlefs> rev_ranks_expected2{0, 2, 3, 4, 1, 5};
-  const std::array<usize, nlefs> fwd_ranks_expected2{0, 1, 2, 3, 4, 5};
+  const std::array<std::size_t, nlefs> rev_ranks_expected2{0, 2, 3, 4, 1, 5};
+  const std::array<std::size_t, nlefs> fwd_ranks_expected2{0, 1, 2, 3, 4, 5};
 
-  Simulation::test_rank_lefs(lefs1, absl::MakeSpan(rev_ranks), absl::MakeSpan(fwd_ranks), false,
-                             true);
-  for (usize i = 0; i < lefs1.size(); ++i) {
+  Simulation::test_rank_lefs(lefs1, rev_ranks, fwd_ranks, false, true);
+  for (std::size_t i = 0; i < lefs1.size(); ++i) {
     CHECK(rev_ranks[i] == rev_ranks_expected1[i]);
     CHECK(fwd_ranks[i] == fwd_ranks_expected1[i]);
   }
 
-  Simulation::test_rank_lefs(lefs2, absl::MakeSpan(rev_ranks), absl::MakeSpan(fwd_ranks), false,
-                             true);
-  for (usize i = 0; i < lefs2.size(); ++i) {
+  Simulation::test_rank_lefs(lefs2, rev_ranks, fwd_ranks, false, true);
+  for (std::size_t i = 0; i < lefs2.size(); ++i) {
     CHECK(rev_ranks[i] == rev_ranks_expected2[i]);
     CHECK(fwd_ranks[i] == fwd_ranks_expected2[i]);
   }

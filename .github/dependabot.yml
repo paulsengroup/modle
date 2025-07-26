@@ -1,4 +1,5 @@
-# Copyright (C) 2022 Roberto Rossini (roberros@uio.no)
+# Copyright (C) 2025 Roberto Rossini <roberros@uio.no>
+#
 # SPDX-License-Identifier: MIT
 
 version: 2
@@ -6,9 +7,14 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
-
-  - package-ecosystem: "docker"
+      interval: "weekly"
+    groups:
+      github-actions:
+        patterns: ["*"]
+  - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      pip:
+        patterns: ["*"]

@@ -4,44 +4,44 @@
 
 #pragma once
 
-#include <cassert>  // for assert
-#include <limits>   // for numeric_limits, numeric_limits<>::digits
+#include <cassert>
+#include <limits>
 
-#include "modle/common/common.hpp"  // for bp_t
-#include "modle/common/dna.hpp"     // for dna::Direction, dna::FWD, dna::REV
-#include "modle/common/random.hpp"  // for generate_canonical, PRNG_t
+#include "modle/common/common.hpp"
+#include "modle/common/dna.hpp"
+#include "modle/common/random.hpp"
 
 namespace modle {
 
 template <class BarrierIt, class StateIt>
 ExtrusionBarriers::ExtrusionBarriers(BarrierIt first_barrier, BarrierIt last_barrier,
-                                     StateIt first_state, bool sort)
-    : ExtrusionBarriers(static_cast<usize>(std::distance(first_barrier, last_barrier))) {
-  this->clear();
+                                     StateIt first_state, bool sort_barriers)
+    : ExtrusionBarriers(static_cast<std::size_t>(std::distance(first_barrier, last_barrier))) {
+  clear();
 
   auto it1 = first_barrier;
   auto it2 = first_state;
 
   while (it1 != last_barrier) {
-    this->push_back(*it1++, *it2++);
+    push_back(*it1++, *it2++);
   }
 
-  if (sort) {
-    this->sort();
+  if (sort_barriers) {
+    sort();
   }
 }
 
 template <class BarrierIt>
 ExtrusionBarriers::ExtrusionBarriers(BarrierIt first_barrier, BarrierIt last_barrier, State state,
-                                     bool sort)
-    : ExtrusionBarriers(static_cast<usize>(std::distance(first_barrier, last_barrier))) {
-  this->clear();
+                                     bool sort_barriers)
+    : ExtrusionBarriers(static_cast<std::size_t>(std::distance(first_barrier, last_barrier))) {
+  clear();
 
   std::for_each(first_barrier, last_barrier,
-                [&](const auto& barrier) { this->push_back(barrier, state); });
+                [&](const auto& barrier) { push_back(barrier, state); });
 
-  if (sort) {
-    this->sort();
+  if (sort_barriers) {
+    sort();
   }
 }
 
@@ -72,7 +72,7 @@ constexpr ExtrusionBarrier::ExtrusionBarrier(bp_t pos_, TP transition_prob_activ
 }
 
 constexpr bool ExtrusionBarrier::operator==(const ExtrusionBarrier& other) const noexcept {
-  return this->pos == other.pos;
+  return pos == other.pos;
 }
 
 constexpr bool ExtrusionBarrier::operator!=(const ExtrusionBarrier& other) const noexcept {
@@ -80,19 +80,19 @@ constexpr bool ExtrusionBarrier::operator!=(const ExtrusionBarrier& other) const
 }
 
 constexpr bool ExtrusionBarrier::operator<(const ExtrusionBarrier& other) const noexcept {
-  return this->pos < other.pos;
+  return pos < other.pos;
 }
 
 constexpr bool ExtrusionBarrier::operator>(const ExtrusionBarrier& other) const noexcept {
-  return this->pos > other.pos;
+  return pos > other.pos;
 }
 
 constexpr bool ExtrusionBarrier::operator<=(const ExtrusionBarrier& other) const noexcept {
-  return this->pos <= other.pos;
+  return pos <= other.pos;
 }
 
 constexpr bool ExtrusionBarrier::operator>=(const ExtrusionBarrier& other) const noexcept {
-  return this->pos >= other.pos;
+  return pos >= other.pos;
 }
 
 // NOLINTNEXTLINE(hicpp-explicit-conversions)
@@ -101,11 +101,11 @@ constexpr internal::TransitionProbability::TransitionProbability(double p) noexc
   assert(_p <= 1.0);
 }
 
-constexpr double internal::TransitionProbability::operator()() const noexcept { return this->_p; }
+constexpr double internal::TransitionProbability::operator()() const noexcept { return _p; }
 
 constexpr double ExtrusionBarrier::compute_stp_active_from_occupancy(TP stp_inactive,
                                                                      double occupancy) noexcept {
-  if (MODLE_UNLIKELY(occupancy == 0)) {
+  if (occupancy == 0) [[unlikely]] {
     return 0.0;
   }
 
@@ -117,7 +117,7 @@ constexpr double ExtrusionBarrier::compute_stp_active_from_occupancy(TP stp_inac
 
 constexpr double ExtrusionBarrier::compute_occupancy_from_stp(TP stp_active,
                                                               TP stp_inactive) noexcept {
-  if (MODLE_UNLIKELY(stp_active() + stp_inactive() == 0)) {
+  if (stp_active() + stp_inactive() == 0) [[unlikely]] {
     return 0.0;
   }
 

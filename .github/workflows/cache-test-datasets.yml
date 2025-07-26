@@ -19,7 +19,7 @@ defaults:
 
 env:
   FETCH_TEST_DATASET_CMAKE: cmake/FetchTestDataset.cmake
-  TEST_DATASET_PATH: test/data/modle_test_data.tar.xz
+  TEST_DATASET_PATH: test/data/modle_test_data.tar.zst
 
 jobs:
   cache-test-datasets:
@@ -31,7 +31,7 @@ jobs:
 
     steps:
     - name: Checkout repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Generate cache key
       id: generate-cache-key
@@ -44,14 +44,14 @@ jobs:
       id: test-dataset
       run: |
         url="$(grep -F 'DOWNLOAD' "$FETCH_TEST_DATASET_CMAKE" | sed 's/.*DOWNLOAD[[:space:]]\+//')"
-        checksum="$(grep -F 'EXPECTED_HASH' "$FETCH_TEST_DATASET_CMAKE" | sed 's/.*SHA512=//')"
+        checksum="$(grep -F 'EXPECTED_HASH' "$FETCH_TEST_DATASET_CMAKE" | sed 's/.*SHA256=//')"
 
         echo "url=$url" >> $GITHUB_OUTPUT
         echo "checksum=$checksum" >> $GITHUB_OUTPUT
 
     - name: Cache test datasets
       id: cache-dataset
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         key: ${{ steps.generate-cache-key.outputs.key }}
         path: ${{ env.TEST_DATASET_PATH }}
@@ -67,11 +67,11 @@ jobs:
 
     - name: Checksum test dataset
       run: |
-        echo "${{ steps.test-dataset.outputs.checksum }}  $TEST_DATASET_PATH" > checksum.sha512
-        shasum -c checksum.sha512
+        echo "${{ steps.test-dataset.outputs.checksum }}  $TEST_DATASET_PATH" > checksum.sha256
+        shasum -c checksum.sha256
 
     - name: Upload test dataset
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ steps.generate-cache-key.outputs.key }}
         path: ${{ env.TEST_DATASET_PATH }}

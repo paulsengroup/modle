@@ -6,25 +6,24 @@
 #include "modle/simulation.hpp"
 // clang-format on
 
-#include <absl/types/span.h>  // for Span
+#include <cassert>
+#include <span>
 
-#include <cassert>  // for assert
-
-#include "modle/common/common.hpp"       // for bp_t
-#include "modle/common/utils.hpp"        // for ndebug_defined
-#include "modle/extrusion_barriers.hpp"  // for ExtrusionBarrier
-#include "modle/extrusion_factors.hpp"   // for ExtrusionUnit, Lef
+#include "modle/common/common.hpp"
+#include "modle/common/utils.hpp"
+#include "modle/extrusion_barriers.hpp"
+#include "modle/extrusion_factors.hpp"
 
 namespace modle {
 
 void Simulation::correct_moves_for_lef_bar_collisions(
-    const absl::Span<const Lef> lefs, const ExtrusionBarriers& barriers,
-    const absl::Span<bp_t> rev_moves, const absl::Span<bp_t> fwd_moves,
-    const absl::Span<const CollisionT> rev_collisions,
-    const absl::Span<const CollisionT> fwd_collisions) noexcept(utils::ndebug_defined()) {
-  for (usize i = 0; i < lefs.size(); ++i) {
-    if (MODLE_UNLIKELY(
-            rev_collisions[i].collision_occurred(CollisionT::LEF_BAR))) {  // Process rev collisions
+    const std::span<const Lef> lefs, const ExtrusionBarriers& barriers,
+    const std::span<bp_t> rev_moves, const std::span<bp_t> fwd_moves,
+    const std::span<const CollisionT> rev_collisions,
+    const std::span<const CollisionT> fwd_collisions) noexcept(utils::ndebug_defined()) {
+  for (std::size_t i = 0; i < lefs.size(); ++i) {
+    if (rev_collisions[i].collision_occurred(CollisionT::LEF_BAR))
+        [[unlikely]] {  // Process rev collisions
       const auto barrier_idx = rev_collisions[i].decode_index();
       const auto barrier_pos = barriers.pos(barrier_idx);
       assert(lefs[i].rev_unit.pos() > barrier_pos);
@@ -36,8 +35,8 @@ void Simulation::correct_moves_for_lef_bar_collisions(
       rev_moves[i] = distance - 1;
     }
 
-    if (MODLE_UNLIKELY(
-            fwd_collisions[i].collision_occurred(CollisionT::LEF_BAR))) {  // Process fwd collisions
+    if (fwd_collisions[i].collision_occurred(CollisionT::LEF_BAR))
+        [[unlikely]] {  // Process fwd collisions
       const auto barrier_idx = fwd_collisions[i].decode_index();
       const auto barrier_pos = barriers.pos(barrier_idx);
       assert(lefs[i].fwd_unit.pos() < barrier_pos);
@@ -52,15 +51,15 @@ void Simulation::correct_moves_for_lef_bar_collisions(
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void Simulation::correct_moves_for_primary_lef_lef_collisions(
-    const absl::Span<const Lef> lefs, const absl::Span<const usize> rev_ranks,
-    const absl::Span<const usize> fwd_ranks, const absl::Span<bp_t> rev_moves,
-    const absl::Span<bp_t> fwd_moves, const absl::Span<const CollisionT> rev_collisions,
-    const absl::Span<const CollisionT> fwd_collisions) noexcept(utils::ndebug_defined()) {
+    const std::span<const Lef> lefs, const std::span<const std::size_t> rev_ranks,
+    const std::span<const std::size_t> fwd_ranks, const std::span<bp_t> rev_moves,
+    const std::span<bp_t> fwd_moves, const std::span<const CollisionT> rev_collisions,
+    const std::span<const CollisionT> fwd_collisions) noexcept(utils::ndebug_defined()) {
   // Primary LEF-LEF collisions are encoded with a number between nbarriers and nbarriers + nlefs.
   // Given a pair of extr. units that are moving in opposite directions, the index i corresponding
   // to the extr. unit that is causing the collision is encoded as nbarriers + i.
   for (auto rev_idx : rev_ranks) {  // Loop over rev units in 5'-3' order
-    if (MODLE_UNLIKELY(rev_collisions[rev_idx].collision_occurred(CollisionT::LEF_LEF_PRIMARY))) {
+    if (rev_collisions[rev_idx].collision_occurred(CollisionT::LEF_LEF_PRIMARY)) [[unlikely]] {
       const auto fwd_idx = rev_collisions[rev_idx].decode_index();
 
       if (fwd_collisions[fwd_idx].collision_occurred(CollisionT::LEF_LEF_PRIMARY)) {
@@ -104,7 +103,7 @@ void Simulation::correct_moves_for_primary_lef_lef_collisions(
   // There may be a way to handle this case directly in the first pass, but for the time being, this
   // will have to do.
   for (auto fwd_idx : fwd_ranks) {
-    if (MODLE_UNLIKELY(fwd_collisions[fwd_idx].collision_occurred(CollisionT::LEF_LEF_PRIMARY))) {
+    if (fwd_collisions[fwd_idx].collision_occurred(CollisionT::LEF_LEF_PRIMARY)) [[unlikely]] {
       const auto rev_idx = fwd_collisions[fwd_idx].decode_index();
 
       if (rev_collisions[rev_idx].collision_occurred(CollisionT::LEF_BAR)) {

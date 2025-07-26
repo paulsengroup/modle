@@ -23,8 +23,7 @@ git_root="$(git rev-parse --show-toplevel)"
 )
 
 tar -C "$git_root" -cf - test/data/{integration,unit}_tests/ test/data/checksums.sha256 |
-  xz -9 --extreme -T0 |
-  tee "$git_root/test/data/modle_test_data.tar.xz" > /dev/null
+  zstd -T0 --long -22 --ultra -v -o "$git_root/test/data/modle_test_data.tar.zst" > /dev/null
 
-tar -tf "$git_root/test/data/modle_test_data.tar.xz"
-sha512sum "$git_root/test/data/modle_test_data.tar.xz"
+tar -tf "$git_root/test/data/modle_test_data.tar.zst"
+sha256sum "$git_root/test/data/modle_test_data.tar.zst"

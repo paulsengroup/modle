@@ -2,24 +2,23 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/strings/str_split.h>  // for StrSplit, Splitter
-#include <fmt/format.h>              // for to_string
+#include <fmt/format.h>
 
-#include <algorithm>  // for sort, max
+#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
-#include <filesystem>   // for path
-#include <string>       // for string, basic_string, operator==, char_traits, stoull
-#include <string_view>  // for operator!=, basic_string_view, string_view, operator<
-#include <vector>       // for vector
+#include <filesystem>
+#include <string>
+#include <string_view>
+#include <vector>
 
-#include "absl/strings/match.h"                   // for StrContains
-#include "modle/bed/bed.hpp"                      // for BED, Parser, formatter<>::format, BED::BED3
-#include "modle/common/common.hpp"                // for usize
-#include "modle/compressed_io/compressed_io.hpp"  // for Reader
-#include "modle/test/self_deleting_folder.hpp"    // for SelfDeletingFolder
+#include "modle/bed/bed.hpp"
+#include "modle/common/common.hpp"
+#include "modle/common/string_utils.hpp"
+#include "modle/compressed_io/compressed_io.hpp"
+#include "modle/test/tmpdir.hpp"
 
 namespace modle::test {
-inline const SelfDeletingFolder testdir{true};  // NOLINT(cert-err58-cpp)
+inline const TmpDir testdir{true};  // NOLINT(cert-err58-cpp)
 }  // namespace modle::test
 
 namespace modle::bed::test {
@@ -37,8 +36,7 @@ static void compare_bed_records_with_file(std::vector<BED> records, const std::s
   lines.reserve(records.size());
   std::string buff;
   while (r.getline(buff)) {
-    if (buff.front() == '#' || absl::StrContains(buff, "track") ||
-        absl::StrContains(buff, "browser")) {
+    if (buff.front() == '#' || str_contains(buff, "track") || str_contains(buff, "browser")) {
       continue;
     }
     lines.push_back(buff);
@@ -47,8 +45,8 @@ static void compare_bed_records_with_file(std::vector<BED> records, const std::s
   REQUIRE(records.size() == lines.size());
   std::sort(records.begin(), records.end());
   std::sort(lines.begin(), lines.end(), [&](const std::string_view &a, const std::string_view &b) {
-    const std::vector<std::string_view> toksa = absl::StrSplit(a, '\t');
-    const std::vector<std::string_view> toksb = absl::StrSplit(b, '\t');
+    const auto toksa = str_split(a, '\t');
+    const auto toksb = str_split(b, '\t');
     const auto &chra = toksa[0];
     const auto &chrb = toksb[0];
     const auto &starta = toksa[1];
@@ -64,7 +62,7 @@ static void compare_bed_records_with_file(std::vector<BED> records, const std::s
     return std::stoull(enda.data(), nullptr) < std::stoull(endb.data(), nullptr);
   });
 
-  for (usize i = 0; i < records.size(); ++i) {
+  for (std::size_t i = 0; i < records.size(); ++i) {
     CHECK(fmt::to_string(records[i]) == lines[i]);
   }
 }
@@ -107,19 +105,19 @@ TEST_CASE("BED: strip quotes", "[parsers][BED][io][short]") {
 TEST_CASE("BED Parser CRLF", "[parsers][BED][io][short]") {
   const auto bed_file = testdir() / "crlf.bed";
 
-  const usize num_records = 3;
+  const std::size_t num_records = 3;
 
   {
     compressed_io::Writer w(bed_file, compressed_io::Writer::NONE);
-    for (usize i = 0; i < num_records; ++i) {
-      w.write(fmt::format(FMT_STRING("chr{}\t0\t1\r\n"), i));
+    for (std::size_t i = 0; i < num_records; ++i) {
+      w.write(fmt::format("chr{}\t0\t1\r\n", i));
     }
   }
 
   const auto records = bed::Parser(bed_file).parse_all();
   REQUIRE(records.size() == num_records);
-  for (usize i = 0; i < num_records; ++i) {
-    CHECK(bed::BED(fmt::format(FMT_STRING("chr{}\t0\t1"), i)) == records[i]);
+  for (std::size_t i = 0; i < num_records; ++i) {
+    CHECK(bed::BED(fmt::format("chr{}\t0\t1", i)) == records[i]);
   }
 }
 

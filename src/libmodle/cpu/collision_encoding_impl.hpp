@@ -3,50 +3,51 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include <absl/numeric/bits.h>  // for countl_zero, popcount
-#include <fmt/format.h>         // for format, formatter
 
-#include <stdexcept>  // for runtime_error
+#include <fmt/format.h>
 
-#include "modle/common/utils.hpp"  // for ndebug_defined, ndebug_not_defined
+#include <bit>
+#include <stdexcept>
+
+#include "modle/common/utils.hpp"
 
 namespace modle {
 template <class I>
 constexpr auto CollisionEvent<I>::operator|(CollisionEvent<I> other) const noexcept
     -> CollisionEvent<I> {
-  return this->_event | other._event;
+  return _event | other._event;
 }
 
 template <class I>
 constexpr auto CollisionEvent<I>::operator|=(CollisionEvent<I> other) noexcept
     -> CollisionEvent<I>& {
-  this->_event |= other._event;
+  _event |= other._event;
   return *this;
 }
 
 template <class I>
 constexpr auto CollisionEvent<I>::operator&(CollisionEvent<I> other) const noexcept
     -> CollisionEvent<I> {
-  return this->_event & other._event;
+  return _event & other._event;
 }
 
 template <class I>
 constexpr auto CollisionEvent<I>::operator&=(CollisionEvent<I> other) noexcept
     -> CollisionEvent<I>& {
-  this->_event &= other._event;
+  _event &= other._event;
   return *this;
 }
 
 template <class I>
 constexpr auto CollisionEvent<I>::operator^(CollisionEvent<I> other) const noexcept
     -> CollisionEvent<I> {
-  return this->_event ^ other._event;
+  return _event ^ other._event;
 }
 
 template <class I>
 constexpr auto CollisionEvent<I>::operator^=(CollisionEvent<I> other) noexcept
     -> CollisionEvent<I>& {
-  this->_event ^= other._event;
+  _event ^= other._event;
   return *this;
 }
 
@@ -62,22 +63,22 @@ constexpr bool CollisionEvent<I>::operator!=(CollisionEvent<I> other) const noex
 
 template <class I>
 constexpr I CollisionEvent<I>::operator()() const noexcept {
-  return this->_event;
+  return _event;
 }
 
 template <class I>
-constexpr Collision<I>::Collision(usize idx,
+constexpr Collision<I>::Collision(std::size_t idx,
                                   CollisionEventT event) noexcept(utils::ndebug_defined())
     : _collision(encode(idx, event)) {}
 
 template <class I>
-constexpr I Collision<I>::encode(const usize idx,
+constexpr I Collision<I>::encode(const std::size_t idx,
                                  const CollisionEventT event) noexcept(utils::ndebug_defined()) {
   if constexpr (utils::ndebug_not_defined()) {
     if (event == 0 && idx != 0) {
       throw std::runtime_error(
-          fmt::format(FMT_STRING("Collision<I>::encode(idx={}, event={:08b}): idx must be 0 when "
-                                 "no collision has occurred/been avoided"),
+          fmt::format("Collision<I>::encode(idx={}, event={:08b}): idx must be 0 when "
+                      "no collision has occurred/been avoided",
                       idx, event()));
     }
     Collision<I>::validate(idx, event);
@@ -86,21 +87,22 @@ constexpr I Collision<I>::encode(const usize idx,
 }
 
 template <class I>
-constexpr bool Collision<I>::is_valid_index(const usize idx) noexcept(utils::ndebug_defined()) {
-  return usize(absl::countl_zero(idx)) >= RESERVED_EVENT_BITS;
+constexpr bool Collision<I>::is_valid_index(const std::size_t idx) noexcept(
+    utils::ndebug_defined()) {
+  return std::size_t(std::countl_zero(idx)) >= RESERVED_EVENT_BITS;
 }
 
 template <class I>
 constexpr bool Collision<I>::is_valid_event(const CollisionEventT event) noexcept(
     utils::ndebug_defined()) {
   // Make sure reserved but unused bits are all 0
-  bool ok = usize(absl::countl_zero(event())) >= RESERVED_EVENT_BITS - EVENT_BITS;
+  bool ok = std::size_t(std::countl_zero(event())) >= RESERVED_EVENT_BITS - EVENT_BITS;
   if ((event & COLLISION) != 0) {
     // In case of a collision we require exactly one of the bits recording the reason of collision
     // to be set to 1
-    ok &= absl::popcount(event()) == 2;
+    ok &= std::popcount(event()) == 2;
   } else {
-    ok &= absl::popcount(event()) <= 1;
+    ok &= std::popcount(event()) <= 1;
   }
   return ok;
 }
@@ -108,7 +110,7 @@ constexpr bool Collision<I>::is_valid_event(const CollisionEventT event) noexcep
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_UNUSED_PARAMETER
 template <class I>
-constexpr void Collision<I>::validate(const usize idx, const CollisionEventT event) {
+constexpr void Collision<I>::validate(const std::size_t idx, const CollisionEventT event) {
   if constexpr (utils::ndebug_not_defined()) {
     if (idx == 0 && event == 0) {
       return;
@@ -134,8 +136,8 @@ constexpr void Collision<I>::validate(const usize idx, const CollisionEventT eve
     }();
 
     if (!error_msg.empty()) {
-      throw std::runtime_error(fmt::format(
-          FMT_STRING("Collision<I>::encode(idx={}, event={:08b}): {}"), idx, event(), error_msg));
+      throw std::runtime_error(
+          fmt::format("Collision<I>::encode(idx={}, event={:08b}): {}", idx, event(), error_msg));
     }
   }
 }
@@ -143,7 +145,7 @@ DISABLE_WARNING_POP
 
 template <class I>
 constexpr void Collision<I>::validate() const {
-  Collision<I>::validate(this->decode_index(), this->decode_event());
+  Collision<I>::validate(decode_index(), decode_event());
 }
 
 template <class I>
@@ -152,41 +154,41 @@ constexpr I Collision<I>::lshift_event(const CollisionEventT event) noexcept {
 }
 
 template <class I>
-constexpr void Collision<I>::set_idx(const usize idx) noexcept {
+constexpr void Collision<I>::set_idx(const std::size_t idx) noexcept {
   assert(is_valid_index(idx));
-  this->_collision |= idx & INDEX_MASK;
+  _collision |= idx & INDEX_MASK;
 }
 
 template <class I>
 constexpr void Collision<I>::add_event(const CollisionEventT event) noexcept {
   assert(is_valid_event(event));
-  this->_collision |= Collision<I>::lshift_event(event);
-  this->validate();
+  _collision |= Collision<I>::lshift_event(event);
+  validate();
 }
 
 template <class I>
 constexpr void Collision<I>::set_event(const CollisionEventT event) noexcept {
   assert(is_valid_event(event));
-  this->_collision = Collision<I>::lshift_event(event) | (this->_collision & INDEX_MASK);
-  assert(is_valid_event(this->decode_event()));
+  _collision = Collision<I>::lshift_event(event) | (_collision & INDEX_MASK);
+  assert(is_valid_event(decode_event()));
 }
 
 template <class I>
-constexpr void Collision<I>::set(const usize idx, const CollisionEventT event) noexcept {
-  this->clear();
-  this->set_idx(idx);
-  this->add_event(event);
-  this->validate();
+constexpr void Collision<I>::set(const std::size_t idx, const CollisionEventT event) noexcept {
+  clear();
+  set_idx(idx);
+  add_event(event);
+  validate();
 }
 
 template <class I>
 constexpr void Collision<I>::clear() noexcept {
-  this->_collision = 0;
+  _collision = 0;
 }
 
 template <class I>
 constexpr bool Collision<I>::operator==(const Collision other) const noexcept {
-  return this->_collision == other._collision;
+  return _collision == other._collision;
 }
 
 template <class I>
@@ -196,47 +198,47 @@ constexpr bool Collision<I>::operator!=(const Collision other) const noexcept {
 
 template <class I>
 constexpr I Collision<I>::operator()() const noexcept {
-  return this->_collision;
+  return _collision;
 }
 
 template <class I>
 constexpr I& Collision<I>::operator()() noexcept {
-  return this->_collision;
+  return _collision;
 }
 
 template <class I>
-constexpr usize Collision<I>::decode_index() const noexcept {
-  return this->_collision & INDEX_MASK;
+constexpr std::size_t Collision<I>::decode_index() const noexcept {
+  return _collision & INDEX_MASK;
 }
 
 template <class I>
 constexpr auto Collision<I>::decode_event() const noexcept -> CollisionEventT {
   DISABLE_WARNING_PUSH
   DISABLE_WARNING_CONVERSION
-  return CollisionEventT(this->_collision >> INDEX_BITS);
+  return CollisionEventT(_collision >> INDEX_BITS);
   DISABLE_WARNING_POP
 }
 
 template <class I>
 constexpr bool Collision<I>::collision_occurred() const noexcept {
-  return this->_collision & Collision<I>::lshift_event(COLLISION);
+  return _collision & Collision<I>::lshift_event(COLLISION);
 }
 
 template <class I>
 constexpr bool Collision<I>::collision_avoided() const noexcept {
-  return !this->collision_occurred() && this->_collision != 0;
+  return !collision_occurred() && _collision != 0;
 }
 
 template <class I>
 constexpr bool Collision<I>::collision_occurred(const CollisionEventT c) const noexcept {
   assert((c & COLLISION) == 0);
-  return this->decode_event() == (c | COLLISION);
+  return decode_event() == (c | COLLISION);
 }
 
 template <class I>
 constexpr bool Collision<I>::collision_avoided(const CollisionEventT c) const noexcept {
   assert((c & COLLISION) == 0);
-  return !this->collision_occurred() && this->decode_event() == c;
+  return !collision_occurred() && decode_event() == c;
 }
 
 }  // namespace modle
@@ -259,9 +261,8 @@ template <typename FormatContext>
 auto fmt::formatter<modle::Collision<>>::format(const modle::Collision<>& c,
                                                 FormatContext& ctx) const -> decltype(ctx.out()) {
   if (presentation == 's') {
-    return fmt::format_to(ctx.out(), FMT_STRING("{}"), c());
+    return fmt::format_to(ctx.out(), "{}", c());
   }
   assert(presentation == 'l');
-  return fmt::format_to(ctx.out(), FMT_STRING("idx={}; event={:08b};"), c.decode_index(),
-                        c.decode_event()());
+  return fmt::format_to(ctx.out(), "idx={}; event={:08b};", c.decode_index(), c.decode_event()());
 }

@@ -6,7 +6,7 @@
 #include <fmt/format.h>
 
 #include <cassert>
-#include <ctgmath>
+#include <cmath>
 
 #include "modle/bed/bed.hpp"
 #include "modle/bigwig/bigwig.hpp"

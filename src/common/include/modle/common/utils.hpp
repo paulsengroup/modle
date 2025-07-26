@@ -4,21 +4,21 @@
 
 #pragma once
 
-#include <absl/types/span.h>  // for Span
-#include <xxhash.h>           // for XXH3_state_t, XXH_INLINE_XXH3_state_t
+#include <xxhash.h>
 
-#include <array>             // for array
-#include <filesystem>        // for path
-#include <functional>        // for reference_wrapper
-#include <future>            // for future
-#include <initializer_list>  // for initializer_list
-#include <string>            // for string
-#include <string_view>       // for string_view
-#include <type_traits>       // for enable_if, enable_if_t
-#include <utility>           // for pair
-#include <vector>            // for vector
+#include <array>
+#include <filesystem>
+#include <functional>
+#include <future>
+#include <initializer_list>
+#include <span>
+#include <string>
+#include <string_view>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
-#include "modle/common/common.hpp"  // for i64, usize, isize
+#include "modle/common/common.hpp"
 
 namespace modle::utils {
 
@@ -58,7 +58,7 @@ class RepeatIterator {
 
  public:
   using value_type = T;
-  using difference_type = isize;
+  using difference_type = std::ptrdiff_t;
   using pointer = T*;
   using reference = T&;
   using iterator_category = std::bidirectional_iterator_tag;
@@ -67,7 +67,7 @@ class RepeatIterator {
   explicit RepeatIterator(T value);
 
   [[nodiscard]] constexpr const T& operator*() const;
-  [[nodiscard]] constexpr const T& operator[](usize i) const;
+  [[nodiscard]] constexpr const T& operator[](std::size_t i) const;
 
   constexpr const RepeatIterator& operator++() const;
   constexpr const RepeatIterator operator++(int) const;
@@ -98,12 +98,11 @@ void concatenate_files(const std::filesystem::path& path_to_dest,
 
 template <class MutexT>
 class LockRangeExclusive {
-  absl::Span<MutexT> _mutexes{};
+  std::span<MutexT> _mutexes{};
 
  public:
   LockRangeExclusive() = default;
-  explicit LockRangeExclusive(absl::Span<MutexT> mutexes);
-  explicit LockRangeExclusive(std::vector<MutexT>& mutexes);
+  explicit LockRangeExclusive(std::span<MutexT> mutexes);
   ~LockRangeExclusive() noexcept;
 
   LockRangeExclusive(const LockRangeExclusive& other) = delete;
@@ -114,11 +113,11 @@ class LockRangeExclusive {
 
 template <class MutexT>
 class LockRangeShared {
-  absl::Span<MutexT> _mutexes{};
+  std::span<MutexT> _mutexes{};
 
  public:
   LockRangeShared() = default;
-  explicit LockRangeShared(absl::Span<MutexT> mutexes);
+  explicit LockRangeShared(std::span<MutexT> mutexes);
   explicit LockRangeShared(std::vector<MutexT>& mutexes);
   ~LockRangeShared() noexcept;
 

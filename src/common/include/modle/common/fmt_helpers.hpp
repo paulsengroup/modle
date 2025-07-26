@@ -19,7 +19,7 @@ struct fmt::formatter<modle::PixelCoordinates> {
 
   template <class FormatContext>
   auto format(const modle::PixelCoordinates& c, FormatContext& ctx) const -> decltype(ctx.out()) {
-    return fmt::format_to(ctx.out(), FMT_STRING("[{}, {}]"), c.row, c.col);
+    return fmt::format_to(ctx.out(), "[{}, {}]", c.row, c.col);
   }
 };
 
@@ -34,6 +34,6 @@ struct fmt::formatter<modle::Pixel<N>> {
 
   template <class FormatContext>
   auto format(const modle::Pixel<N>& p, FormatContext& ctx) const -> decltype(ctx.out()) {
-    return fmt::format_to(ctx.out(), FMT_STRING("{}: {}"), p.coords, p.count);
+    return fmt::format_to(ctx.out(), "{}: {}", p.coords, p.count);
   }
 };

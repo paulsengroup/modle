@@ -2,18 +2,17 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include <absl/strings/str_split.h>  // for StrSplit, Splitter
-
 #include <catch2/catch_test_macros.hpp>
-#include <filesystem>   // for path
-#include <string>       // for basic_string, operator==, string
-#include <string_view>  // for string_view
-#include <vector>       // for vector
+#include <filesystem>
+#include <string>
+#include <string_view>
+#include <vector>
 
-#include "modle/bed/bed.hpp"        // for BED, BED_tree, BED_tree::contains, BED_tree::count_...
-#include "modle/common/common.hpp"  // for usize, u8
-#include "modle/common/numeric_utils.hpp"         // for parse_numeric_or_throw
-#include "modle/compressed_io/compressed_io.hpp"  // for Reader
+#include "modle/bed/bed.hpp"
+#include "modle/common/common.hpp"
+#include "modle/common/numeric_utils.hpp"
+#include "modle/common/string_utils.hpp"
+#include "modle/compressed_io/compressed_io.hpp"
 
 namespace modle::bed::test {
 
@@ -57,10 +56,10 @@ TEST_CASE("BED Tree multiple overlaps", "[BED][io][long]") {
 
   std::vector<std::string_view> toks;
   while (r.getline(buff)) {
-    toks = absl::StrSplit(buff, '\t');
-    usize num_expected_overlaps{};
-    usize start{};
-    usize end{};
+    toks = str_split(buff, '\t');
+    std::size_t num_expected_overlaps{};
+    std::size_t start{};
+    std::size_t end{};
     const auto chrom = std::string{toks.front()};
     utils::parse_numeric_or_throw(toks[1], start);
     utils::parse_numeric_or_throw(toks[2], end);

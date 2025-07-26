@@ -12,9 +12,9 @@ SPDX-License-Identifier: MIT
 [![Build Docker image](https://github.com/paulsengroup/modle/actions/workflows/build-docker-image.yml/badge.svg)](https://github.com/paulsengroup/modle/actions/workflows/build-docker-image.yml)
 [![Download from Bioconda](https://img.shields.io/conda/vn/bioconda/modle?label=bioconda&logo=Anaconda)](https://anaconda.org/bioconda/modle)
 
-[![MoDLE paper - Genome Biology 2022](https://img.shields.io/badge/CITE-Genome%20Biology%20(2022)-blue
-)](https://doi.org/10.1186/s13059-022-02815-7)
+[![MoDLE paper - Genome Biology 2022](https://img.shields.io/badge/CITE-Genome%20Biology%20(2022)-blue)](https://doi.org/10.1186/s13059-022-02815-7)
 [![Zenodo DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6424697.svg)](https://doi.org/10.5281/zenodo.6424697)
+
 ---
 
 MoDLE is a computational tool for fast, stochastic modeling of molecular contacts from DNA loop extrusion capable of simulating realistic contact patterns genome wide in a few minutes.
@@ -61,9 +61,14 @@ The following instructions assume you have root/admin permissions.
 
 Apptainer can be easily installed using your system package manager.
 
+<!-- markdownlint-disable MD059 -->
+
 [Here](https://apptainer.org/docs/admin/main/installation.html#install-from-pre-built-packages) you can find instructions for common Linux distributions such as Ubuntu.
 
-Even if your distribution is not listed in the above documentation, your system package manager likely includes a package for Singularity or Apptainer. If this is not the case, then you must install Apptainer from source (instructions available [here](https://github.com/apptainer/apptainer/blob/release-1.1/INSTALL.md)).
+Even if your distribution is not listed in the above documentation, your system package manager likely includes a package for Singularity or Apptainer.
+If this is not the case, then you must install Apptainer from source (instructions available [here](https://github.com/apptainer/apptainer/blob/release-1.1/INSTALL.md)).
+
+<!-- markdownlint-enable MD059 -->
 
 </details>
 
@@ -100,6 +105,7 @@ The above will print MoDLE's help message, and is equivalent to running `modle -
 
 <!-- TODO: Should this section be moved elsewhere? -->
 
+<!-- markdownlint-disable-next-line MD036 -->
 __Errors regarding missing input file(s)__
 
 Assuming you have placed the required input files inside a folder named `mydata`
@@ -114,6 +120,7 @@ drwxrwxrwt 20 user group  540 Jan  5 12.00 ..
 ```
 
 Running MoDLE using Docker as shown below fails due to missing input file(s)
+
 ```bash
 docker run ghcr.io/paulsengroup/modle:1.1.0 simulate \
   --chrom-sizes mydata/grch38.chrom.sizes \
@@ -137,7 +144,7 @@ docker run -v "$(pwd -P)/mydata/:/data/" \
   --extrusion-barrier-file /data/grch38_h1_extrusion_barriers.bed.xz \
   --output-prefix /data/output
 
-# Mehtod 2: use two different folders for input/output. Input folder is mounted in read-only mode
+# Method 2: use two different folders for input/output. Input folder is mounted in read-only mode
 docker run -v "$(pwd -P)/mydata/:/input_data/:ro" \
            -v "$(pwd -P)/output/:/output_data/" \
   ghcr.io/paulsengroup/modle:1.1.0 simulate \
@@ -176,6 +183,7 @@ drwxrwxrwt 20 user group  560 Jan  5 12:20 ..
 ```
 
 Output produced by Method 2:
+
 ```console
 user@dev:/tmp$ ls -lah mydata/
 total 57M
@@ -258,7 +266,6 @@ singularity shell docker://ghcr.io/paulsengroup/modle:1.1.0
 
 </details>
 
-
 ### Conda (bioconda)
 
 MoDLE package for Linux and MacOS is available on [bioconda](https://anaconda.org/bioconda/modle) and can be installed as follows:
@@ -322,7 +329,6 @@ MoDLE can be compiled on most UNIX-like systems, including many Linux distributi
 
 [Build instructions](https://github.com/paulsengroup/modle/wiki/Building-from-source)
 
-
 ### Running MoDLE
 
 Here we assume MoDLE was correctly installed and is available in your PATH (i.e. running `whereis modle` prints something like `modle: /usr/local/bin/modle`).
@@ -336,8 +342,15 @@ Folder `examples/data/` from this repository contains the input files used throu
 
 - `examples/data/hg38.chrom.sizes` was generated from the [hg38.chrom.sizes](https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.chrom.sizes) released by UCSC.
 Chromosmes were filtered and sorted using `grep -E 'chr[0-9XY]+[[:space:]]' hg38.chrom.sizes | sort -V`
-- `examples/data/hg38_extrusion_barriers.bed.xz` was generated as described the Methods of MoDLE's [paper](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-022-02815-7) (third paragraph of section "MoDLE simulations").
-  Refer to code hosted on [github.com/paulsengroup/2021-modle-paper-001-data-analysis](https://github.com/paulsengroup/2021-modle-paper-001-data-analysis) for more details (useful links: [link1](https://github.com/paulsengroup/2021-modle-paper-001-data-analysis/blob/main/workflows/preprocess_data.nf#L41-L100), [link2](https://github.com/paulsengroup/2021-modle-paper-001-data-analysis/blob/main/configs/preprocess_data.config), [link3](https://github.com/paulsengroup/2021-modle-paper-001-data-analysis/blob/main/data/download_list.txt), [link4](https://github.com/paulsengroup/2021-modle-paper-001-data-analysis/blob/main/scripts/convert_chip_signal_to_occupancy.py). Feel free to get in touch if you are struggling to navigate code hosted in the data analysis repository).
+- `examples/data/hg38_extrusion_barriers.bed.xz`
+  was generated as described the Methods of MoDLE's [paper](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-022-02815-7) (third paragraph of section "MoDLE simulations").
+  Refer to code hosted on [github.com/paulsengroup/2021-modle-paper-001-data-analysis](https://github.com/paulsengroup/2021-modle-paper-001-data-analysis) for more details
+  (useful links:
+  [link1](https://github.com/paulsengroup/2021-modle-paper-001-data-analysis/blob/main/workflows/preprocess_data.nf#L41-L100),
+  [link2](https://github.com/paulsengroup/2021-modle-paper-001-data-analysis/blob/main/configs/preprocess_data.config),
+  [link3](https://github.com/paulsengroup/2021-modle-paper-001-data-analysis/blob/main/data/download_list.txt),
+  [link4](https://github.com/paulsengroup/2021-modle-paper-001-data-analysis/blob/main/scripts/convert_chip_signal_to_occupancy.py).
+  Feel free to get in touch if you are struggling to navigate code hosted in the data analysis repository).
 
 </details>
 
@@ -354,12 +367,19 @@ The extrusion barrier BED file should have at least the first 6 columns defined 
 score and strand. See [bedtools docs](https://bedtools.readthedocs.io/en/latest/content/general-usage.html#bed-format) for more details).
 
 Some remarks:
-- ___chrom___ should contain the name of one of the chromosome defined in the `.chrom.sizes`
-- The ___start___ and ___end___ fields are used to position barriers along chromosomes. MoDLE models extrusion barriers as 1bp entities. Thus, when $end - start \gt 1$ the extrusion barrier will be placed in the middle of interval $[start, end)$.
-- The ___name___ field is required but ignored, and can be safely set to `.`
-- ___score___ is required and should be set to a number between 0 and 1. This number expresses the average occupancy of the extrusion barrier site defined by the current line. Occupancies between 0.7-0.9 can be used as a starting point.
 
-  Check out [this](https://github.com/paulsengroup/modle/wiki/%5BTutorial%5D---Generating-a-list-of-extrusion-barrier-from-ChIP-seq-data) tutorial to learn how barrier occupancy can be inferred from CTCF/RAD21 ChIP-Seq data. More information regarding how extrusion barriers are modeled canm be found in [MoDLE's paper](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-022-02815-7) and [suppl. text](https://static-content.springer.com/esm/art%3A10.1186%2Fs13059-022-02815-7/MediaObjects/13059_2022_2815_MOESM1_ESM.pdf).
+- ___chrom___ should contain the name of one of the chromosome defined in the `.chrom.sizes`
+- The ___start___ and ___end___ fields are used to position barriers along chromosomes. MoDLE models extrusion barriers as 1bp entities.
+  Thus, when $end - start \gt 1$ the extrusion barrier will be placed in the middle of interval $[start, end)$.
+- The ___name___ field is required but ignored, and can be safely set to `.`
+- ___score___ is required and should be set to a number between 0 and 1. This number expresses the average occupancy of the extrusion barrier site defined by the current line.
+  Occupancies between 0.7-0.9 can be used as a starting point.
+
+  Check out [this](https://github.com/paulsengroup/modle/wiki/%5BTutorial%5D---Generating-a-list-of-extrusion-barrier-from-ChIP-seq-data)
+  tutorial to learn how barrier occupancy can be inferred from CTCF/RAD21 ChIP-Seq data.
+  More information regarding how extrusion barriers are modeled canm be found in
+  [MoDLE's paper](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-022-02815-7) and
+  [suppl. text](https://static-content.springer.com/esm/art%3A10.1186%2Fs13059-022-02815-7/MediaObjects/13059_2022_2815_MOESM1_ESM.pdf).
 - ___strand___ is required and is used to define the extrusion barrier direction (should be one of `-`, `+` or `.`).
   As of MoDLE v1.1.0, extrusion barriers are modeled after CTCF barriers.
   Thus, the strand field should be populated with the direction of the CTCF binding site that is being defined.
@@ -408,7 +428,7 @@ Bye.
 
 The above command will create folder `examples/out/` (if it doesn't already exist), and write the following files inside it:
 
-```
+```tree
 examples/out
 ├── hg38_default_config.toml
 ├── hg38_default.cool
@@ -416,6 +436,7 @@ examples/out
 └── hg38_default.log
 ```
 
+<!-- markdownlint-disable-next-line MD059 -->
 Output files produced by the above command are available [here](https://doi.org/10.5281/zenodo.7924253).
 
 Simulated interactions are written to file `hg38_default.cool`. More information about the .cool format is available at [open2c/cooler](https://github.com/open2c/cooler).
@@ -425,10 +446,11 @@ collisions.
 
 Passing the `--force` flag overrides this behavior and will cause MoDLE to overwrite existing files.
 
-To visualize `.cool` files we recommend using [cooler show](https://open2c.github.io/cooler/) or [higlass](https://docs.higlass.io/) (more specifically [higlass-docker](https://github.com/higlass/higlass-docker) or [higlass-manage](https://github.com/higlass/higlass-manage)).
+To visualize `.cool` files we recommend using [cooler show](https://open2c.github.io/cooler/) or [higlass](https://docs.higlass.io/)
+(more specifically [higlass-docker](https://github.com/higlass/higlass-docker) or [higlass-manage](https://github.com/higlass/higlass-manage)).
 
-<details>
-<summary> <b> Tips for visualization </b> </summary>
+<details>  <!-- markdownlint-disable-next-line MD033 -->
+<summary> <b>Tips for visualization</b> </summary>
 
 ##### Quickly visualizing interactions with Cooler
 
@@ -469,6 +491,7 @@ INFO:cooler.reduce:Aggregating from 10000 to 20000.
 Next, you need to start HiGlass server.
 
 If you are using `higlass-manage`, you may have to prefix commands with `sudo` or `sudo -E`.
+
 ```console
 # Using higlass-docker
 user@dev:/tmp/modle$ sudo docker pull higlass/higlass-docker
@@ -552,12 +575,14 @@ In case you are struggling to visualize MoDLE's output feel free to reach out by
 
 </details>
 
-<details>
-<summary> <b> Tips for programmatic access to Cooler files </b> </summary>
+<details>  <!-- markdownlint-disable-next-line MD033 -->
+<summary> <b>Tips for programmatic access to Cooler files</b> </summary>
 
 Programmatic access to contacts stored in Cooler files is possible using the `cooler` [CLI interface](https://cooler.readthedocs.io/en/latest/cli.html) or Python [API](https://cooler.readthedocs.io/en/latest/api.html).
 
 ##### CLI interface
+
+<!-- markdownlint-disable MD010 -->
 
 ```console
 # Dumping interactions in BEDPE format
@@ -587,6 +612,8 @@ chr1	0	20000	chr1	140000	160000	18
 chr1	0	20000	chr1	160000	180000	20
 chr1	0	20000	chr1	180000	200000	12
 ```
+
+<!-- markdownlint-enable MD010 -->
 
 ##### Python API
 
@@ -631,8 +658,10 @@ Refer to Cooler [documentation](https://cooler.readthedocs.io/en/latest/quicksta
 
 #### Running a simulation using config files
 
-The `hg38_default_config.toml` file produced by MoDLE in the [previous section](#running-a-simulation-with-default-settings) is a config file that can be used to repeat simulations using the same set of parameters and input files.
+The `hg38_default_config.toml` file produced by MoDLE in the [previous section](#running-a-simulation-with-default-settings)
+is a config file that can be used to repeat simulations using the same set of parameters and input files.
 Information found in config files is also embedded in the `.cool` file as a JSON string, and can be extracted using `cooler info`:
+
 <!-- TODO: Update once https://github.com/paulsengroup/modle/issues/75 is implemented -->
 ```console
 user@dev:/tmp/modle$ cooler info --metadata examples/out/hg38_default.cool
@@ -647,7 +676,7 @@ user@dev:/tmp/modle$ cooler info --metadata examples/out/hg38_default.cool
 ...
 ```
 
-The following will run a simulation with the same settings as the simulation from the [previous example](#Running-a-simulation-with-default-settings)
+The following will run a simulation with the same settings as the simulation from the [previous example](#running-a-simulation-with-default-settings)
 
 ```bash
 modle simulate --config examples/out/hg38_default_config.toml --force
@@ -659,7 +688,8 @@ meaning that CLI options can be used to override parameters read from the config
 This can be useful when running a batch of simulations using a large number of optional parameters, and where only a
 handful of parameters need to change across simulation runs.
 
-The following command will run a simulation using parameters from the [previous example](#Running-a-simulation-with-default-settings) as starting point, but using a different number of cells and target contact density.
+The following command will run a simulation using parameters from the [previous example](#running-a-simulation-with-default-settings) as starting point,
+but using a different number of cells and target contact density.
 
 ```bash
 modle simulate \
@@ -669,6 +699,7 @@ modle simulate \
     --output-prefix examples/out/hg38_deep
 ```
 
+<!-- markdownlint-disable-next-line MD059 -->
 Output files produced by the above command are available [here](https://doi.org/10.5281/zenodo.7924253).
 
 ![Simulation w/ high contact density](examples/images/higlass_003.avif)
@@ -719,7 +750,6 @@ Options:
 If you use MoDLE in your research, please cite the following paper:
 
 Rossini, R., Kumar, V., Mathelier, A. _et al._ MoDLE: high-performance stochastic modeling of DNA loop extrusion interactions. _Genome Biol_ __23__, 247 (2022). [https://doi.org/10.1186/s13059-022-02815-7](https://doi.org/10.1186/s13059-022-02815-7)
-
 
 <details>
 <summary>BibTex</summary>

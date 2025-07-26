@@ -4,22 +4,63 @@
 
 #pragma once
 
-#include <absl/strings/str_split.h>  // for StrSplit, Splitter
-#include <fast_float/fast_float.h>   // for from_chars (fp)
-#include <fmt/format.h>              // for compile_string_to_view, FMT_STRING
+#include <fast_float/fast_float.h>
+#include <fmt/format.h>
 
-#include <charconv>      // for from_chars (int)
-#include <limits>        // for numeric_limits
-#include <stdexcept>     // for runtime_error, logic_error
-#include <string>        // for string
-#include <string_view>   // for string_view
-#include <system_error>  // for errc, make_error_code, errc::invalid_argument, errc:...
-#include <type_traits>   // for is_arithmetic, is_integral, is_unsigned
-#include <vector>        // for vector
+#include <charconv>
+#include <limits>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <system_error>
+#include <type_traits>
+#include <vector>
 
-#include "modle/common/common.hpp"  // for usize, u64
+#include "modle/common/common.hpp"
+#include "modle/common/string_utils.hpp"
 
 namespace modle::utils {
+
+namespace detail {
+template <class N>
+void throw_except_from_errc(std::string_view tok, std::size_t idx, [[maybe_unused]] const N &field,
+                            const char *c, std::errc e) {
+  static_assert(std::is_arithmetic<N>());
+  std::string base_error;
+  if (idx != (std::numeric_limits<std::size_t>::max)()) {
+    base_error = fmt::format("unable to convert field {} (\"{}\") to a ", idx, tok);
+  } else {
+    base_error = fmt::format("unable to convert field \"{}\" to", tok);
+  }
+  if (std::is_integral<N>()) {
+    if (std::is_unsigned<N>()) {
+      base_error += " a positive integral number";
+    } else {
+      base_error += " an integral number";
+    }
+  } else {
+    base_error += " a real number";
+  }
+  if (e == std::errc::invalid_argument) {
+    if (c != nullptr) {
+      throw std::runtime_error(
+          fmt::format("{}. Reason: found an invalid character \"{}\"", base_error, *c));
+    }
+    throw std::runtime_error(fmt::format("{}. Reason: found an invalid character", base_error));
+  }
+  if (e == std::errc::result_out_of_range) {
+    throw std::runtime_error(fmt::format(
+        "{}. Reason: number {} is outside the range of representable numbers [{}, {}].", base_error,
+        tok, (std::numeric_limits<N>::min)(), (std::numeric_limits<N>::max)()));
+  }
+
+  throw std::logic_error(
+      fmt::format("{}. If you see this error, report it to the developers on "
+                  "GitHub.\n throw_except_from_errc "
+                  "called with an invalid std::errc \"{}\". This should not be possible!",
+                  base_error, std::make_error_code(e).message()));
+}
+}  // namespace detail
 
 template <class N>
 inline auto from_chars(const char *first, const char *last, N &value) noexcept {
@@ -34,8 +75,8 @@ template <class N>
 void parse_numeric_or_throw(std::string_view tok, N &field) {
   auto [ptr, err] = utils::from_chars(tok.data(), tok.end(), field);
   if (ptr != tok.end() && err != std::errc{}) {
-    utils::detail::throw_except_from_errc(tok, (std::numeric_limits<usize>::max)(), field, ptr,
-                                          err);
+    utils::detail::throw_except_from_errc(tok, (std::numeric_limits<std::size_t>::max)(), field,
+                                          ptr, err);
   }
 }
 
@@ -47,66 +88,23 @@ N parse_numeric_or_throw(std::string_view tok) {
 }
 
 template <class N>
-void parse_numeric_or_throw(const std::vector<std::string_view> &toks, usize idx, N &field) {
+void parse_numeric_or_throw(const std::vector<std::string_view> &toks, std::size_t idx, N &field) {
   parse_numeric_or_throw(toks[idx], field);
 }
 
 template <class N>
-void parse_vect_of_numbers_or_throw(const std::vector<std::string_view> &toks, usize idx,
-                                    std::vector<N> &fields, u64 expected_size) {
+void parse_vect_of_numbers_or_throw(const std::vector<std::string_view> &toks, std::size_t idx,
+                                    std::vector<N> &fields, std::uint64_t expected_size) {
   static_assert(std::is_arithmetic<N>());
-  std::vector<std::string_view> ns = absl::StrSplit(toks[idx], ',');
+  const auto ns = str_split(toks[idx], ',');
   if (ns.size() != expected_size) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("expected {} fields, got {}."), expected_size, ns.size()));
+    throw std::runtime_error(fmt::format("expected {} fields, got {}.", expected_size, ns.size()));
   }
   fields.resize(ns.size());
-  for (usize i = 0; i < expected_size; ++i) {
+  for (std::size_t i = 0; i < expected_size; ++i) {
     parse_numeric_or_throw(ns, i, fields[i]);
   }
 }
-
-namespace detail {
-template <class N>
-void throw_except_from_errc(std::string_view tok, usize idx, [[maybe_unused]] const N &field,
-                            const char *c, std::errc e) {
-  static_assert(std::is_arithmetic<N>());
-  std::string base_error;
-  if (idx != (std::numeric_limits<usize>::max)()) {
-    base_error = fmt::format(FMT_STRING("unable to convert field {} (\"{}\") to a "), idx, tok);
-  } else {
-    base_error = fmt::format(FMT_STRING("unable to convert field \"{}\" to"), tok);
-  }
-  if (std::is_integral<N>()) {
-    if (std::is_unsigned<N>()) {
-      base_error += " a positive integral number";
-    } else {
-      base_error += " an integral number";
-    }
-  } else {
-    base_error += " a real number";
-  }
-  if (e == std::errc::invalid_argument) {
-    if (c != nullptr) {
-      throw std::runtime_error(
-          fmt::format(FMT_STRING("{}. Reason: found an invalid character \"{}\""), base_error, *c));
-    }
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("{}. Reason: found an invalid character"), base_error));
-  }
-  if (e == std::errc::result_out_of_range) {
-    throw std::runtime_error(fmt::format(
-        FMT_STRING("{}. Reason: number {} is outside the range of representable numbers [{}, {}]."),
-        base_error, tok, (std::numeric_limits<N>::min)(), (std::numeric_limits<N>::max)()));
-  }
-
-  throw std::logic_error(fmt::format(
-      FMT_STRING("{}. If you see this error, report it to the developers on "
-                 "GitHub.\n throw_except_from_errc "
-                 "called with an invalid std::errc \"{}\". This should not be possible!"),
-      base_error, std::make_error_code(e).message()));
-}
-}  // namespace detail
 
 }  // namespace modle::utils
 
