@@ -4,16 +4,15 @@
 
 #include "modle/interval_tree.hpp"
 
-#include <absl/strings/str_split.h>  // for StrSplit, Splitter, ByAnyChar
-
 #include <catch2/catch_test_macros.hpp>
-#include <filesystem>   // for path
-#include <string>       // for string, basic_string, operator==
-#include <string_view>  // for string_view
-#include <vector>       // for vector, allocator
+#include <filesystem>
+#include <string>
+#include <string_view>
+#include <vector>
 
-#include "modle/common/numeric_utils.hpp"         // for parse_numeric_or_throw
-#include "modle/compressed_io/compressed_io.hpp"  // for Reader
+#include "modle/common/numeric_utils.hpp"
+#include "modle/common/string_utils.hpp"
+#include "modle/compressed_io/compressed_io.hpp"
 
 namespace modle::interval_tree::test {
 
@@ -23,31 +22,31 @@ namespace modle::interval_tree::test {
 }
 
 struct Record {
-  usize start{};
-  usize end{};
+  std::size_t start{};
+  std::size_t end{};
   std::string data{};
 
   Record() = default;
 
   explicit Record(std::string_view buff) {
-    const std::vector<std::string_view> toks = absl::StrSplit(buff, absl::ByAnyChar("\t "));
+    const auto toks = str_split(buff, "\t ");
     REQUIRE(toks.size() == 3UL);
-    utils::parse_numeric_or_throw(toks[1], this->start);
-    utils::parse_numeric_or_throw(toks[2], this->end);
-    this->data = toks[0];
+    utils::parse_numeric_or_throw(toks[1], start);
+    utils::parse_numeric_or_throw(toks[2], end);
+    data = toks[0];
   }
 };
 
 template <class IITreeT>
-static void test_find_overlaps(const IITreeT& tree, usize start, usize end,
-                               usize num_expected_overlaps) {
+static void test_find_overlaps(const IITreeT& tree, std::size_t start, std::size_t end,
+                               std::size_t num_expected_overlaps) {
   const auto [overlap_begin, overlap_end] = tree.find_overlaps(start, end);
-  CHECK(static_cast<usize>(overlap_end - overlap_begin) == num_expected_overlaps);
+  CHECK(static_cast<std::size_t>(overlap_end - overlap_begin) == num_expected_overlaps);
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Interval tree simple", "[interval-tree][short]") {
-  IITree<usize, Record> tree{};
+  IITree<std::size_t, Record> tree{};
 
   tree.insert(0, 10, Record{});
   tree.insert(5, 15, Record{});
@@ -82,7 +81,7 @@ TEST_CASE("Interval tree chrX", "[interval-tree][short]") {
 
   // Construct interval tree
   const auto tree = [&]() {
-    IITree<usize, Record> tree_{};
+    IITree<std::size_t, Record> tree_{};
 
     compressed_io::Reader r(all_intervals);
     REQUIRE(r.is_open());

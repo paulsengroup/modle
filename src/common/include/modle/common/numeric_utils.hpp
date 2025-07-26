@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include <string_view>   // for string_view
-#include <system_error>  // for errc
-#include <vector>        // for vector
+#include <string_view>
+#include <system_error>
+#include <vector>
 
-#include "modle/common/common.hpp"  // for usize, u64
+#include "modle/common/common.hpp"
 
 namespace modle::utils {
 
@@ -22,17 +22,13 @@ template <class N>
 inline N parse_numeric_or_throw(std::string_view tok);
 
 template <class N>
-inline void parse_numeric_or_throw(const std::vector<std::string_view>& toks, usize idx, N& field);
+inline void parse_numeric_or_throw(const std::vector<std::string_view>& toks, std::size_t idx,
+                                   N& field);
 
 template <class N>
-inline void parse_vect_of_numbers_or_throw(const std::vector<std::string_view>& toks, usize idx,
-                                           std::vector<N>& fields, u64 expected_size);
-
-namespace detail {
-template <class N>
-inline void throw_except_from_errc(std::string_view tok, usize idx, const N& field, const char* c,
-                                   std::errc e);
-}
+inline void parse_vect_of_numbers_or_throw(const std::vector<std::string_view>& toks,
+                                           std::size_t idx, std::vector<N>& fields,
+                                           std::uint64_t expected_size);
 }  // namespace modle::utils
 
 #include "../../../numeric_utils_impl.hpp"  // IWYU pragma: export

@@ -4,38 +4,37 @@
 
 #include "./cli.hpp"
 
-#include <absl/strings/str_cat.h>    // for StrAppend
-#include <absl/strings/str_split.h>  // for SplitIterator, Splitter, StrSplit, operator!=
-#include <absl/time/clock.h>
-#include <absl/types/span.h>  // for MakeSpan
-#include <fmt/format.h>       // for format, FMT_STRING, join, print, make_format_...
-#include <fmt/os.h>           // for output_file, ostream
+#include <fmt/format.h>
 #include <fmt/std.h>
 #include <spdlog/spdlog.h>
-#include <toml++/toml.h>  // for array::operator[], operator<<, parse, print_to...
 
-#include <CLI/CLI.hpp>  // for Option_group, App
-#include <algorithm>    // for max
-#include <array>        // for array
-#include <cassert>      // for assert
-#include <cmath>        // for round, pow, log
-#include <cstdio>       // for stderr
-#include <exception>    // for exception
-#include <filesystem>   // for path, operator<<
+#include <CLI/CLI.hpp>
+#include <algorithm>
+#include <array>
+#include <cassert>
+#include <chrono>
+#include <cmath>
+#include <cstdio>
+#include <exception>
+#include <filesystem>
 #include <hictk/cooler.hpp>
-#include <limits>     // for numeric_limits
-#include <sstream>    // for streamsize, stringstream, basic_ostream
-#include <stdexcept>  // for invalid_argument, out_of_range, runtime_error
-#include <string>     // for allocator, string, basic_string
-#include <thread>     // for hardware_concurrency
-#include <vector>     // for vector
+#include <limits>
+#include <span>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <thread>
+#include <vector>
 
 #include "modle/common/cli_utils.hpp"
-#include "modle/common/common.hpp"  // for bp_t, i64
+#include "modle/common/common.hpp"
 #include "modle/common/fmt_helpers.hpp"
-#include "modle/common/simulation_config.hpp"  // for Config
-#include "modle/common/utils.hpp"              // for parse_numeric_or_throw
-#include "modle/config/version.hpp"            // modle_version_long
+#include "modle/common/simulation_config.hpp"
+#include "modle/common/string_utils.hpp"
+#include "modle/common/utils.hpp"
+#include "modle/config/version.hpp"
+#include "modle/json/json.hpp"
+#include "modle/toml/toml.hpp"
 
 namespace modle {
 
@@ -158,16 +157,17 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
   io_adv.add_flag(
       "--log-model-internal-state",
       c.log_model_internal_state,
-      fmt::format(FMT_STRING(
-                      "Collect detailed statistics regarding the internal state of MoDLE simulation instance(s).\n"
-                      "Statistics will be written to a compressed file under the prefix specified through the\n"
-                      "--output-prefix option.\n"
-                      "Example: modle sim --output-prefix=/tmp/myprefix\n"
-                               "statistics will be written to file /tmp/myprefix_internal_state.log.gz.\n"
-                      "Depending on the input file(s) and parameters, specifying this option may hinder\n"
-                      "simulation throughput. Currently the following metrics are collected:\n"
-                      " - {}"),
-                  fmt::join(absl::StrSplit(Config::model_internal_state_log_header, '\t'), "\n - ")))
+      fmt::format("Collect detailed statistics regarding the internal state of MoDLE simulation instance(s).\n"
+                  "Statistics will be written to a compressed file under the prefix specified through the\n"
+                  "--output-prefix option.\n"
+                  "Example: modle sim --output-prefix=/tmp/myprefix\n"
+                           "statistics will be written to file /tmp/myprefix_internal_state.log.gz.\n"
+                  "Depending on the input file(s) and parameters, specifying this option may hinder\n"
+                  "simulation throughput. Currently the following metrics are collected:\n"
+                  " - {}",
+                  str_replace(std::string{Config::model_internal_state_log_header},
+                                     "\t",
+                                     "\n - ")))
       ->capture_default_str();
 
   io_adv.add_flag(
@@ -255,7 +255,7 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       "--fwd-extrusion-speed-std as its standard deviation. Candidate moves represent the maximum\n"
       "distance a given extrusion unit is set to travel during the current epoch.\n"
       "Moving distances can be shortened by collision events taking place during the current epoch.\n"
-      "By deafult extrusion speed is set to half the bin size specified through the --resolution\n"
+      "By default extrusion speed is set to half the bin size specified through the --resolution\n"
       "option.")
       ->transform(utils::cli::TrimTrailingZerosFromDecimalDigit |  utils::cli::AsGenomicDistance)
       ->check(CLI::NonNegativeNumber)
@@ -333,15 +333,15 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
   cgen.add_option(
       "--contact-sampling-strategy",
       c.contact_sampling_strategy,
-      fmt::format(FMT_STRING("Strategy to use when sampling contacts.\n"
-                             "Should be one of:\n"
-                             " - {}\n"
-                             "When one of the *-with-noise strategies is specified, contacts are randomized by\n"
-                             "applying a random offset to the location of LEF extrusion units.\n"
-                             "Offsets are drawn from a genextreme distrubution.\n"
-                             "The distribution parameters can be controlled through the options --mu, --sigma\n"
-                             "and --xi."),
-                  fmt::join(Cli::contact_sampling_strategy_map.keys_view(), "\n - ")))
+      fmt::format("Strategy to use when sampling contacts.\n"
+                  "Should be one of:\n"
+                  " - {}\n"
+                  "When one of the *-with-noise strategies is specified, contacts are randomized by\n"
+                  "applying a random offset to the location of LEF extrusion units.\n"
+                  "Offsets are drawn from a genextreme distribution.\n"
+                  "The distribution parameters can be controlled through the options --mu, --sigma\n"
+                  "and --xi.",
+                  fmt::join(Cli::contact_sampling_strategy_map.keys(), "\n - ")))
       ->transform(CLI::CheckedTransformer(Cli::contact_sampling_strategy_map))
       ->capture_default_str();
 
@@ -421,8 +421,8 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
   stopping.add_option(
       "-s,--stopping-criterion",
       c.stopping_criterion,
-      fmt::format(FMT_STRING("Simulation stopping criterion. Should be one of {}."),
-                  utils::format_collection_to_english_list(Cli::stopping_criterion_map.keys_view(), ", ", " or ")))
+      fmt::format("Simulation stopping criterion. Should be one of {}.",
+                  utils::format_collection_to_english_list(Cli::stopping_criterion_map.keys(), ", ", " or ")))
       ->transform(CLI::CheckedTransformer(Cli::stopping_criterion_map))
       ->capture_default_str();
 
@@ -536,7 +536,7 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
       "Setting this to numbers > 1.0 will speed-up the burn-in phase, as the average loop size will\n"
       "stabilize faster.\n"
       "IMPORTANT: Setting this parameter to values other than 1.0 comes with many gotchas.\n"
-      "           For the time being, tuning this parameter is not reccommended.")
+      "           For the time being, tuning this parameter is not recommended.")
       ->check(CLI::PositiveNumber)
       ->capture_default_str();
 
@@ -603,56 +603,54 @@ static std::vector<CLI::App*> add_common_options(CLI::App& subcommand, modle::Co
 
 void Cli::make_simulation_subcommand() {
   auto& s =
-      *this->_cli
-           .add_subcommand(
+      *_cli.add_subcommand(
                "simulate",
                "Simulate loop extrusion and write resulting molecular contacts in a .cool file.")
            ->fallthrough()
            ->configurable();
   s.alias("sim");
-  auto option_group_ptrs = add_common_options(s, this->_config);
+  auto option_group_ptrs = add_common_options(s, _config);
 }
 
 void Cli::make_cli() {
-  this->_cli.description(
-      "High-performance stochastic modeling of DNA loop extrusion interactions.");
-  this->_cli.set_version_flag("-V,--version", std::string{modle::config::version::str_long()});
-  this->_cli.require_subcommand(1);
-  this->_cli.set_config("--config", "", "Path to MoDLE's config file (optional).", false);
-  this->_cli.formatter(std::make_shared<utils::cli::Formatter>());
-  this->_cli.get_formatter()->column_width(30);
+  _cli.description("High-performance stochastic modeling of DNA loop extrusion interactions.");
+  _cli.set_version_flag("-V,--version", std::string{modle::config::version::str_long()});
+  _cli.require_subcommand(1);
+  _cli.set_config("--config", "", "Path to MoDLE's config file (optional).", false);
+  _cli.formatter(std::make_shared<utils::cli::Formatter>());
+  _cli.get_formatter()->column_width(30);
 
-  this->make_simulation_subcommand();
+  make_simulation_subcommand();
 }
 
-Cli::Cli(int argc, char** argv) : _argc(argc), _argv(argv), _exec_name(*argv) { this->make_cli(); }
+Cli::Cli(int argc, char** argv) : _argc(argc), _argv(argv), _exec_name(*argv) { make_cli(); }
 
 const Config& Cli::parse_arguments() {
-  if (this->_cli.parsed()) {
-    return this->_config;
+  if (_cli.parsed()) {
+    return _config;
   }
 
-  this->_cli.name(this->_exec_name);
-  this->_cli.parse(this->_argc, this->_argv);
+  _cli.name(_exec_name);
+  _cli.parse(_argc, _argv);
 
-  if (this->_cli.get_subcommand("simulate")->parsed()) {
-    this->_subcommand = simulate;
+  if (_cli.get_subcommand("simulate")->parsed()) {
+    _subcommand = simulate;
   }
 
-  this->validate_args();
-  this->transform_args();
-  this->_config.args = absl::MakeSpan(_argv, static_cast<usize>(_argc));
+  validate_args();
+  transform_args();
+  _config.args = std::span<char*>{_argv, static_cast<std::size_t>(_argc)};
 
-  this->_config.args_json = this->to_json();
-  return this->_config;
+  _config.args_json = to_json();
+  return _config;
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity) TODO: reduce complexity
-std::string Cli::detect_path_collisions(modle::Config& c) const {
-  std::string collisions;
+std::vector<std::string> Cli::detect_path_collisions(modle::Config& c) const {
+  std::vector<std::string> collisions;
 
   if (c.force || c.skip_output) {
-    return "";
+    return {};
   }
 
   auto check_for_path_collisions = [](const std::filesystem::path& path) -> std::string {
@@ -660,45 +658,46 @@ std::string Cli::detect_path_collisions(modle::Config& c) const {
     if (std::filesystem::exists(path)) {
       if (std::filesystem::is_directory(path)) {
         return fmt::format(
-            FMT_STRING("Refusing to continue because output file {} already "
-                       "exist (and is actually a {}directory).\n{}.\n"),
+            "Refusing to continue because output file {} already "
+            "exist (and is actually a {}directory).\n{}.",
             path, std::filesystem::is_empty(path) ? "" : "non-empty ",
             std::filesystem::is_empty(path)
                 ? " Pass --force to overwrite"
                 : "You should specify a different output path, or manually remove the "
                   "existing directory");
       }
-      return fmt::format(FMT_STRING("Refusing to continue because output file {} already exist.\n"
-                                    "Pass --force to overwrite.\n"),
-                         path);
+      return fmt::format(
+          "Refusing to continue because output file {} already exist.\n"
+          "Pass --force to overwrite.",
+          path);
     }
     if (std::filesystem::is_directory(path) && !std::filesystem::is_empty(path)) {
       return fmt::format(
-          FMT_STRING("Refusing to continue because output file {} is a non-empty directory.\n"
-                     "You should specify a different output path, or "
-                     "manually remove the existing directory.\n"),
+          "Refusing to continue because output file {} is a non-empty directory.\n"
+          "You should specify a different output path, or "
+          "manually remove the existing directory.",
           path);
     }
     return {};
   };
 
   if (std::filesystem::exists(c.path_to_log_file)) {
-    absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_log_file));
+    collisions.emplace_back(check_for_path_collisions(c.path_to_log_file));
   }
 
   if (c.track_1d_lef_position && std::filesystem::exists(c.path_to_lef_1d_occupancy_bw_file)) {
-    absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_lef_1d_occupancy_bw_file));
+    collisions.emplace_back(check_for_path_collisions(c.path_to_lef_1d_occupancy_bw_file));
   }
 
-  if (this->get_subcommand() == simulate && !c.path_to_model_state_log_file.empty() &&
+  if (get_subcommand() == simulate && !c.path_to_model_state_log_file.empty() &&
       std::filesystem::exists(c.path_to_model_state_log_file)) {
-    absl::StrAppend(&collisions, check_for_path_collisions(c.path_to_model_state_log_file));
+    collisions.emplace_back(check_for_path_collisions(c.path_to_model_state_log_file));
   }
 
   return collisions;
 }
 
-int Cli::exit(const CLI::ParseError& e) const { return this->_cli.exit(e); }
+int Cli::exit(const CLI::ParseError& e) const { return _cli.exit(e); }
 
 static void detect_deprecated_option_usage(const CLI::App& subcmd,
                                            std::vector<std::string>& warnings_buff) {
@@ -714,19 +713,19 @@ static void detect_deprecated_option_usage(const CLI::App& subcmd,
   for (const auto& opt : deprecated_opt_grp->parse_order()) {
     const auto match = deprecated_option_mappings.find(opt->get_name());
     if (match != deprecated_option_mappings.end()) {
-      warnings_buff.emplace_back(fmt::format(FMT_STRING("Option {} is deprecated. Use {} instead."),
-                                             *match.first, *match.second));
+      warnings_buff.emplace_back(
+          fmt::format("Option {} is deprecated. Use {} instead.", *match.first, *match.second));
     }
   }
 }
 
 void Cli::validate_args() const {
-  const auto& c = this->_config;
+  const auto& c = _config;
   std::vector<std::string> errors;
 
-  const auto* subcmd = this->get_subcommand_ptr();
+  const auto* subcmd = get_subcommand_ptr();
 
-  detect_deprecated_option_usage(*subcmd, this->_warnings);
+  detect_deprecated_option_usage(*subcmd, _warnings);
 
   if (c.burnin_smoothing_window_size > c.burnin_history_length) {
     assert(subcmd->get_option_group("Advanced")
@@ -735,10 +734,10 @@ void Cli::validate_args() const {
     assert(subcmd->get_option_group("Advanced")
                ->get_option_group("Burn-in")
                ->get_option("--burnin-history-length"));
-    errors.emplace_back(fmt::format(
-        FMT_STRING("The value passed to {} should be less or equal than that of {} ({} > {})"),
-        "--burnin-smoothing-window-size", "--burnin-history-length", c.burnin_smoothing_window_size,
-        c.burnin_history_length));
+    errors.emplace_back(
+        fmt::format("The value passed to {} should be less or equal than that of {} ({} > {})",
+                    "--burnin-smoothing-window-size", "--burnin-history-length",
+                    c.burnin_smoothing_window_size, c.burnin_history_length));
   }
 
   const auto& cgen_adv =
@@ -749,10 +748,10 @@ void Cli::validate_args() const {
   if (!(c.contact_sampling_strategy & CS::noisify)) {
     for (const std::string label : {"--mu", "--sigma", "--xi"}) {
       if (!cgen_adv->get_option(label)->empty()) {
-        this->_warnings.emplace_back(fmt::format(
-            FMT_STRING("Option {} has no effect. Reason: {} requires the strategy passed to "
-                       "--contact-sampling-strategy to be one of the *-with-noise strategies."),
-            label, label));
+        _warnings.emplace_back(
+            fmt::format("Option {} has no effect. Reason: {} requires the strategy passed to "
+                        "--contact-sampling-strategy to be one of the *-with-noise strategies.",
+                        label, label));
       }
     }
   }
@@ -763,19 +762,19 @@ void Cli::validate_args() const {
     assert(sample_loop_contacts || sample_tad_contacts);
 
     if (sample_loop_contacts && !sample_tad_contacts && c.tad_to_loop_contact_ratio != 0) {
-      this->_warnings.emplace_back(
-          fmt::format(FMT_STRING("Option --tad-to-loop-contact-ratio={} has no effect. Reason: "
-                                 "--tad-to-loop-contact-ratio is implicitly set to 0 when "
-                                 "--contact-sampling-strategy={}"),
+      _warnings.emplace_back(
+          fmt::format("Option --tad-to-loop-contact-ratio={} has no effect. Reason: "
+                      "--tad-to-loop-contact-ratio is implicitly set to 0 when "
+                      "--contact-sampling-strategy={}",
                       c.tad_to_loop_contact_ratio,
                       Cli::contact_sampling_strategy_map.at(c.contact_sampling_strategy)));
     }
     if (!sample_loop_contacts && sample_tad_contacts &&
         c.tad_to_loop_contact_ratio != std::numeric_limits<double>::infinity()) {
-      this->_warnings.emplace_back(
-          fmt::format(FMT_STRING("Option --tad-to-loop-contact-ratio={} has no effect. Reason: "
-                                 "--tad-to-loop-contact-ratio is implicitly set to inf when "
-                                 "--contact-sampling-strategy={}"),
+      _warnings.emplace_back(
+          fmt::format("Option --tad-to-loop-contact-ratio={} has no effect. Reason: "
+                      "--tad-to-loop-contact-ratio is implicitly set to inf when "
+                      "--contact-sampling-strategy={}",
                       c.tad_to_loop_contact_ratio,
                       Cli::contact_sampling_strategy_map.at(c.contact_sampling_strategy)));
     }
@@ -802,48 +801,47 @@ void Cli::validate_args() const {
                                          ->get_option_group("Miscellaneous")
                                          ->get_option("--probability-normalization-factor")
                                          ->empty()) {
-    this->_warnings.emplace_back(
-        fmt::format(FMT_STRING("Option --probability-normalization-factor has no effect. Reason: "
-                               "CLI option --no-normalize-probabilities was passed by the user.")));
+    _warnings.emplace_back(
+        fmt::format("Option --probability-normalization-factor has no effect. Reason: "
+                    "CLI option --no-normalize-probabilities was passed by the user."));
   }
 
   if (c.min_burnin_epochs > c.max_burnin_epochs) {
-    errors.emplace_back(fmt::format(
-        FMT_STRING("--min-burnin-epochs={} cannot be greater than --max-burnin-epochs={}."),
-        c.min_burnin_epochs, c.max_burnin_epochs));
+    errors.emplace_back(
+        fmt::format("--min-burnin-epochs={} cannot be greater than --max-burnin-epochs={}.",
+                    c.min_burnin_epochs, c.max_burnin_epochs));
   }
 
   if (!errors.empty()) {
     throw std::runtime_error(fmt::format(
-        FMT_STRING(
-            "The following error(s) where encountered while validating CLI arguments:\n - {}"),
+        "The following error(s) where encountered while validating CLI arguments:\n - {}",
         fmt::join(errors, "\n - ")));
   }
 }
 
 CLI::App* Cli::get_subcommand_ptr() {
   for (const auto& subcmd : {"sim", "pert", "replay"}) {
-    if (auto* s = this->_cli.get_subcommand(subcmd); s->parsed()) {
+    if (auto* s = _cli.get_subcommand(subcmd); s->parsed()) {
       return s;
     }
   }
-  MODLE_UNREACHABLE_CODE;
+  utils::unreachable_code();
 }
 
 const CLI::App* Cli::get_subcommand_ptr() const {
   for (const auto& subcmd : {"sim", "pert", "replay"}) {
-    if (auto* s = this->_cli.get_subcommand(subcmd); s->parsed()) {
+    if (auto* s = _cli.get_subcommand(subcmd); s->parsed()) {
       return s;
     }
   }
-  MODLE_UNREACHABLE_CODE;
+  utils::unreachable_code();
 }
 
 // The following two functions have been copied from the ExtrusionBarrier class.
 // This is not ideal, but I think it is better than make the CLI interface depend on the
 // ExtrusionBarrier class (which is part of libmodle_internal)
 constexpr double compute_stp_active_from_occupancy(double stp_inactive, double occupancy) noexcept {
-  if (MODLE_UNLIKELY(occupancy == 0)) {
+  if (occupancy == 0) [[unlikely]] {
     return 0.0;
   }
 
@@ -854,7 +852,7 @@ constexpr double compute_stp_active_from_occupancy(double stp_inactive, double o
 }
 
 constexpr double compute_occupancy_from_stp(double stp_active, double stp_inactive) noexcept {
-  if (MODLE_UNLIKELY(stp_active + stp_inactive == 0)) {
+  if (stp_active + stp_inactive == 0) [[unlikely]] {
     return 0.0;
   }
 
@@ -988,88 +986,73 @@ void cli_update_burnin_params(Config& c) {
   const auto lef_activation_bp = 5 * c.avg_lef_processivity;
   c.burnin_target_epochs_for_lef_activation = std::min(
       c.max_burnin_epochs,
-      utils::conditional_static_cast<usize>(
+      utils::conditional_static_cast<std::size_t>(
           lef_activation_bp / (c.rev_extrusion_speed_burnin + c.fwd_extrusion_speed_burnin)));
 }
 
 void Cli::transform_args() {
-  cli_update_paths(this->get_subcommand(), this->_config);
-  cli_update_extr_speed(this->_cli, this->_config);
-  cli_compute_prob_of_lef_release(this->_config);
-  cli_update_barrier_stp_and_occupancy(this->_cli, this->_config);
-  cli_update_tad_to_loop_contact_ratio(this->_config);
-  cli_update_burnin_params(this->_config);
+  cli_update_paths(get_subcommand(), _config);
+  cli_update_extr_speed(_cli, _config);
+  cli_compute_prob_of_lef_release(_config);
+  cli_update_barrier_stp_and_occupancy(_cli, _config);
+  cli_update_tad_to_loop_contact_ratio(_config);
+  cli_update_burnin_params(_config);
 
-  if (this->_config.normalize_probabilities) {
-    cli_normalize_probabilities(this->_config);
+  if (_config.normalize_probabilities) {
+    cli_normalize_probabilities(_config);
   }
 
-  const auto* subcmd = this->get_subcommand_ptr();
+  const auto* subcmd = get_subcommand_ptr();
 
   if (!subcmd->get_option_group("Extrusion Barriers and Factors")
            ->get_option("--extrusion-barrier-occupancy")
            ->empty()) {
-    this->_config.override_extrusion_barrier_occupancy = true;
+    _config.override_extrusion_barrier_occupancy = true;
   }
 
-  if (this->_config.stopping_criterion == Config::StoppingCriterion::simulation_epochs) {
-    this->_config.target_contact_density = -1;
+  if (_config.stopping_criterion == Config::StoppingCriterion::simulation_epochs) {
+    _config.target_contact_density = -1;
   }
 }
 
-Cli::subcommand Cli::get_subcommand() const { return this->_subcommand; }
+Cli::subcommand Cli::get_subcommand() const { return _subcommand; }
 
 void Cli::print_config(bool print_default_args) const {
-  fmt::print(stderr, FMT_STRING("{}\n"), this->_cli.config_to_str(print_default_args, true));
+  fmt::print(stderr, "{}\n", _cli.config_to_str(print_default_args, true));
 }
 
 void Cli::write_config_file(bool write_default_args) const {
-  auto fp = fmt::output_file(this->_config.path_to_config_file.string());
-  fp.print(FMT_STRING("# Config created by {} on {}\n{}\n"), modle::config::version::str_long(),
-           absl::FormatTime(absl::Now(), absl::UTCTimeZone()),
-           this->_cli.config_to_str(write_default_args, true));
+  try {
+    std::ofstream fs;
+    fs.exceptions(fs.exceptions() | std::ios::failbit | std::ios::badbit);
+    fs.open(_config.path_to_config_file);
+
+    fmt::print(fs, "# Config created by {} on {}\n{}\n", modle::config::version::str_long(),
+               std::chrono::system_clock::now(), _cli.config_to_str(write_default_args, true));
+  } catch (const std::exception& e) {
+    throw std::runtime_error(fmt::format("failed to write config file \"{}\": {}",
+                                         _config.path_to_config_file, e.what()));
+  }
 }
 
-bool Cli::config_file_parsed() const { return !this->_cli.get_config_ptr()->empty(); }
+bool Cli::config_file_parsed() const { return !_cli.get_config_ptr()->empty(); }
 
 void Cli::log_warnings() const {
-  for (const auto& warning : this->_warnings) {
-    spdlog::warn(FMT_STRING("{}"), warning);
+  for (const auto& warning : _warnings) {
+    SPDLOG_WARN("{}", warning);
   }
 }
 
 std::string Cli::to_json() const {
-  std::string buff;
-  for (const auto& line : absl::StrSplit(this->_cli.config_to_str(true, false), '\n')) {
-    if (line.empty()) {
-      continue;
-    }
-    if (line.front() == '[') {  // Begin of the section for the active subcommand
-      absl::StrAppend(&buff, line, "\n");
-      continue;
-    }
-    // Given two subcommands named comm1 and comm2, assuming comm1 was parsed while comm2 was
-    // not, the TOML produced by CLI11 will have values for comm2 formatted as comm2.myarg1=1,
-    // comm2.myarg2="a" etc.
-    // All we are doing here is to look for an argument name containing '.'.
-    // In this way we can filter out entry corresponding to arguments for inactive subcommands
-    const auto arg = line.substr(0, line.find('='));
-    assert(!arg.empty());
-    if (!absl::StrContains(arg, '.')) {
-      absl::StrAppend(&buff, line, "\n");
-    }
-  }
-
   try {
-    auto tt = toml::parse(buff);
-    std::stringstream ss;
-    ss << toml::json_formatter{tt};
-    return ss.str();
+    const auto toml_config_str = _cli.config_to_str(true, false);
+    const auto toml_config = toml::parse(toml_config_str);
+    // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
+    return toml_to_json(toml_config).dump(4);
   } catch (const std::exception& e) {
-    throw std::runtime_error(
-        fmt::format(FMT_STRING("The following error occurred while converting MoDLE's config "
-                               "from TOML to JSON: {}"),
-                    e.what()));
+    throw std::runtime_error(fmt::format(
+        "The following error occurred while converting MoDLE's config from TOML to JSON: {}",
+        e.what()));
   }
 }
 

@@ -2,46 +2,68 @@
 #
 # SPDX-License-Identifier: MIT
 
-find_package(absl CONFIG REQUIRED)
 find_package(Boost CONFIG REQUIRED COMPONENTS headers)
 find_package(CLI11 CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
+find_package(hictk CONFIG REQUIRED)
+find_package(phmap CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
-find_package(tomlplusplus CONFIG REQUIRED)
 
 add_executable(modle)
 
-target_sources(modle PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cli.cpp ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
+target_sources(
+  modle
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/cli.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
+)
 
 target_link_libraries(
   modle
-  PRIVATE project_warnings
-          project_options
-          Modle::common
-          Modle::config
-          Modle::libmodle)
+  PRIVATE
+    modle_project_warnings
+    modle_project_options
+    Modle::common
+    Modle::config
+    Modle::io_json
+    Modle::io_toml
+    Modle::libmodle
+)
 
 target_link_system_libraries(
   modle
   PRIVATE
-  absl::failure_signal_handler
-  absl::flat_hash_map
-  absl::span
-  absl::strings
-  absl::symbolize
-  absl::time
   Boost::headers
   CLI11::CLI11
-  spdlog::spdlog
-  tomlplusplus::tomlplusplus
-  hictk)
+  phmap
+  spdlog::spdlog_header_only
+  hictk::libhictk
+)
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  set_target_properties(
+    modle
+    PROPERTIES
+      LINK_FLAGS_RELEASE
+        -s
+  )
+endif()
 
 include(GNUInstallDirs)
 install(
-  TARGETS modle
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+  TARGETS
+    modle
+  COMPONENT Runtime
+  LIBRARY
+    DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/scratch/"
+  ARCHIVE
+    DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/scratch/"
+  RUNTIME
+    DESTINATION "${CMAKE_INSTALL_BINDIR}"
+  PUBLIC_HEADER
+    DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/scratch/"
+  PRIVATE_HEADER
+    DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/scratch/"
+)
 
-install(FILES ${PROJECT_SOURCE_DIR}/LICENSE DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/modle/)
+install(FILES "${PROJECT_SOURCE_DIR}/LICENSE" DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/modle/" COMPONENT Runtime)

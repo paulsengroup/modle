@@ -3,21 +3,26 @@
 # SPDX-License-Identifier: MIT
 
 include(FetchContent)
-if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
-  cmake_policy(SET CMP0135 NEW)
-endif()
 
-# cmake-format: off
+# gersemi: off
 FetchContent_Declare(
         hictk
-        URL ${CMAKE_CURRENT_SOURCE_DIR}/external/hictk-7a1a5d7.tar.xz
-        URL_HASH SHA256=ebbf369cc4ab01af64a4c320851b577d2fd6df636e87aeb36fb6c86524066e6e
+        URL ${CMAKE_CURRENT_SOURCE_DIR}/external/hictk-v2.1.4.tar.xz
+        URL_HASH SHA256=21abacc4322408e4611341e47dd3198aa5c7e9177d0d39e6addb615adf238a97
+        EXCLUDE_FROM_ALL
+        OVERRIDE_FIND_PACKAGE
+        SYSTEM
 )
-# cmake-format: on
+# gersemi: on
 
-set(HICTK_ENABLE_TESTING OFF)
-set(HICTK_BUILD_EXAMPLES OFF)
 set(HICTK_BUILD_BENCHMARKS OFF)
+set(HICTK_BUILD_EXAMPLES OFF)
 set(HICTK_BUILD_TOOLS OFF)
+set(HICTK_ENABLE_FUZZY_TESTING OFF)
+set(HICTK_ENABLE_TESTING OFF)
+set(HICTK_INSTALL OFF)
+set(HICTK_WITH_ARROW OFF)
+set(HICTK_WITH_EIGEN OFF)
+set(HICTK_ENABLE_GIT_VERSION_TRACKING OFF)
 
 FetchContent_MakeAvailable(hictk)

@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <xoshiro-cpp/XoshiroCpp.hpp>  // for SplitMix64, Xoshiro256PlusPlus
+#include <xoshiro-cpp/XoshiroCpp.hpp>
 
-#include "modle/common/common.hpp"  // for u64
+#include "modle/common/common.hpp"
 
 #ifdef MODLE_WITH_BOOST_RANDOM
 #include <boost/random/bernoulli_distribution.hpp>
@@ -23,13 +23,13 @@
 #endif
 
 namespace modle::random {
-[[nodiscard]] constexpr XoshiroCpp::Xoshiro256PlusPlus PRNG(u64 seed) noexcept(
+[[nodiscard]] constexpr XoshiroCpp::Xoshiro256PlusPlus PRNG(std::uint64_t seed) noexcept(
     utils::ndebug_defined()) {
   auto seeder = XoshiroCpp::SplitMix64(seed);
   return XoshiroCpp::Xoshiro256PlusPlus(seeder.generateSeedSequence<4>());
 }
 
-using PRNG_t = decltype(PRNG(u64(1)));
+using PRNG_t = decltype(PRNG(std::uint64_t(1)));
 
 #ifdef MODLE_WITH_BOOST_RANDOM
 using bernoulli_trial = boost::random::bernoulli_distribution<double>;
@@ -37,7 +37,7 @@ template <class N>
 using binomial_distribution = boost::random::binomial_distribution<N>;
 template <class N>
 using discrete_distribution = boost::random::discrete_distribution<N>;
-template <class N, usize bits>
+template <class N, std::size_t bits>
 inline N generate_canonical(random::PRNG_t& rand_eng) {
   return boost::random::generate_canonical<N, bits>(rand_eng);
 }
@@ -58,7 +58,7 @@ template <class N>
 using binomial_distribution = std::binomial_distribution<N>;
 template <class N>
 using discrete_distribution = std::discrete_distribution<N>;
-template <class N, usize bits>
+template <class N, std::size_t bits>
 inline N generate_canonical(random::PRNG_t& rand_eng) {
   return std::generate_canonical<N, bits>(rand_eng);
 }

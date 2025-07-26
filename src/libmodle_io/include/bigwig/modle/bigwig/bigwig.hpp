@@ -6,32 +6,30 @@
 
 // IWYU pragma: no_include "modle/src/libio/bigwig_impl.hpp"
 
-#include <absl/container/btree_map.h>
-#include <absl/types/span.h>  // for Span
 #include <fmt/std.h>
+#include <parallel_hashmap/phmap.h>
 
-#include <filesystem>   // for path
-#include <string_view>  // for string_view
-#include <type_traits>  // for enable_if
+#include <filesystem>
+#include <span>
+#include <string_view>
+#include <type_traits>
 
-#include "modle/common/common.hpp"  // for u32, usize, u64
+#include "modle/common/common.hpp"
 
 // clang-format off
-#include "modle/common/suppress_compiler_warnings.hpp"  // for DISABLE_WARNING_PADDED, DISABLE_W...
+#include "modle/common/suppress_compiler_warnings.hpp"
 
 // clang-format on
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_PADDED
-#include "libbigwig/bigWig.h"  // for bigWigFile_t
+#include "libbigwig/bigWig.h"
 DISABLE_WARNING_POP
 
 namespace modle::io::bigwig {
 
 class Reader {
  public:
-  // TODO replace with flat_hash after issues with ASAN and abseil have been addressed
-  // using Chromosomes = absl::flat_hash_map<std::string, bp_t>;
-  using Chromosomes = absl::btree_map<std::string, bp_t>;
+  using Chromosomes = phmap::flat_hash_map<std::string, bp_t>;
   using Intervals =
       std::unique_ptr<bwOverlappingIntervals_t, decltype(&bwDestroyOverlappingIntervals)>;
   using StatsType = bwStatsType;
@@ -94,12 +92,17 @@ class Writer {
   template <class Chromosomes>
   void write_chromosomes(Chromosomes& chroms);
   void write_chromosomes(const std::vector<std::string>& chrom_names,
-                         const std::vector<u32>& chrom_sizes);
-  void write_chromosomes(const char* const* chrom_names, const u32* chrom_sizes, usize num_chroms);
+                         const std::vector<std::uint32_t>& chrom_sizes);
+  void write_chromosomes(const char* const* chrom_names, const std::uint32_t* chrom_sizes,
+                         std::size_t num_chroms);
 
   template <class N, class = std::enable_if<std::is_arithmetic_v<N>>>
-  void write_range(std::string_view chrom_name, absl::Span<N> values, u64 span, u64 step,
-                   u64 offset = 0);
+  void write_range(std::string_view chrom_name, const std::vector<N>& values, std::uint64_t span,
+                   std::uint64_t step, std::uint64_t offset = 0);
+
+  template <class N, class = std::enable_if<std::is_arithmetic_v<N>>>
+  void write_range(std::string_view chrom_name, std::span<const N> values, std::uint64_t span,
+                   std::uint64_t step, std::uint64_t offset = 0);
 };
 
 }  // namespace modle::io::bigwig

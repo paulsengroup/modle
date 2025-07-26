@@ -1,0 +1,315 @@
+# Copyright (C) 2022 Roberto Rossini (roberros@uio.no)
+# SPDX-License-Identifier: MIT
+
+name: Build Docker image
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - ".github/workflows/build-dockerfile.yml"
+      - "cmake/**"
+      - "external/**"
+      - "src/**"
+      - "test/**"
+      - "!test/scripts/devel/**"
+      - "utils/devel/test_docker_image.sh"
+      - "CMakeLists.txt"
+      - ".dockerignore"
+      - "Dockerfile"
+      - "conanfile.py"
+    tags:
+      - 'v*.*.*'
+
+  pull_request:
+    paths:
+      - ".github/workflows/build-dockerfile.yml"
+      - "cmake/**"
+      - "external/**"
+      - "src/**"
+      - "test/**"
+      - "!test/scripts/devel/**"
+      - "utils/devel/test_docker_image.sh"
+      - "CMakeLists.txt"
+      - "Dockerfile"
+      - ".dockerignore"
+      - "conanfile.py"
+
+# https://stackoverflow.com/a/72408109
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: read
+
+jobs:
+  cache-test-dataset:
+    name: Cache test dataset
+    uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@75f936a00588191e1c59c66b789f6a8dc1f1beb9
+
+  build-dockerfile:
+    name: Build Dockerfile
+    needs: cache-test-dataset
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { platform: "linux/amd64", runner: "ubuntu-24.04" }
+          - { platform: "linux/arm64", runner: "ubuntu-24.04-arm" }
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore test dataset
+        uses: actions/cache/restore@v4
+        with:
+          key: ${{ needs.cache-test-dataset.outputs.cache-key }}
+          path: test/data/modle_test_data.tar.zst
+          fail-on-cache-miss: true
+
+      - name: Generate build args
+        id: build-args
+        run: |
+          set -e
+          set -u
+          set -o pipefail
+
+          OS_NAME='ubuntu'
+          OS_VERSION='24.04'
+
+          BUILD_BASE_IMAGE='ghcr.io/paulsengroup/ci-docker-images/alpine-3.22-cxx:latest'
+
+          FINAL_BASE_IMAGE="docker.io/library/$OS_NAME"
+          FINAL_BASE_IMAGE_TAG="$OS_VERSION"
+          sudo docker pull "$FINAL_BASE_IMAGE:$FINAL_BASE_IMAGE_TAG"
+
+          FINAL_BASE_IMAGE_DIGEST="$(docker inspect --format='{{index .RepoDigests 0}}' "$FINAL_BASE_IMAGE:$FINAL_BASE_IMAGE_TAG" | grep -o '[[:alnum:]:]\+$')"
+          FINAL_BASE_IMAGE+="@$FINAL_BASE_IMAGE_DIGEST"
+
+          if [[ '${{ github.event_name }}' == 'pull_request' ]]; then
+            GIT_HASH='0000000000000000000000000000000000000000'
+            GIT_SHORT_HASH='00000000'
+            CREATION_DATE='2000-01-01'
+          else
+            GIT_HASH="$(git rev-parse HEAD)"
+            GIT_SHORT_HASH="$(git rev-parse --short HEAD)"
+            CREATION_DATE="$(date --iso-8601)"
+          fi
+
+          GIT_TAG="$(git for-each-ref 'refs/tags/v*.*.*' --count 1 --sort=-v:refname --format "%(refname:short)" --points-at HEAD)"
+          if [ -z "$GIT_TAG" ]; then
+            VERSION="sha-$GIT_SHORT_HASH"
+            GIT_TAG=unknown
+          else
+            VERSION="$GIT_TAG"
+          fi
+
+          PLATFORM="$(echo '${{ matrix.platform }}' | cut -d '/' -f 2)"
+          CACHE_REGISTRY="ghcr.io/${{ github.repository }}:buildcache-$PLATFORM"
+
+          echo "FINAL_BASE_IMAGE=$FINAL_BASE_IMAGE" | tee -a "$GITHUB_OUTPUT"
+          echo "FINAL_BASE_IMAGE_TAG=$FINAL_BASE_IMAGE_TAG" | tee -a "$GITHUB_OUTPUT"
+          echo "BUILD_BASE_IMAGE=$BUILD_BASE_IMAGE" | tee -a "$GITHUB_OUTPUT"
+          echo "FINAL_BASE_IMAGE_DIGEST=$FINAL_BASE_IMAGE_DIGEST" | tee -a "$GITHUB_OUTPUT"
+          echo "GIT_HASH=$GIT_HASH" | tee -a "$GITHUB_OUTPUT"
+          echo "GIT_SHORT_HASH=$GIT_SHORT_HASH" | tee -a "$GITHUB_OUTPUT"
+          echo "CREATION_DATE=$CREATION_DATE" | tee -a "$GITHUB_OUTPUT"
+          echo "GIT_TAG=$GIT_TAG" | tee -a "$GITHUB_OUTPUT"
+          echo "VERSION=$VERSION" | tee -a "$GITHUB_OUTPUT"
+          echo "CACHE_REGISTRY=$CACHE_REGISTRY" | tee -a "$GITHUB_OUTPUT"
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5.7.0
+        with:
+          images: ${{ github.repository }},ghcr.io/${{ github.repository }}
+          flavor: latest=true
+          tags: |
+            type=semver,priority=1000,pattern={{version}}
+            type=sha,priority=900
+            type=ref,priority=700,event=branch
+            type=ref,priority=600,event=pr
+
+      - name: Login to DockerHub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+
+      - name: Build Docker image (${{ matrix.platform }})
+        id: build-image
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: ${{ github.workspace }}
+          load: true
+          push: false
+          cache-from: type=registry,ref=${{ steps.build-args.outputs.CACHE_REGISTRY }}
+          cache-to: type=registry,ref=${{ steps.build-args.outputs.CACHE_REGISTRY }},mode=max,compression=zstd
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: ${{ matrix.platform }}
+          build-args: |
+            BUILD_BASE_IMAGE=${{ steps.build-args.outputs.BUILD_BASE_IMAGE }}
+            FINAL_BASE_IMAGE=${{ steps.build-args.outputs.FINAL_BASE_IMAGE }}
+            FINAL_BASE_IMAGE_TAG=${{ steps.build-args.outputs.FINAL_BASE_IMAGE_TAG }}
+            FINAL_BASE_IMAGE_DIGEST=${{ steps.build-args.outputs.FINAL_BASE_IMAGE_DIGEST }}
+            GIT_HASH=${{ steps.build-args.outputs.GIT_HASH }}
+            GIT_SHORT_HASH=${{ steps.build-args.outputs.GIT_SHORT_HASH }}
+            GIT_TAG=${{ steps.build-args.outputs.GIT_TAG }}
+            GIT_IS_DIRTY=false
+            CREATION_DATE=${{ steps.build-args.outputs.CREATION_DATE }}
+            VERSION=${{ steps.build-args.outputs.VERSION }}
+
+      - name: Test Docker image
+        run: utils/devel/test_docker_image.sh '${{ steps.build-image.outputs.imageid }}'
+
+      - name: Push image to registries
+        id: push-image
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: ${{ github.workspace }}
+          push: true
+          cache-from: type=registry,ref=${{ steps.build-args.outputs.CACHE_REGISTRY }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,"name=${{ github.repository }},ghcr.io/${{ github.repository }}",push-by-digest=true,name-canonical=true,push=true
+          build-args: |
+            BUILD_BASE_IMAGE=${{ steps.build-args.outputs.BUILD_BASE_IMAGE }}
+            FINAL_BASE_IMAGE=${{ steps.build-args.outputs.FINAL_BASE_IMAGE }}
+            FINAL_BASE_IMAGE_TAG=${{ steps.build-args.outputs.FINAL_BASE_IMAGE_TAG }}
+            FINAL_BASE_IMAGE_DIGEST=${{ steps.build-args.outputs.FINAL_BASE_IMAGE_DIGEST }}
+            GIT_HASH=${{ steps.build-args.outputs.GIT_HASH }}
+            GIT_SHORT_HASH=${{ steps.build-args.outputs.GIT_SHORT_HASH }}
+            GIT_TAG=${{ steps.build-args.outputs.GIT_TAG }}
+            GIT_IS_DIRTY=false
+            CREATION_DATE=${{ steps.build-args.outputs.CREATION_DATE }}
+            VERSION=${{ steps.build-args.outputs.VERSION }}
+
+      - name: Export digest
+        if: github.event_name != 'pull_request'
+        run: |
+          mkdir -p ${{ runner.temp }}/digests
+          digest="${{ steps.push-image.outputs.digest }}"
+          touch "${{ runner.temp }}/digests/${digest#sha256:}"
+
+      - name: Generate artifact name
+        if: github.event_name != 'pull_request'
+        id: generate-artifact-name
+        run: |
+          echo 'name=${{ matrix.platform }}' |
+            sed 's|[^[:alnum:]=-]\+|-|g' |
+            tee -a $GITHUB_OUTPUT
+
+      - name: Upload digest
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ steps.generate-artifact-name.outputs.name }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge-images:
+    name: Merge images
+    runs-on: ubuntu-latest
+    needs: [build-dockerfile]
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5.7.0
+        with:
+          images: ${{ github.repository }},ghcr.io/${{ github.repository }}
+          flavor: latest=true
+          tags: |
+            type=semver,priority=1000,pattern={{version}}
+            type=sha,priority=900
+            type=ref,priority=700,event=branch
+            type=ref,priority=600,event=pr
+
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to DockerHub
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+
+      - name: Create manifest list and push (DockerHub)
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          # https://docs.docker.com/build/ci/github-actions/multi-platform/#distribute-build-across-multiple-runners
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '  ${{ github.repository }}@sha256:%s ' *)
+
+      - name: Inspect image (DockerHub)
+        run: docker buildx imagetools inspect ${{ github.repository }}
+
+      - name: Create manifest list and push (GHRC.io)
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          # https://docs.docker.com/build/ci/github-actions/multi-platform/#distribute-build-across-multiple-runners
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '  ghcr.io/${{ github.repository }}@sha256:%s ' *)
+
+      - name: Inspect image (GHCR.io)
+        run: docker buildx imagetools inspect ghcr.io/${{ github.repository }}
+
+  build-dockerfile-status-check:
+    name: Status Check (Build Dockerfile)
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    needs:
+      - build-dockerfile
+      - merge-images
+
+    steps:
+      - name: Collect job results
+        if: |
+          needs.build-dockerfile.result != 'success' ||
+          (
+           needs.merge-images.result != 'success'    &&
+           needs.merge-images.result != 'skipped'
+          )
+        run: exit 1

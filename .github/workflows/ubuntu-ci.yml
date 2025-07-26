@@ -15,8 +15,6 @@ on:
       - "!test/scripts/devel/**"
       - "CMakeLists.txt"
       - "conanfile.txt"
-    tags:
-      - 'v*.*.*'
 
   pull_request:
     paths:
@@ -28,6 +26,17 @@ on:
       - "!test/scripts/devel/**"
       - "CMakeLists.txt"
       - "conanfile.txt"
+
+  workflow_dispatch:
+    inputs:
+      ci-type:
+        description: "CI type"
+        required: true
+        default: "short"
+        type: choice
+        options:
+          - short
+          - full
 
 # https://stackoverflow.com/a/72408109
 concurrency:
@@ -44,9 +53,10 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-result.outputs.result }}
+      ci-type: ${{ steps.ci-type.outputs.type }}
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ github.event.after }}
@@ -54,14 +64,16 @@ jobs:
       - name: Detect CI type
         id: ci-type
         run: |
-          if git log --format=%B -n 1 ${{ github.event.after }} | grep -qF '[ci full]'; then
-            echo "type=full" >> $GITHUB_OUTPUT
+          if [[ ${{ github.event_name }} == 'workflow_dispatch' ]]; then
+            echo "type=${{ inputs.ci-type }}" | tee -a "$GITHUB_OUTPUT"
+          elif git log --format=%B -n 1 ${{ github.event.after }} | grep -qF '[ci full]'; then
+            echo "type=full" | tee -a "$GITHUB_OUTPUT"
           else
-            echo "type=short" >> $GITHUB_OUTPUT
+            echo "type=short" | tee -a "$GITHUB_OUTPUT"
           fi
 
       - name: Generate matrix
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         id: set-result
         with:
           script: |
@@ -74,58 +86,65 @@ jobs:
             var includes = []
 
             // Debug builds (short CI)
-            includes.push({ compiler: 'gcc-8',     os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.26.*', conan: '2.0.*', build_type: 'Debug',   developer_mode: 'OFF' })
-            includes.push({ compiler: 'gcc-12',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.26.*', conan: '2.0.*', build_type: 'Debug',   developer_mode: 'ON'  })
-            includes.push({ compiler: 'clang-8',   os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.26.*', conan: '2.0.*', build_type: 'Debug',   developer_mode: 'OFF' })
-            includes.push({ compiler: 'clang-15',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.26.*', conan: '2.0.*', build_type: 'Debug',   developer_mode: 'ON'  })
+            includes.push({ compiler: 'gcc-10',    os: 'ubuntu-24.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler: 'gcc-15',    os: 'ubuntu-25.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Debug',   developer_mode: 'ON'  })
+            includes.push({ compiler: 'clang-13',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-20',  os: 'ubuntu-24.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Debug',   developer_mode: 'ON'  })
 
             // Release builds (short CI)
-            includes.push({ compiler: 'gcc-12',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.26.*', conan: '2.0.*', build_type: 'Release', developer_mode: 'ON'  })
-            includes.push({ compiler: 'clang-15',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.26.*', conan: '2.0.*', build_type: 'Release', developer_mode: 'ON'  })
+            includes.push({ compiler: 'gcc-15',    os: 'ubuntu-25.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Release', developer_mode: 'ON'  })
+            includes.push({ compiler: 'clang-20',  os: 'ubuntu-24.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Release', developer_mode: 'ON'  })
 
             if (ci_short) {
               return { include: includes }
             }
 
             // Debug builds (long CI)
-            includes.push({ compiler: 'gcc-9',     os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.26.*', conan: '2.0.*', build_type: 'Debug',   developer_mode: 'OFF' })
-            includes.push({ compiler: 'gcc-10',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.26.*', conan: '2.0.*', build_type: 'Debug',   developer_mode: 'OFF' })
-            includes.push({ compiler: 'gcc-11',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.26.*', conan: '2.0.*', build_type: 'Debug',   developer_mode: 'ON'  })
-            includes.push({ compiler: 'clang-9',   os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.26.*', conan: '2.0.*', build_type: 'Debug',   developer_mode: 'OFF' })
-            includes.push({ compiler: 'clang-10',  os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.26.*', conan: '2.0.*', build_type: 'Debug',   developer_mode: 'OFF' })
-            includes.push({ compiler: 'clang-11',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.26.*', conan: '2.0.*', build_type: 'Debug',   developer_mode: 'OFF' })
-            includes.push({ compiler: 'clang-12',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.26.*', conan: '2.0.*', build_type: 'Debug',   developer_mode: 'OFF' })
-            includes.push({ compiler: 'clang-13',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.26.*', conan: '2.0.*', build_type: 'Debug',   developer_mode: 'ON'  })
-            includes.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.26.*', conan: '2.0.*', build_type: 'Debug',   developer_mode: 'ON'  })
+            includes.push({ compiler: 'gcc-11',    os: 'ubuntu-24.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler: 'gcc-12',    os: 'ubuntu-24.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler: 'gcc-13',    os: 'ubuntu-24.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler: 'gcc-14',    os: 'ubuntu-24.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-14',  os: 'ubuntu-24.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-15',  os: 'ubuntu-24.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-16',  os: 'ubuntu-24.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-17',  os: 'ubuntu-24.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-18',  os: 'ubuntu-24.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-19',  os: 'ubuntu-24.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Debug',   developer_mode: 'OFF' })
 
             // Release builds (long CI)
-            includes.push({ compiler: 'gcc-8',     os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.26.*', conan: '2.0.*', build_type: 'Release', developer_mode: 'OFF' })
-            includes.push({ compiler: 'gcc-9',     os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.26.*', conan: '2.0.*', build_type: 'Release', developer_mode: 'OFF' })
-            includes.push({ compiler: 'gcc-10',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.26.*', conan: '2.0.*', build_type: 'Release', developer_mode: 'ON'  })
-            includes.push({ compiler: 'gcc-11',    os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.26.*', conan: '2.0.*', build_type: 'Release', developer_mode: 'ON'  })
-            includes.push({ compiler: 'clang-8',   os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.26.*', conan: '2.0.*', build_type: 'Release', developer_mode: 'OFF' })
-            includes.push({ compiler: 'clang-9',   os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.26.*', conan: '2.0.*', build_type: 'Release', developer_mode: 'OFF' })
-            includes.push({ compiler: 'clang-10',  os: 'ubuntu-20.04',  generator: 'Ninja', cmake: '3.26.*', conan: '2.0.*', build_type: 'Release', developer_mode: 'OFF' })
-            includes.push({ compiler: 'clang-11',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.26.*', conan: '2.0.*', build_type: 'Release', developer_mode: 'OFF' })
-            includes.push({ compiler: 'clang-12',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.26.*', conan: '2.0.*', build_type: 'Release', developer_mode: 'ON'  })
-            includes.push({ compiler: 'clang-13',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.26.*', conan: '2.0.*', build_type: 'Release', developer_mode: 'ON'  })
-            includes.push({ compiler: 'clang-14',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.26.*', conan: '2.0.*', build_type: 'Release', developer_mode: 'ON'  })
+            includes.push({ compiler: 'gcc-10',    os: 'ubuntu-24.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler: 'gcc-11',    os: 'ubuntu-24.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler: 'gcc-12',    os: 'ubuntu-24.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler: 'gcc-13',    os: 'ubuntu-24.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler: 'gcc-14',    os: 'ubuntu-24.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-13',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-14',  os: 'ubuntu-24.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-15',  os: 'ubuntu-24.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-16',  os: 'ubuntu-24.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-17',  os: 'ubuntu-24.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-18',  os: 'ubuntu-24.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-19',  os: 'ubuntu-24.04',  generator: 'Ninja', cmake: '4.0.*', build_type: 'Release', developer_mode: 'OFF' })
 
-            // Make sure project builds with CMake 3.20
-            includes.push({ compiler: 'clang-15',  os: 'ubuntu-22.04',  generator: 'Ninja', cmake: '3.25.2', conan: '2.0.*', build_type: 'Release', developer_mode: 'OFF' })
+            // Make sure project builds with CMake 3.25
+            includes.push({ compiler: 'clang-20',  os: 'ubuntu-24.04',  generator: 'Ninja', cmake: '3.25.2', build_type: 'Release', developer_mode: 'OFF' })
             // Make sure project builds with make
-            includes.push({ compiler: 'clang-15',  os: 'ubuntu-22.04',  generator: 'Unix Makefiles', cmake: '3.26.*', conan: '2.0.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler: 'clang-20',  os: 'ubuntu-24.04',  generator: 'Unix Makefiles', cmake: '4.0.*', build_type: 'Release', developer_mode: 'OFF' })
 
             return { include: includes }
 
+  cache-test-dataset:
+    name: Cache test dataset
+    uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@75f936a00588191e1c59c66b789f6a8dc1f1beb9
 
-  cache-test-datasets:
-    uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@main
-
+  build-conan-deps:
+    name: Build Conan deps
+    uses: paulsengroup/modle/.github/workflows/build-conan-deps-linux.yml@473e56428a2d40c29e260d02f2f89c3c91ab3abd
 
   build-project:
     name: Build project
-    needs: matrix-factory
+    needs:
+      - matrix-factory
+      - build-conan-deps
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -137,13 +156,14 @@ jobs:
 
     env:
       CCACHE_DIR: "/opt/ccache-cache"
-      CCACHE_COMPRESSLEVEL: "13"
-      CCACHE_MAXSIZE: "200M"
+      CCACHE_COMPILERCHECK: "content"
+      CCACHE_COMPRESSLEVEL: "1"
+      CCACHE_MAXSIZE: "500M"
       CONAN_HOME: "/opt/conan/"
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Fix permissions
         run: |
@@ -155,22 +175,19 @@ jobs:
           pattern='[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$'
           flag=false
 
-          if [[ $(cmake --version | grep -o "$pattern") != ${{ matrix.cmake }} ||
-                $(conan --version | grep -o "$pattern") != ${{ matrix.conan }} ]]; then
+          if [[ $(cmake --version | grep -o "$pattern") != ${{ matrix.cmake }} ]]; then
             flag=true
           fi
 
-          echo "outdated=$flag" >> $GITHUB_OUTPUT
+          echo "outdated=$flag" | tee -a "$GITHUB_OUTPUT"
 
       - name: Update build deps
-        if: ${{ steps.buld-deps-outdated.outputs.outdated }}
+        if: steps.build-deps-outdated.outputs.outdated == 'true'
         run: |
           apt-get update
           apt-get install -y --no-install-recommends python3-pip
 
-          python3 -m pip install         \
-            "cmake==${{ matrix.cmake }}" \
-            "conan==${{ matrix.conan }}"
+          python3 -m pip install "cmake==${{ matrix.cmake }}"
 
       - name: Generate cache keys
         id: cache-key
@@ -181,150 +198,233 @@ jobs:
           compiler="${{ matrix.compiler }}"
           generator="${{ matrix.generator }}"
           build_type="${{ matrix.build_type }}"
+          dev_mode="${{ matrix.developer_mode }}"
 
-          conanfile_hash="${{ hashFiles('conanfile.txt') }}"
-          workflow_hash="${{ hashFiles('.github/workflows/ubuntu-ci.yml') }}"
-          combined_hash="${{ hashFiles('conanfile.txt', '.github/workflows/ubuntu-ci.yml') }}"
+          conanfile_hash="${{ hashFiles('conanfile.py') }}"
 
           # This can be used by to always update a cache entry (useful e.g. for ccache)
           current_date="$(date '+%s')"
 
-          conan_key_prefix="conan-$os-$compiler-$conanfile_hash-$build_type-$generator"
-          ccache_key_prefix="ccache-$os-$compiler-$conanfile_hash-$build_type-$generator"
+          ccache_key_prefix="ccache-$os-$compiler-$conanfile_hash-$build_type-$generator-$dev_mode"
 
-          echo "conan-key=$conan_key_prefix" >> $GITHUB_OUTPUT
-          echo "conan-restore-key=$conan_key_prefix" >> $GITHUB_OUTPUT
+          echo "ccache-key=${ccache_key_prefix}-$GITHUB_REF-${current_date}" | tee -a $GITHUB_OUTPUT
+          echo "ccache-restore-key-1=$ccache_key_prefix-$GITHUB_REF" | tee -a $GITHUB_OUTPUT
+          echo "ccache-restore-key-2=$ccache_key_prefix" | tee -a $GITHUB_OUTPUT
 
-          echo "ccache-key=${ccache_key_prefix}-${current_date}" >> $GITHUB_OUTPUT
-          echo "ccache-restore-key=$ccache_key_prefix" >> $GITHUB_OUTPUT
-
-      - name: Cache Conan packages
-        id: cache-conan
-        uses: actions/cache@v3
+      - name: Restore Conan cache
+        uses: actions/cache/restore@v4
         with:
-          key: ${{ steps.cache-key.outputs.conan-key }}
-          restore-keys: ${{ steps.cache-key.outputs.conan-restore-key }}
-          path: ${{ env.CONAN_HOME }}
+          key: ${{ needs.build-conan-deps.outputs.conan-key }}
+          path: |
+            ${{ env.CONAN_HOME }}/p
+            /tmp/cmake-prefix-dbg.tar
+            /tmp/cmake-prefix-rel.tar
+          fail-on-cache-miss: true
 
-      - name: Clean Conan cache (pre-build)
-        if: steps.cache-conan.outputs.cache-hit != 'true'
+      - name: Extract CMake configs (Debug)
+        if: matrix.build_type == 'Debug'
         run: |
-          conan cache clean "*" --build
-          conan cache clean "*" --download
-          conan cache clean "*" --source
-          conan remove --confirm "*"
+          mkdir conan-env
+          tar -xf /tmp/cmake-prefix-dbg.tar -C conan-env/ --strip-components=1
 
-      - name: Build conanfile.txt
+      - name: Extract CMake configs (Release)
+        if: matrix.build_type == 'Release'
         run: |
-          conan install conanfile.txt                 \
-               --build=missing                        \
-               -pr:b="$CONAN_DEFAULT_PROFILE_PATH"    \
-               -pr:h="$CONAN_DEFAULT_PROFILE_PATH"    \
-               -s build_type=${{ matrix.build_type }} \
-               -s compiler.libcxx=libstdc++11         \
-               -s compiler.cppstd=17                  \
-               --output-folder=build/
+          mkdir conan-env
+          tar -xf /tmp/cmake-prefix-rel.tar -C conan-env/ --strip-components=1
 
-      - name: Clean Conan cache (post-build)
-        if: steps.cache-conan.outputs.cache-hit != 'true'
-        run: |
-          conan cache clean "*" --build
-          conan cache clean "*" --download
-          conan cache clean "*" --source
-
-      - name: Cache Ccache folder
-        uses: actions/cache@v3
+      - name: Restore Ccache folder
+        id: cache-ccache
+        uses: actions/cache/restore@v4
         with:
-          key: ${{ steps.cache-key.outputs.ccache-key }}
-          restore-keys: ${{ steps.cache-key.outputs.ccache-restore-key }}
+          key: ${{ steps.cache-key.outputs.ccache-restore-key-1 }}
+          restore-keys: ${{ steps.cache-key.outputs.ccache-restore-key-2 }}
           path: ${{ env.CCACHE_DIR }}
+
+      - name: Reset Ccache stats
+        run: ccache --zero-stats
 
       - name: Configure project
         run: |
+          if ! lld -v &> /dev/null; then
+            LINKER=SYSTEM
+          else
+            LINKER=LLD
+          fi
+
           cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}          \
-                -DCMAKE_PREFIX_PATH="$PWD/build"                     \
+                -DCMAKE_LINKER_TYPE="$LINKER"                        \
+                -DCMAKE_PREFIX_PATH="$PWD/conan-env"                 \
                 -DMODLE_ENABLE_TESTING=ON                            \
                 -DMODLE_DOWNLOAD_TEST_DATASET=OFF                    \
                 -DENABLE_DEVELOPER_MODE=${{ matrix.developer_mode }} \
                 -DOPT_ENABLE_CLANG_TIDY=OFF                          \
                 -DOPT_ENABLE_CPPCHECK=OFF                            \
                 -DCMAKE_INSTALL_PREFIX=dest                          \
-                -G "${{ matrix.generator }}"                         \
+                -G '${{ matrix.generator }}'                         \
                 -S .                                                 \
                 -B ./build/
 
-      - name: Build test units
-        run: cmake --build build -t test_main -j $(nproc)
-
-      - name: Package unit tests
-        run: |
-          tar -cf - build/ | zstd -T0 -13 -o unit-tests.tar.zst
-
-      - name: Build modle and modle_tools
+      - name: Build project
         run: cmake --build build -j $(nproc)
 
       - name: Package binaries
         run: |
           cmake --install build
 
-          tar -cf - -C dest/ bin |
-          zstd -T0 -13 -o binaries.tar.zst
+          tar -cf - -C dest/ bin | zstd -T0 -13 -o binaries.tar.zst
+
+      - name: Package unit tests
+        run: |
+          rm -r build/src
+          tar --exclude='*.o' -cf - build/ | zstd -T0 -13 -o unit-tests.tar.zst
 
       - name: Upload unit tests
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: unit-tests-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.generator }}-${{ matrix.build_type }}
+          name: "unit-tests-${{ matrix.os }}-\
+            ${{ matrix.compiler }}-\
+            ${{ matrix.generator }}-\
+            ${{ matrix.build_type }}-\
+            ${{ matrix.developer_mode }}"
           path: unit-tests.tar.zst
           if-no-files-found: error
           retention-days: 1
 
       - name: Upload binaries
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: binaries-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.generator }}-${{ matrix.build_type }}
+          name: "binaries-${{ matrix.os }}-\
+            ${{ matrix.compiler }}-\
+            ${{ matrix.generator }}-\
+            ${{ matrix.build_type }}-\
+            ${{ matrix.developer_mode }}"
           path: binaries.tar.zst
           if-no-files-found: error
           retention-days: 1
 
-      - name: Print Ccache statistics
-        run: ccache -s
+      - name: Print Ccache statistics (pre-cleanup)
+        run: |
+          ccache --show-stats \
+                 --show-compression \
+                 --verbose
+
+      - name: Cleanup Ccache folder
+        if: needs.matrix-factory.outputs.ci-type == 'short'
+        run: |
+          ccache --evict-older-than=14400s # 4h
+          ccache --recompress=19 --recompress-threads="$(nproc)"
+          ccache --cleanup
+
+      - name: Print Ccache statistics (post-cleanup)
+        if: needs.matrix-factory.outputs.ci-type == 'short'
+        run: |
+          ccache --show-stats \
+                 --show-compression \
+                 --verbose
+
+      - name: Save Ccache folder
+        if: needs.matrix-factory.outputs.ci-type == 'short'
+        uses: actions/cache/save@v4
+        with:
+          key: ${{ steps.cache-key.outputs.ccache-key }}
+          path: ${{ env.CCACHE_DIR }}
+        env:
+          ZSTD_CLEVEL: 1
+
+      - name: Generate list of stale cache entries
+        id: stale-cache
+        if: steps.cache-ccache.outputs.cache-matched-key != ''
+        run: |
+          fname='stale-cache-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.generator }}-${{ matrix.build_type }}-${{ matrix.developer_mode }}.txt'
+          echo '${{ steps.cache-ccache.outputs.cache-matched-key }}' > "$fname"
+
+          echo "name=$fname" | tee -a "$GITHUB_OUTPUT"
+
+      - name: Upload stale cache entries
+        if: steps.cache-ccache.outputs.cache-matched-key != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.stale-cache.outputs.name }}
+          path: "${{ steps.stale-cache.outputs.name }}"
+          if-no-files-found: error
+          retention-days: 1
+
+  clean-stale-cache:
+    needs: [build-project]
+    name: Evict stale cache entries
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: stale-cache-*
+          merge-multiple: true
+
+      - name: Evict cache entries
+        continue-on-error: true
+        run: |
+          set -x
+          while read entry; do
+            if ! grep -q '/heads/main' <(echo "$entry"); then
+              gh cache delete --repo '${{ github.repository }}' "$entry"
+            fi
+          done < <(cat stale-cache*.txt | grep -v '^$')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 
   run-unit-tests:
     name: Run unit tests
-    needs: [matrix-factory, cache-test-datasets, build-project]
+    needs: [matrix-factory, cache-test-dataset, build-project]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.matrix-factory.outputs.matrix) }}
 
     container:
-      image: ghcr.io/paulsengroup/ci-docker-images/modle/${{ matrix.os }}-cxx-${{ matrix.compiler }}:latest
+      image: ghcr.io/paulsengroup/ci-docker-images/${{ matrix.os }}-cxx-${{ matrix.compiler }}:latest
       options: "--user=root"
+
+    env:
+      MODLE_CI: "1"
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Fix permissions
-        run: |
-          chown -R $(id -u):$(id -g) $PWD
+      - name: Restore test dataset
+        uses: actions/cache/restore@v4
+        with:
+          key: ${{ needs.cache-test-dataset.outputs.cache-key }}
+          path: test/data/modle_test_data.tar.zst
+          fail-on-cache-miss: true
 
       - name: Download unit tests artifact
         uses: actions/download-artifact@v4
         with:
-          name: unit-tests-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.generator }}-${{ matrix.build_type }}
-
-      - name: Download test datasets
-        id: test-dataset
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ needs.cache-test-datasets.outputs.artifact-name }}
+          name: "unit-tests-${{ matrix.os }}-\
+            ${{ matrix.compiler }}-\
+            ${{ matrix.generator }}-\
+            ${{ matrix.build_type }}-\
+            ${{ matrix.developer_mode }}"
 
       - name: Extract binaries and test dataset
         run: |
           zstd -dcf unit-tests.tar.zst | tar -xf -
-          tar -xf modle_test_data.tar.xz
+          tar -xf test/data/modle_test_data.tar.zst
+
+      - name: Setup dependencies
+        run: |
+          apt-get update
+          apt-get install -q -y --no-install-recommends \
+            python3-pip
+
+          python3 -m pip install "cmake==${{ matrix.cmake }}"
 
       - name: Run unit tests
         run: |
@@ -332,49 +432,73 @@ jobs:
           export TMPDIR
           mkdir -p "$TMPDIR"
 
-          ctest --test-dir build/        \
-                --schedule-random        \
-                --output-on-failure      \
-                --no-tests=error         \
-                --timeout 300            \
+          ctest --test-dir build/           \
+                --schedule-random           \
+                --output-on-failure         \
+                --no-tests=error            \
+                --timeout 300               \
                 -j $(nproc)
-
 
   run-modle-integration-test:
     name: Run modle integration tests
-    needs: [matrix-factory, cache-test-datasets, build-project]
+    needs: [matrix-factory, cache-test-dataset, build-project]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.matrix-factory.outputs.matrix) }}
 
     container:
-      image: ghcr.io/paulsengroup/ci-docker-images/modle/${{ matrix.os }}-cxx-${{ matrix.compiler }}:latest
+      image: ubuntu:24.04
       options: "--user=root"
+
+    env:
+      MODLE_CI: "1"
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Fix permissions
         run: |
           chown -R $(id -u):$(id -g) $PWD
 
+      - name: Setup test dependencies
+        run: |
+          apt-get update
+          apt-get install -q -y --no-install-recommends \
+            gcc                                         \
+            libdigest-sha-perl                          \
+            python3-dev                                 \
+            python3-pip                                 \
+            xz-utils                                    \
+            zstd
+
+          python3 -m pip install \
+            'cooler>=0.10.3' \
+            'pyBigWig>=0.3.24' \
+            --break-system-packages \
+            --no-cache-dir
+
       - name: Download binary artifact
         uses: actions/download-artifact@v4
         with:
-          name: binaries-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.generator }}-${{ matrix.build_type }}
+          name: "binaries-${{ matrix.os }}-\
+            ${{ matrix.compiler }}-\
+            ${{ matrix.generator }}-\
+            ${{ matrix.build_type }}-\
+            ${{ matrix.developer_mode }}"
 
-      - name: Download test datasets
-        id: test-dataset
-        uses: actions/download-artifact@v4
+      - name: Restore test dataset
+        uses: actions/cache/restore@v4
         with:
-          name: ${{ needs.cache-test-datasets.outputs.artifact-name }}
+          key: ${{ needs.cache-test-dataset.outputs.cache-key }}
+          path: test/data/modle_test_data.tar.zst
+          fail-on-cache-miss: true
 
       - name: Extract binaries and test dataset
         run: |
           zstd -dcf binaries.tar.zst | tar -xf -
-          tar -xf modle_test_data.tar.xz
+          tar -xf test/data/modle_test_data.tar.zst
 
       - name: Inspect modle version
         run: bin/modle --version
@@ -385,39 +509,64 @@ jobs:
 
   run-modle-tools-integration-test:
     name: Run modle_tools integration tests
-    needs: [matrix-factory, cache-test-datasets, build-project]
+    needs: [matrix-factory, cache-test-dataset, build-project]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.matrix-factory.outputs.matrix) }}
 
     container:
-      image: ghcr.io/paulsengroup/ci-docker-images/modle/${{ matrix.os }}-cxx-${{ matrix.compiler }}:latest
+      image: ubuntu:24.04
       options: "--user=root"
+
+    env:
+      MODLE_CI: "1"
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Fix permissions
         run: |
           chown -R $(id -u):$(id -g) $PWD
 
+      - name: Setup test dependencies
+        run: |
+          apt-get update
+          apt-get install -q -y --no-install-recommends \
+            gcc                                         \
+            libdigest-sha-perl                          \
+            python3-dev                                 \
+            python3-pip                                 \
+            xz-utils                                    \
+            zstd
+
+          python3 -m pip install \
+            'cooler>=0.10.3' \
+            'pyBigWig>=0.3.24' \
+            --break-system-packages \
+            --no-cache-dir
+
       - name: Download binary artifact
         uses: actions/download-artifact@v4
         with:
-          name: binaries-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.generator }}-${{ matrix.build_type }}
+          name: "binaries-${{ matrix.os }}-\
+            ${{ matrix.compiler }}-\
+            ${{ matrix.generator }}-\
+            ${{ matrix.build_type }}-\
+            ${{ matrix.developer_mode }}"
 
-      - name: Download test datasets
-        id: test-dataset
-        uses: actions/download-artifact@v4
+      - name: Restore test dataset
+        uses: actions/cache/restore@v4
         with:
-          name: ${{ needs.cache-test-datasets.outputs.artifact-name }}
+          key: ${{ needs.cache-test-dataset.outputs.cache-key }}
+          path: test/data/modle_test_data.tar.zst
+          fail-on-cache-miss: true
 
       - name: Extract binaries and test dataset
         run: |
           zstd -dcf binaries.tar.zst | tar -xf -
-          tar -xf modle_test_data.tar.xz
+          tar -xf test/data/modle_test_data.tar.zst
 
       - name: Inspect modle_tools version
         run: bin/modle_tools --version
@@ -437,8 +586,6 @@ jobs:
     if: ${{ always() }}
     runs-on: ubuntu-latest
     needs:
-      - matrix-factory
-      - cache-test-datasets
       - build-project
       - run-unit-tests
       - run-modle-integration-test
@@ -447,8 +594,6 @@ jobs:
     steps:
       - name: Collect job results
         if: |
-          needs.matrix-factory.result != 'success'                   ||
-          needs.cache-test-datasets.result != 'success'              ||
           needs.build-project.result != 'success'                    ||
           needs.run-unit-tests.result != 'success'                   ||
           needs.run-modle-integration-test.result != 'success'       ||

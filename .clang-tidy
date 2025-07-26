@@ -1,32 +1,42 @@
-# Copyright (C) 2022 Roberto Rossini <roberros@uio.no>
+# Copyright (C) 2025 Roberto Rossini <roberros@uio.no>
 #
 # SPDX-License-Identifier: MIT
 ---
 Checks: >
   *,
+  -abseil-*,
+  -altera-*,
+  -android-*,
+  -boost-*,
+  -bugprone-easily-swappable-parameters,
+  -clang-analyzer-optin.core.EnumCastOutOfRange,
+  -cppcoreguidelines-avoid-do-while,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
   -fuchsia-*,
   -google-*,
-  -zircon-*,
+  -hicpp-no-array-decay,
   -llvm-*,
   -llvmlibc-*,
-  -altera-*,
+  -misc-confusable-identifiers,
+  -misc-include-cleaner,
+  -misc-no-recursion,
+  -misc-use-anonymous-namespace,
   -modernize-use-trailing-return-type,
-  -cppcoreguidelines-avoid-magic-numbers,
-  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
-  -hicpp-no-array-decay,
-  -cppcoreguidelines-pro-bounds-constant-array-index,
-  -cppcoreguidelines-avoid-magic-numbers,
   -readability-identifier-length,
-  -readability-magic-numbers
-WarningsAsErrors: ''
-HeaderFilterRegex: ''
+  -readability-magic-numbers,
+  -readability-redundant-member-init,
+  -readability-static-definition-in-anonymous-namespace,
+  -zircon-*
+WarningsAsErrors: ""
+HeaderFilterRegex: "(^\\.\\/.*)|(.*modle.*)"
 FormatStyle: none
 CheckOptions:
-  - key: misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic
-    value: '1'
-  - key: cppcoreguidelines-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic
-    value: '1'
-  - key: readability-implicit-bool-conversion.AllowPointerConditions
-    value: '1'
   - key: cppcoreguidelines-macro-usage.AllowedRegexp
-    value: 'DISABLE_WARNING_.*,MAKE_.*TEST_CASE'
+    value: "MODLE_.*"
+  - key: misc-include-cleaner.IgnoreHeaders
+    value: "fmt/.*"
+  - key: misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic
+    value: "1"
+  - key: readability-implicit-bool-conversion.AllowPointerConditions
+    value: "1"

@@ -2,16 +2,27 @@
 #
 # SPDX-License-Identifier: MIT
 
-# cmake-format: off
-file(
-  DOWNLOAD https://zenodo.org/record/7937395/files/modle_test_data.tar.xz?download=1
-  EXPECTED_HASH SHA512=7c74479d0570b2d59419f360054255efd1656e1401f442e8dcf2754d84bcb797011374ef3c18b2aa23f06aeb3c9fc64888e1c43a1bccaee6f5cf460c1b9d6e35
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/data/modle_test_data.tar.xz)
-# cmake-format: on
+if(NOT WIN32)
+  file(LOCK "${PROJECT_SOURCE_DIR}/test/data/" DIRECTORY GUARD FILE)
+endif()
 
+set(TEST_DATASET_TAR "${PROJECT_SOURCE_DIR}/test/data/modle_test_data.tar.zst")
+
+message(STATUS "Fetching the test dataset")
+
+# gersemi: off
 file(
-  ARCHIVE_EXTRACT
-  INPUT
-  ${CMAKE_CURRENT_SOURCE_DIR}/test/data/modle_test_data.tar.xz
-  DESTINATION
-  ${CMAKE_CURRENT_SOURCE_DIR})
+  DOWNLOAD https://zenodo.org/records/10790566/files/modle_test_data.tar.zst?download=1
+  EXPECTED_HASH SHA256=9db43cc25c0ecd8f6928a93f42f31814cd70ab45b7edcc3e80ca28955f174237
+  "${TEST_DATASET_TAR}"
+)
+# gersemi: on
+
+message(STATUS "Fetching the test dataset - done")
+
+message(STATUS "Extracting the test dataset")
+
+file(ARCHIVE_EXTRACT INPUT "${TEST_DATASET_TAR}" DESTINATION "${PROJECT_SOURCE_DIR}")
+
+message(STATUS "Extracting the test dataset - done")
+message(STATUS "Test datasets can be found under \"${PROJECT_SOURCE_DIR}/test/data/\"")

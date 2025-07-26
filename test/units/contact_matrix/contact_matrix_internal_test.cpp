@@ -6,7 +6,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "modle/common/common.hpp"  // for usize
+#include "modle/common/common.hpp"
 #include "modle/common/random.hpp"
 
 namespace modle::cmatrix::test {
@@ -25,8 +25,8 @@ TEST_CASE("ContactMatrix internal: transpose_coords", "[cmatrix][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("ContactMatrix internal: encode_idx", "[cmatrix][short]") {
-  constexpr usize nrows = 4;
-  [[maybe_unused]] constexpr usize ncols = 4;
+  constexpr std::size_t nrows = 4;
+  [[maybe_unused]] constexpr std::size_t ncols = 4;
 
   const auto i1 = internal::encode_idx(PixelCoordinates{0, 0}, nrows);
   CHECK(i1 == 0);
@@ -37,8 +37,8 @@ TEST_CASE("ContactMatrix internal: encode_idx", "[cmatrix][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("ContactMatrix internal: decode_idx", "[cmatrix][short]") {
-  constexpr usize nrows = 4;
-  [[maybe_unused]] constexpr usize ncols = 4;
+  constexpr std::size_t nrows = 4;
+  [[maybe_unused]] constexpr std::size_t ncols = 4;
 
   const auto c1 = internal::decode_idx(0, nrows);
   CHECK(c1 == PixelCoordinates{0, 0});
@@ -49,14 +49,14 @@ TEST_CASE("ContactMatrix internal: decode_idx", "[cmatrix][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("ContactMatrix internal: encode/decode roundtrip", "[cmatrix][long]") {
-  constexpr usize nrows = 100;
-  constexpr usize ncols = 5000;
+  constexpr std::size_t nrows = 100;
+  constexpr std::size_t ncols = 5000;
 
   auto rand_eng = random::PRNG(1234567890ULL);
-  for (usize i = 0; i < 1'000'000; ++i) {
-    const auto col = random::uniform_int_distribution<usize>{0, ncols - 1}(rand_eng);
-    const auto row =
-        std::min(col + random::uniform_int_distribution<usize>{0, nrows - 1}(rand_eng), ncols - 1);
+  for (std::size_t i = 0; i < 1'000'000; ++i) {
+    const auto col = random::uniform_int_distribution<std::size_t>{0, ncols - 1}(rand_eng);
+    const auto row = std::min(
+        col + random::uniform_int_distribution<std::size_t>{0, nrows - 1}(rand_eng), ncols - 1);
 
     const auto coordst = internal::transpose_coords(row, col);
     const auto idx = internal::encode_idx(coordst, nrows);

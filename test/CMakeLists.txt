@@ -2,11 +2,15 @@
 #
 # SPDX-License-Identifier: MIT
 
-find_package(absl CONFIG REQUIRED)
-find_package(Boost CONFIG REQUIRED COMPONENTS filesystem headers)
+if(MODLE_DOWNLOAD_TEST_DATASET)
+  include("${PROJECT_SOURCE_DIR}/cmake/FetchTestDataset.cmake")
+endif()
+
+find_package(Boost CONFIG REQUIRED)
 find_package(bshoshany-thread-pool CONFIG REQUIRED)
 find_package(Catch2 CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
+find_package(phmap CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 
 include(CTest)
@@ -16,60 +20,61 @@ add_executable(test_main)
 
 target_sources(
   test_main
-  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/units/common/cli_utils_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/common/const_map_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/common/dna_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/contact_matrix/contact_matrix_dense_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/contact_matrix/contact_matrix_internal_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/contact_matrix/contact_matrix_serde_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/contact_matrix/contact_matrix_sparse_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/interval_tree/interval_tree_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/bed_parser_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/bed_tree_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/bigwig_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/compressed_io_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/contact_matrix_io_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_cpu/collision_encoding_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_cpu/common.hpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_cpu/simulation_complex_unit_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_cpu/simulation_simple_unit_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_internal/extrusion_barriers_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/correlation_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/correlation_utils_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/descriptive_test.cpp
-          ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/misc_test.cpp)
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/units/common/cli_utils_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/units/common/const_map_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/units/common/dna_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/units/common/string_utils_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/units/contact_matrix/contact_matrix_dense_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/units/contact_matrix/contact_matrix_internal_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/units/contact_matrix/contact_matrix_sparse_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/units/interval_tree/interval_tree_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/bed_parser_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/bed_tree_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/bigwig_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/compressed_io_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/units/libmodle_io/contact_matrix_io_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_cpu/collision_encoding_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_cpu/common.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_cpu/simulation_complex_unit_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_cpu/simulation_simple_unit_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/units/simulation_internal/extrusion_barriers_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/correlation_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/correlation_utils_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/descriptive_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/units/stats/misc_test.cpp
+)
 
 target_include_directories(test_main PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/units/include)
 
 target_link_libraries(
   test_main
-  PRIVATE project_warnings
-          project_options
-          fmt::fmt
-          Modle::cmatrix
-          Modle::common
-          Modle::interval_tree
-          Modle::io_bed
-          Modle::io_bigwig
-          Modle::io_chrom_sizes
-          Modle::io_compressed
-          Modle::io_contact_matrix
-          Modle::libmodle_cpu
-          Modle::libmodle_internal
-          Modle::stats)
+  PRIVATE
+    modle_project_warnings
+    modle_project_options
+    fmt::fmt-header-only
+    Modle::cmatrix
+    Modle::common
+    Modle::interval_tree
+    Modle::io_bed
+    Modle::io_bigwig
+    Modle::io_chrom_sizes
+    Modle::io_compressed
+    Modle::io_contact_matrix
+    Modle::libmodle_cpu
+    Modle::libmodle_internal
+    Modle::stats
+)
 
 target_link_system_libraries(
   test_main
   PRIVATE
-  absl::flat_hash_set
-  absl::hash
-  absl::span
-  absl::strings
-  Boost::filesystem
   Boost::headers
   bshoshany-thread-pool::bshoshany-thread-pool
   Catch2::Catch2WithMain
-  spdlog::spdlog)
+  phmap
+  spdlog::spdlog_header_only
+)
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Testing/)
 
@@ -85,7 +90,8 @@ catch_discover_tests(
   ${CMAKE_CURRENT_SOURCE_DIR}/../
   # OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/Testing/
   EXTRA_ARGS
-  --success)
+  --success
+)
 
 catch_discover_tests(
   test_main
@@ -97,7 +103,8 @@ catch_discover_tests(
   ${CMAKE_CURRENT_SOURCE_DIR}/../
   # OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/Testing/
   EXTRA_ARGS
-  --success)
+  --success
+)
 
 catch_discover_tests(
   test_main
@@ -109,4 +116,5 @@ catch_discover_tests(
   ${CMAKE_CURRENT_SOURCE_DIR}/../
   # OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/Testing/
   EXTRA_ARGS
-  --success)
+  --success
+)

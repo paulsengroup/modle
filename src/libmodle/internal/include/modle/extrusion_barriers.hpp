@@ -6,13 +6,13 @@
 
 #include <fmt/format.h>
 
-#include <cassert>  // for assert
+#include <cassert>
 #include <initializer_list>
-#include <vector>  // for vector
+#include <vector>
 
-#include "modle/common/common.hpp"  // for bp_t
-#include "modle/common/dna.hpp"     // for Direction
-#include "modle/common/random.hpp"  // for PRNG_t
+#include "modle/common/common.hpp"
+#include "modle/common/dna.hpp"
+#include "modle/common/random.hpp"
 namespace modle {
 
 namespace internal {
@@ -31,7 +31,7 @@ struct ExtrusionBarrier;
 
 class ExtrusionBarriers {
  public:
-  enum class State : u8f { INACTIVE = 0, ACTIVE = 1 };
+  enum class State : std::uint_fast8_t { INACTIVE = 0, ACTIVE = 1 };
   using TP = internal::TransitionProbability;
 
  private:
@@ -43,43 +43,43 @@ class ExtrusionBarriers {
 
  public:
   ExtrusionBarriers() = default;
-  explicit ExtrusionBarriers(usize size);
+  explicit ExtrusionBarriers(std::size_t size);
   template <class BarrierIt, class StateIt>
   ExtrusionBarriers(BarrierIt first_barrier, BarrierIt last_barrier, StateIt first_state,
-                    bool sort = true);
+                    bool sort_barriers = true);
   template <class BarrierIt>
   ExtrusionBarriers(BarrierIt first_barrier, BarrierIt last_barrier, State state = State::INACTIVE,
-                    bool sort = true);
+                    bool sort_barriers = true);
   ExtrusionBarriers(std::initializer_list<bp_t> pos,
                     std::initializer_list<dna::Direction> direction,
                     std::initializer_list<TP> stp_active, std::initializer_list<TP> stp_inactive,
-                    std::initializer_list<State> state, bool sort = true);
+                    std::initializer_list<State> state, bool sort_barriers = true);
   ExtrusionBarriers(std::initializer_list<ExtrusionBarrier> barriers,
-                    std::initializer_list<State> states, bool sort = true);
+                    std::initializer_list<State> states, bool sort_barriers = true);
 
-  void set(usize i, bp_t pos, dna::Direction direction, TP stp_active, TP stp_inactive,
+  void set(std::size_t i, bp_t pos, dna::Direction direction, TP stp_active, TP stp_inactive,
            State state = State::INACTIVE) noexcept;
   void push_back(bp_t pos, dna::Direction direction, TP stp_active, TP stp_inactive,
                  State state = State::INACTIVE);
-  void set(usize i, const ExtrusionBarrier& barrier, State state = State::INACTIVE) noexcept;
+  void set(std::size_t i, const ExtrusionBarrier& barrier, State state = State::INACTIVE) noexcept;
   void push_back(const ExtrusionBarrier& barrier, State state = State::INACTIVE);
-  void set(usize i, State state) noexcept;
-  auto init_state(usize i, random::PRNG_t& rand_eng) noexcept -> State;
+  void set(std::size_t i, State state) noexcept;
+  auto init_state(std::size_t i, random::PRNG_t& rand_eng) noexcept -> State;
   void init_states(random::PRNG_t& rand_eng) noexcept;
 
-  [[nodiscard]] usize size() const noexcept;
+  [[nodiscard]] std::size_t size() const noexcept;
   [[nodiscard]] bool empty() const noexcept;
-  void resize(usize new_size);
+  void resize(std::size_t new_size);
   void clear() noexcept;
 
-  [[nodiscard]] bp_t pos(usize i) const noexcept;
-  [[nodiscard]] dna::Direction direction(usize i) const noexcept;
-  [[nodiscard]] double stp_active(usize i) const noexcept;
-  [[nodiscard]] double stp_inactive(usize i) const noexcept;
-  [[nodiscard]] auto state(usize i) const noexcept -> State;
-  [[nodiscard]] bool is_active(usize i) const noexcept;
-  [[nodiscard]] bool is_not_active(usize i) const noexcept;
-  [[nodiscard]] double occupancy(usize i) const noexcept;
+  [[nodiscard]] bp_t pos(std::size_t i) const noexcept;
+  [[nodiscard]] dna::Direction direction(std::size_t i) const noexcept;
+  [[nodiscard]] double stp_active(std::size_t i) const noexcept;
+  [[nodiscard]] double stp_inactive(std::size_t i) const noexcept;
+  [[nodiscard]] auto state(std::size_t i) const noexcept -> State;
+  [[nodiscard]] bool is_active(std::size_t i) const noexcept;
+  [[nodiscard]] bool is_not_active(std::size_t i) const noexcept;
+  [[nodiscard]] double occupancy(std::size_t i) const noexcept;
 
   [[nodiscard]] const std::vector<bp_t>& pos() const noexcept;
   [[nodiscard]] const std::vector<dna::Direction>& direction() const noexcept;
@@ -87,18 +87,18 @@ class ExtrusionBarriers {
   [[nodiscard]] auto stp_inactive() const noexcept -> const std::vector<TP>&;
   [[nodiscard]] auto state() const noexcept -> const std::vector<State>&;
 
-  auto next_state(usize i, random::PRNG_t& rand_eng) noexcept -> State;
+  auto next_state(std::size_t i, random::PRNG_t& rand_eng) noexcept -> State;
   void next_state(random::PRNG_t& rand_eng) noexcept;
 
-  [[nodiscard]] usize count_active() const noexcept;
-  [[nodiscard]] usize count_inactive() const noexcept;
+  [[nodiscard]] std::size_t count_active() const noexcept;
+  [[nodiscard]] std::size_t count_inactive() const noexcept;
 
   void sort();
-  void sort(std::vector<usize>& idx_buff);
+  void sort(std::vector<std::size_t>& idx_buff);
 
  private:
   void assert_buffer_sizes_are_equal() const noexcept;
-  void assert_index_within_bounds(usize i) const noexcept;
+  void assert_index_within_bounds(std::size_t i) const noexcept;
 };
 
 struct ExtrusionBarrier {

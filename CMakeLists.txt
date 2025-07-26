@@ -3,48 +3,59 @@
 # SPDX-License-Identifier: MIT
 
 cmake_minimum_required(VERSION 3.25)
-cmake_policy(VERSION 3.25...3.27)
+cmake_policy(VERSION 3.25...4.0)
+set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
+set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/")
 
 # Not ideal to use this global variable, but necessary to make sure that tooling and projects use the same version
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_C_STANDARD 11)
 
 # strongly encouraged to enable this globally to avoid conflicts between -Wpedantic being enabled and -std=c++20 and
 # -std=gnu++20 for example when compiling with PCH enabled
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(ENABLE_DEVELOPER_MODE
-    OFF
-    CACHE BOOL "Enable 'developer mode'")
+set(ENABLE_DEVELOPER_MODE OFF CACHE BOOL "Enable 'developer mode'")
 
 if(BUILD_SHARED_LIBS)
   message(
     FATAL_ERROR
-      "Building project with dynamic linking is currently not supported! Please remove option -DBUILD_SHARED_LIBS=ON and re-run cmake."
+    "Building project with dynamic linking is currently not supported! Please remove option -DBUILD_SHARED_LIBS=ON and re-run cmake."
   )
 endif()
 
-include(FetchContent)
-# cmake-format: off
-FetchContent_Declare(
-        _project_options
-        URL ${CMAKE_CURRENT_SOURCE_DIR}/external/project_options-v0.28.0.tar.xz
-        URL_HASH SHA512=216d0970ace00e3176788a2b5abb7b92490c005111d26365e7807a5e86c6323e38b33e2e5b01f4ee43438a8f8e96cacf16cedc6f905a7e0ad58752905b260b38
-)
-# cmake-format: on
+if(NOT CMAKE_FIND_PACKAGE_PREFER_CONFIG)
+  set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
+endif()
 
-FetchContent_MakeAvailable(_project_options)
-include(${_project_options_SOURCE_DIR}/Index.cmake)
+set(MODLE_PROJECT_VERSION_MAJOR 1)
+set(MODLE_PROJECT_VERSION_MINOR 1)
+set(MODLE_PROJECT_VERSION_PATCH 0)
+set(MODLE_PROJECT_VERSION_SUFFIX "")
 
-include(cmake/Versioning.cmake)
 project(
   MoDLE
-  LANGUAGES CXX
+  LANGUAGES
+    C
+    CXX
   VERSION "${MODLE_PROJECT_VERSION_MAJOR}.${MODLE_PROJECT_VERSION_MINOR}.${MODLE_PROJECT_VERSION_PATCH}"
   HOMEPAGE_URL https://github.com/paulsengroup/modle
-  DESCRIPTION "MoDLE: High-performance stochastic modeling of DNA loop extrusion interactions.")
+  DESCRIPTION "MoDLE: High-performance stochastic modeling of DNA loop extrusion interactions."
+)
+
+include(FetchContent)
+# gersemi: off
+FetchContent_Declare(
+        _modle_project_options
+        URL "${CMAKE_CURRENT_SOURCE_DIR}/external/project_options-v0.36.6.tar.xz"
+        URL_HASH SHA256=b4df2a4107847248d4711ee48477cdf93c1a1c7d51a931937759eb9ffba67af8
+)
+# gersemi: on
+
+FetchContent_MakeAvailable(_modle_project_options)
+include("${_modle_project_options_SOURCE_DIR}/Index.cmake")
 
 get_property(BUILDING_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 if(BUILDING_MULTI_CONFIG)
@@ -52,19 +63,23 @@ if(BUILDING_MULTI_CONFIG)
     # Make sure that all supported configuration types have their associated conan packages available. You can reduce
     # this list to only the configuration types you use, but only if one is not forced-set on the command line for VS
     message(TRACE "Setting up multi-config build types")
-    set(CMAKE_CONFIGURATION_TYPES
-        Debug Release RelWithDebInfo
-        CACHE STRING "Enabled build types" FORCE)
+    set(
+      CMAKE_CONFIGURATION_TYPES
+      Debug
+      Release
+      RelWithDebInfo
+      CACHE STRING
+      "Enabled build types"
+      FORCE
+    )
   else()
     message(TRACE "User chose a specific build type, so we are using that")
-    set(CMAKE_CONFIGURATION_TYPES
-        ${CMAKE_BUILD_TYPE}
-        CACHE STRING "Enabled build types" FORCE)
+    set(CMAKE_CONFIGURATION_TYPES ${CMAKE_BUILD_TYPE} CACHE STRING "Enabled build types" FORCE)
   endif()
 endif()
 
-include(${_project_options_SOURCE_DIR}/src/DynamicProjectOptions.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/CompilerWarnings.cmake)
+include("${_modle_project_options_SOURCE_DIR}/src/DynamicProjectOptions.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CompilerWarnings.cmake")
 
 # dynamic_project_options sets recommended defaults and provides user and developer modes and full GUI support for
 # choosing options at configure time
@@ -79,18 +94,30 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/CompilerWarnings.cmake)
 # `project_warnings` uncomment the options to enable them:
 
 set(ENABLE_CACHE_DEFAULT ON)
-set(ENABLE_CLANG_TIDY_DEFAULT OFF)
 set(ENABLE_COMPILE_COMMANDS_SYMLINK_DEFAULT OFF)
 set(ENABLE_CONAN_DEFAULT OFF)
+set(ENABLE_CLANG_TIDY_DEFAULT OFF)
 set(ENABLE_CPPCHECK_DEFAULT OFF)
-set(ENABLE_DOXYGEN_USER OFF)
-set(ENABLE_DOXYGEN_DEVELOPER ON)
-set(ENABLE_GCC_ANALYZER_DEFAULT OFF)
+set(ENABLE_DOXYGEN_DEFAULT OFF)
 set(ENABLE_INTERPROCEDURAL_OPTIMIZATION_DEFAULT ON)
 set(ENABLE_NATIVE_OPTIMIZATION_DEFAULT OFF)
 set(ENABLE_PCH_DEFAULT OFF)
 
+set(ENABLE_SANITIZER_ADDRESS_USER_DEFAULT OFF)
+set(ENABLE_SANITIZER_ADDRESS_DEVELOPER_DEFAULT ON)
+set(ENABLE_SANITIZER_LEAK_USER_DEFAULT OFF)
+set(ENABLE_SANITIZER_LEAK_DEVELOPER_DEFAULT ON)
+set(ENABLE_SANITIZER_POINTER_COMPARE_USER_DEFAULT OFF)
+set(ENABLE_SANITIZER_POINTER_COMPARE_DEVELOPER_DEFAULT OFF)
+set(ENABLE_SANITIZER_POINTER_SUBTRACT_USER_DEFAULT OFF)
+set(ENABLE_SANITIZER_POINTER_SUBTRACT_DEVELOPER_DEFAULT ON)
+set(ENABLE_SANITIZER_UNDEFINED_USER_DEFAULT OFF)
+set(ENABLE_SANITIZER_UNDEFINED_DEVELOPER_DEFAULT ON)
+
 dynamic_project_options(
+  PREFIX
+  modle
+  # CLANG_WARNINGS # Override the defaults for the CLANG warnings GCC_WARNINGS   # Override the defaults for the GCC
   CPPCHECK_OPTIONS
   --enable=performance,portability,style,warning
   --inline-suppr
@@ -101,127 +128,60 @@ dynamic_project_options(
   --suppress=passedByValue
   --inconclusive
   MSVC_WARNINGS
-  ${MSVC_WARNINGS}
+  "${MSVC_WARNINGS}"
   CLANG_WARNINGS
-  ${CLANG_WARNINGS}
+  "${CLANG_WARNINGS}"
   GCC_WARNINGS
-  ${GCC_WARNINGS}
+  "${GCC_WARNINGS}"
   CUDA_WARNINGS
-  ${CUDA_WARNINGS})
+  "${CUDA_WARNINGS}"
+)
 
+# TODO fixme
 # This is used so that source files can include "modle/version/version.hpp" and "modle/version/git.hpp" which is
 # automatically generated by CMake
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/version/include)
+include_directories("${CMAKE_CURRENT_BINARY_DIR}/src/version/include")
 
+target_compile_features(modle_project_options INTERFACE "cxx_std_${CMAKE_CXX_STANDARD}")
+
+target_compile_definitions(
+  modle_project_options
+  INTERFACE
+    # Tweak fmt
+    FMT_HEADER_ONLY
+    FMT_USE_FULL_CACHE_DRAGONBOX
+    # Tweak spdlog
+    "SPDLOG_ACTIVE_LEVEL=$<IF:$<CONFIG:Debug>,SPDLOG_LEVEL_TRACE,SPDLOG_LEVEL_INFO>"
+    SPDLOG_CLOCK_COARSE
+    SPDLOG_FMT_EXTERNAL
+    SPDLOG_NO_THREAD_ID
+    SPDLOG_NO_ATOMIC_LEVELS
+    # Tweak xxHash
+    XXH_INLINE_ALL
+)
+
+include(CMakeDependentOption)
 option(MODLE_WITH_BOOST_RANDOM "Use Boost's random library instead of that from the STL (recommended)" ON)
-option(MODLE_OPTIMIZE_FOR_PROFILING
-       "Compile project in RelWithDebInfo and with less aggressive optimizations to aid profiling" OFF)
-option(
-  MODLE_ENABLE_ASSERTIONS
-  "Enable assertions and various other runtime checks (this is done regardless of the type passed to CMAKE_BUILD_TYPE)"
-  OFF)
-option(MODLE_DOWNLOAD_TEST_DATASET "Download datasets required by unit and integration tests" ON)
 option(MODLE_ENABLE_TESTING "Build MoDLE's unit tests" ON)
 
-target_compile_features(project_options INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
-
-include(cmake/TestStdlibFeatures.cmake)
-
-target_compile_definitions(project_options
-                           INTERFACE $<$<BOOL:${CHARCONV_VARIANT_AVAILABLE}>:MODLE_CHARCONV_VARIANT_AVAILABLE>)
-
-find_package(Filesystem REQUIRED)
-target_link_libraries(project_options INTERFACE std::filesystem)
-
-# Reduce level of optimization to improve the code profiling experience
-if(MODLE_OPTIMIZE_FOR_PROFILING)
-  if(NOT
-     "${uppercase_CMAKE_BUILD_TYPE}"
-     STREQUAL
-     "RelWithDebInfo")
-    message(
-      WARNING
-        "Switching build type from ${CMAKE_BUILD_TYPE} to RelWithDebInfo because MODLE_OPTIMIZE_FOR_PROFILING was set to ON by the user"
-    )
-    set(CMAKE_BUILD_TYPE "RelWithDebInfo")
-  endif()
-
-  target_compile_options(project_options INTERFACE -O1 -fno-omit-frame-pointer)
-endif()
-
-# Source:
-# https://github.com/llvm/llvm-project/blob/656ebd519e3fd52050e1c8abeacafcf94d1fa260/llvm/cmake/modules/HandleLLVMOptions.cmake#L54
-if(MODLE_ENABLE_ASSERTIONS)
-  if(NOT MSVC)
-    add_definitions(-D_DEBUG)
-  endif()
-  # On non-Debug builds cmake automatically defines NDEBUG, so we explicitly undefine it:
-  if(NOT
-     uppercase_CMAKE_BUILD_TYPE
-     STREQUAL
-     "DEBUG")
-    # NOTE: use `add_compile_options` rather than `add_definitions` since `add_definitions` does not support generator
-    # expressions.
-    target_compile_options(project_options INTERFACE $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-UNDEBUG>)
-
-    # Also remove /D NDEBUG to avoid MSVC warnings about conflicting defines.
-    foreach(
-      flags_var_to_scrub
-      CMAKE_CXX_FLAGS_RELEASE
-      CMAKE_CXX_FLAGS_RELWITHDEBINFO
-      CMAKE_CXX_FLAGS_MINSIZEREL
-      CMAKE_C_FLAGS_RELEASE
-      CMAKE_C_FLAGS_RELWITHDEBINFO
-      CMAKE_C_FLAGS_MINSIZEREL)
-      string(
-        REGEX
-        REPLACE "(^| )[/-]D *NDEBUG($| )"
-                " "
-                "${flags_var_to_scrub}"
-                "${${flags_var_to_scrub}}")
-    endforeach()
-  endif()
-endif()
+cmake_dependent_option(
+  MODLE_DOWNLOAD_TEST_DATASET
+  "Download datasets required by unit and integration tests"
+  ON
+  "MODLE_ENABLE_TESTING"
+  OFF
+)
 
 if(MODLE_WITH_BOOST_RANDOM)
-  target_compile_definitions(project_options INTERFACE MODLE_WITH_BOOST_RANDOM=1)
+  target_compile_definitions(modle_project_options INTERFACE MODLE_WITH_BOOST_RANDOM=1)
 endif()
-
-# Tweak spdlog
-target_compile_definitions(
-  project_options
-  INTERFACE SPDLOG_CLOCK_COARSE
-            SPDLOG_DISABLE_DEFAULT_LOGGER
-            SPDLOG_NO_ATOMIC_LEVELS
-            SPDLOG_PREVENT_CHILD_FD)
-
-# Tweak fmt
-target_compile_definitions(project_options INTERFACE FMT_ENFORCE_COMPILE_STRING)
-
-# Tweak boost
-find_package(Boost CONFIG REQUIRED COMPONENTS filesystem)
-
-if(Boost_VERSION_STRING VERSION_GREATER_EQUAL 1.77.0)
-  target_compile_definitions(project_options INTERFACE BOOST_FILESYSTEM_VERSION=4)
-elseif(Boost_VERSION_STRING VERSION_GREATER 1.44.0)
-  target_compile_definitions(project_options INTERFACE BOOST_FILESYSTEM_VERSION=3)
-endif()
-
-if(MODLE_ENABLE_TESTING)
-  enable_testing()
-  message("-- Configuring unit tests")
-  target_compile_definitions(project_options INTERFACE MODLE_ENABLE_TESTING)
-
-  if(MODLE_DOWNLOAD_TEST_DATASET)
-    message("-- Downloading test dataset...")
-    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FetchTestDataset.cmake)
-  endif()
-
-  add_subdirectory(test)
-endif()
-
-add_subdirectory(src)
 
 include(cmake/FetchExternalDeps.cmake)
 
-# include(cmake/Packaging.cmake)
+add_subdirectory(src)
+
+if(MODLE_ENABLE_TESTING)
+  enable_testing()
+  target_compile_definitions(modle_project_options INTERFACE MODLE_ENABLE_TESTING)
+  add_subdirectory(test)
+endif()

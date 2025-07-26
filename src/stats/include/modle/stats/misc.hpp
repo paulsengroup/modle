@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <type_traits>  // for enable_if, enable_if_t, is_arithmetic_v, is_floating_point
-#include <vector>       // for vector
+#include <type_traits>
+#include <vector>
 
-#include "modle/common/common.hpp"  // for usize
+#include "modle/common/common.hpp"
 
 namespace modle::stats {
 
@@ -18,10 +18,10 @@ template <class FP = double, class = std::enable_if_t<std::is_floating_point_v<F
 inline void compute_gauss_kernel2d(std::vector<FP>& buff, FP sigma, FP truncate = 4.0);
 
 template <class FP = double, class = std::enable_if_t<std::is_floating_point_v<FP>>>
-[[nodiscard]] inline std::vector<FP> compute_gauss_kernel2d(usize size, FP sigma);
+[[nodiscard]] inline std::vector<FP> compute_gauss_kernel2d(std::size_t size, FP sigma);
 
 template <class FP = double, class = std::enable_if_t<std::is_floating_point_v<FP>>>
-inline void compute_gauss_kernel2d(usize radius, std::vector<FP>& buff, FP sigma);
+inline void compute_gauss_kernel2d(std::size_t radius, std::vector<FP>& buff, FP sigma);
 
 template <class InputIt1, class InputIt2, class N = double,
           class = std::enable_if_t<std::is_arithmetic_v<N>>>

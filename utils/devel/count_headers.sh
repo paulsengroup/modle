@@ -17,4 +17,4 @@ if [ $# -eq 2 ]; then
     path="$1"
 fi
 
-cat $(find "$wd/../$1" -type f -name "*.hpp" | tr '\n' ' ') | grep -oE '#include .[[:alnum:]_/\.\-]+.' | sort | uniq -c | sort -r
+cat $(find "$wd/../$path" -type f -name "*.hpp" | tr '\n' ' ') | grep -oE '#include .[[:alnum:]_/\.\-]+.' | sort | uniq -c | sort -r

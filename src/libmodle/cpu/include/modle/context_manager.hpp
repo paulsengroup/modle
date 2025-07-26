@@ -28,10 +28,10 @@ class ContextManager {
   std::unique_ptr<StateLoggerAggregator> _state_logger_ptr{};
   QueueT _pending{};
   QueueT _finished{};
-  BS::thread_pool _worker_tpool;
-  BS::thread_pool _io_tpool;
-  std::atomic<usize> _num_in{};
-  std::atomic<usize> _num_out{};
+  BS::light_thread_pool _worker_tpool;
+  BS::light_thread_pool _io_tpool;
+  std::atomic<std::size_t> _num_in{};
+  std::atomic<std::size_t> _num_out{};
 
   mutable std::vector<std::future<void>> _futures{};
   mutable std::atomic<bool> _exception_thrown{false};
@@ -40,7 +40,7 @@ class ContextManager {
 
  public:
   ContextManager() = delete;
-  explicit ContextManager(usize num_worker_threads, usize num_io_threads = 1);
+  explicit ContextManager(std::size_t num_worker_threads, std::size_t num_io_threads = 1);
 
   [[nodiscard]] explicit operator bool() const noexcept;
   [[nodiscard]] bool shutdown_signal_sent() const noexcept;
@@ -62,17 +62,17 @@ class ContextManager {
   [[noreturn]] void throw_exception(Exception exception) const;
   void set_exception_main(std::exception_ptr e);
 
-  [[nodiscard]] usize num_tasks_submitted() const noexcept;
-  [[nodiscard]] usize num_tasks_completed() const noexcept;
+  [[nodiscard]] std::size_t num_tasks_submitted() const noexcept;
+  [[nodiscard]] std::size_t num_tasks_completed() const noexcept;
 
   template <Status s>
   [[nodiscard]] moodycamel::ProducerToken register_producer();
   template <Status s>
   [[nodiscard]] moodycamel::ConsumerToken register_consumer();
   void check_exceptions();
-  [[nodiscard]] usize num_threads() const noexcept;
-  [[nodiscard]] usize num_worker_threads() const noexcept;
-  [[nodiscard]] usize num_io_threads() const noexcept;
+  [[nodiscard]] std::size_t num_threads() const noexcept;
+  [[nodiscard]] std::size_t num_worker_threads() const noexcept;
+  [[nodiscard]] std::size_t num_io_threads() const noexcept;
 
   template <typename TaskLambda>
   void spawn_worker_thread(TaskLambda lambda);

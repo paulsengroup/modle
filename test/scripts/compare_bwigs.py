@@ -15,9 +15,7 @@ import pyBigWig
 def make_cli() -> argparse.ArgumentParser:
     cli = argparse.ArgumentParser()
 
-    cli.add_argument(
-        "reference", type=pathlib.Path, help="Path to the reference BigWig file."
-    )
+    cli.add_argument("reference", type=pathlib.Path, help="Path to the reference BigWig file.")
     cli.add_argument(
         "bigwig",
         type=pathlib.Path,
@@ -62,13 +60,9 @@ def compare_intervals(f1, f2, chrom_name: str, tol: float):
         intervals2 = []
 
     if len(intervals1) != len(intervals2):
-        raise RuntimeError(
-            f"{chrom_name}: expected {len(intervals1)} intervals, found {len(intervals2)}!"
-        )
+        raise RuntimeError(f"{chrom_name}: expected {len(intervals1)} intervals, found {len(intervals2)}!")
 
-    for i, ((start1, end1, n1), (start2, end2, n2)) in enumerate(
-        zip(intervals1, intervals2)
-    ):
+    for i, ((start1, end1, n1), (start2, end2, n2)) in enumerate(zip(intervals1, intervals2)):
         if start1 != start2 or end1 != end2 or not math.isclose(n1, n2, rel_tol=tol):
             raise RuntimeError(
                 f"{chrom_name}:{start1}-{end1}: Found difference! Expected {start1}-{end1}={n1}, found {start2}-{end2}={n2}"

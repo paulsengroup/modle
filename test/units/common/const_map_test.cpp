@@ -32,9 +32,9 @@ TEST_CASE("ConstMap Ctor", "[utils][short]") {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("ConstMap Accessors", "[utils][short]") {
-  using CMap = ConstMap<std::string_view, usize, 5>;
+  using CMap = ConstMap<std::string_view, std::size_t, 5>;
   constexpr CMap map{{"1", 1}, {"2", 2}, {"3", 3}, {"4", 4}, {"5", 5}};
-  for (usize i = 1; i <= map.size(); ++i) {
+  for (std::size_t i = 1; i <= map.size(); ++i) {
     CHECK(map.contains(std::to_string(i)));
     CHECK(map.at(std::to_string(i)) == i);
     const auto it = map.find(std::to_string(i));
@@ -46,7 +46,7 @@ TEST_CASE("ConstMap Accessors", "[utils][short]") {
 
   const auto& keys = map.keys();
   const auto& values = map.values();
-  for (usize i = 0; i < keys.size(); ++i) {
+  for (std::size_t i = 0; i < keys.size(); ++i) {
     CHECK(keys[i] == std::to_string(i + 1));
     CHECK(values[i] == i + 1);
   }

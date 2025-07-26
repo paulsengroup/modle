@@ -2,18 +2,18 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include "modle/compressed_io/compressed_io.hpp"  // for Reader
+#include "modle/compressed_io/compressed_io.hpp"
 
 #include <catch2/catch_test_macros.hpp>
-#include <filesystem>  // for path, operator/
-#include <fstream>     // for ifstream, basic_ios, basic_istream, operator<<
-#include <iostream>    // for cerr
-#include <string>      // for operator==, string, basic_string, getline
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <string>
 
-#include "modle/test/self_deleting_folder.hpp"  // for SelfDeletingFolder
+#include "modle/test/tmpdir.hpp"
 
 namespace modle::test {
-inline const SelfDeletingFolder testdir{true};  // NOLINT(cert-err58-cpp)
+inline const TmpDir testdir{true};  // NOLINT(cert-err58-cpp)
 }  // namespace modle::test
 
 namespace modle::compressed_io::test {
@@ -151,6 +151,7 @@ TEST_CASE("Reader lzma", "[io][reader][medium]") {
 }
 
 static void compare_compressed_writer_with_reader(Reader& r1, Writer& w) {
+  const auto test_file_path = w.path();
   std::string buff1;
   std::string buff2;
   while (r1.getline(buff1)) {
@@ -161,7 +162,7 @@ static void compare_compressed_writer_with_reader(Reader& r1, Writer& w) {
   r1.reset();
   w.close();
 
-  Reader r2(w.path());
+  Reader r2(test_file_path);
   while (r1.getline(buff1) && r2.getline(buff2)) {
     CHECK(buff1 == buff2);
   }
@@ -179,7 +180,7 @@ TEST_CASE("Reader plain - readall", "[io][reader][long]") {
     std::ifstream fp(ptext_file.string(), std::ios::ate);
     const auto size = fp.tellg();
     fp.seekg(0, std::ios::beg);
-    std::string buff(static_cast<usize>(size), '\0');
+    std::string buff(static_cast<std::size_t>(size), '\0');
     REQUIRE(fp.read(buff.data(), size));
     return buff;
   }();
@@ -190,7 +191,9 @@ TEST_CASE("Reader plain - readall", "[io][reader][long]") {
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST_CASE("Reader plain - empty file", "[io][reader][short]") {
   const auto test_file = testdir() / "empty_file.txt";
-  { std::ofstream fp(test_file.string()); }
+  {
+    std::ofstream fp(test_file.string());
+  }
 
   Reader r(test_file);
   CHECK(r.eof());

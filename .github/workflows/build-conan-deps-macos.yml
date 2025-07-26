@@ -1,0 +1,157 @@
+# Copyright (C) 2025 Roberto Rossini <roberros@uio.no>
+#
+# SPDX-License-Identifier: MIT
+
+name: Build dependencies with Conan (macOS)
+
+on:
+  workflow_call:
+    outputs:
+      conan-key:
+        description: "Conan packages"
+        value: ${{ jobs.build-deps.outputs.conan-key }}
+
+    inputs:
+      conan-version:
+        default: "2.18.*"
+        type: string
+        required: false
+        description: "Conan version to be installed with pip."
+      cppstd:
+        default: "20"
+        type: string
+        required: false
+        description: "Value to pass to compiler.cppstd."
+      os:
+        type: string
+        required: true
+        description: "OS used to build Conan deps."
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: read
+
+jobs:
+  build-deps:
+    name: Build dependencies with Conan (${{ inputs.os }})
+    runs-on: ${{ inputs.os }}
+
+    env:
+      CMAKE_POLICY_VERSION_MINIMUM: 3.5
+      CONAN_HOME: "${{ github.workspace }}/.conan2"
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+
+    outputs:
+      conan-key: ${{ steps.generate-cache-key.outputs.conan-key }}
+
+    steps:
+      - name: Checkout conanfile.py
+        uses: actions/checkout@v4
+
+      - name: Generate cache key
+        id: generate-cache-key
+        run: |
+          set -u
+          set -e
+
+          hash="${{ hashFiles('conanfile.py') }}"
+
+          compiler="$(cc --version | head -n 1 | tr -c '[:alnum:]._-' '-' | sed 's/-\+/-/g' | sed 's/-$//')"
+
+          suffix="${{ inputs.os }}-$compiler-c++${{ inputs.cppstd }}-$hash"
+
+          echo "conan-key=conan-$suffix" | tee -a "$GITHUB_OUTPUT"
+
+      - name: Lookup package cache
+        id: lookup-conan-cache
+        uses: actions/cache/restore@v4
+        with:
+          key: ${{ steps.generate-cache-key.outputs.conan-key }}
+          path: |
+            ${{ env.CONAN_HOME }}/p
+            /tmp/cmake-prefix-dbg.tar
+            /tmp/cmake-prefix-rel.tar
+          lookup-only: true
+
+      - name: Restore package cache
+        uses: actions/cache/restore@v4
+        if: steps.lookup-conan-cache.outputs.cache-hit != 'true'
+        with:
+          key: ${{ steps.generate-cache-key.outputs.conan-key }}
+          path: |
+            ${{ env.CONAN_HOME }}/p
+            /tmp/cmake-prefix-dbg.tar
+            /tmp/cmake-prefix-rel.tar
+
+      - uses: actions/setup-python@v5
+        if: steps.lookup-conan-cache.outputs.cache-hit != 'true'
+        with:
+          python-version: "3.13"
+
+      - name: Update build deps
+        if: steps.lookup-conan-cache.outputs.cache-hit != 'true'
+        run: pip install "conan==${{ inputs.conan-version }}"
+
+      - name: Configure Conan
+        if: steps.lookup-conan-cache.outputs.cache-hit != 'true'
+        run: |
+          conan profile detect --force
+
+          # Newer versions of b2 lead to exceptions like
+          # ConanException: These libraries were built, but were not used in any boost module
+          cat << EOF | tee -a "$(conan profile path default)"
+          [tool_requires]
+          boost/*: b2/5.2.1
+          EOF
+
+      - name: Clean Conan cache (pre-build)
+        if: steps.lookup-conan-cache.outputs.cache-hit != 'true'
+        run: conan remove --confirm "*"
+
+      - name: Install dependencies (Debug)
+        if: steps.lookup-conan-cache.outputs.cache-hit != 'true'
+        run: |
+          conan install conanfile.py                  \
+            --build=missing                           \
+            -s build_type=Debug                       \
+            -s compiler.cppstd='${{ inputs.cppstd }}' \
+            --output-folder=cmake-prefix-dbg
+
+          tar -cf cmake-prefix-dbg.tar cmake-prefix-dbg/
+
+      - name: Install dependencies (Release)
+        if: steps.lookup-conan-cache.outputs.cache-hit != 'true'
+        run: |
+          conan install conanfile.py                  \
+            --build=missing                           \
+            -s build_type=Release                     \
+            -s compiler.cppstd='${{ inputs.cppstd }}' \
+            --output-folder=cmake-prefix-rel
+
+          tar -cf cmake-prefix-rel.tar cmake-prefix-rel/
+
+      - name: Move archives
+        if: steps.lookup-conan-cache.outputs.cache-hit != 'true'
+        run: mv cmake-prefix-*.tar /tmp/
+
+      - name: Clean Conan cache (post-build)
+        if: steps.lookup-conan-cache.outputs.cache-hit != 'true'
+        run: |
+          conan cache clean "*" --build
+          conan cache clean "*" --download
+          conan cache clean "*" --source
+
+      - name: Save Conan cache
+        uses: actions/cache/save@v4
+        if: steps.lookup-conan-cache.outputs.cache-hit != 'true'
+        with:
+          key: ${{ steps.generate-cache-key.outputs.conan-key }}
+          path: |
+            ${{ env.CONAN_HOME }}/p
+            /tmp/cmake-prefix-dbg.tar
+            /tmp/cmake-prefix-rel.tar
+        env:
+          ZSTD_CLEVEL: 19

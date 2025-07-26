@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <CLI/CLI.hpp>  // for App
-#include <string>       // for string
+#include <CLI/CLI.hpp>
+#include <string>
 
 #include "./cli.hpp"
 #include "modle/common/cli_utils.hpp"
-#include "modle/common/common.hpp"             // for u8
-#include "modle/common/simulation_config.hpp"  // for Config
+#include "modle/common/common.hpp"
+#include "modle/common/simulation_config.hpp"
 namespace CLI {
 class ParseError;
 }  // namespace CLI
@@ -19,11 +19,11 @@ namespace modle {
 
 class Cli {
  public:
-  enum subcommand : u8f { help, simulate };
+  enum subcommand : std::uint_fast8_t { help, simulate };
 
   Cli(int argc, char** argv);
   [[nodiscard]] const Config& parse_arguments();
-  [[nodiscard]] std::string detect_path_collisions(modle::Config& c) const;
+  [[nodiscard]] std::vector<std::string> detect_path_collisions(modle::Config& c) const;
 
   [[nodiscard]] int exit(const CLI::ParseError& e) const;
   [[nodiscard]] subcommand get_subcommand() const;
