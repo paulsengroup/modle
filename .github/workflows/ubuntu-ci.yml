@@ -138,7 +138,7 @@ jobs:
 
   build-conan-deps:
     name: Build Conan deps
-    uses: paulsengroup/modle/.github/workflows/build-conan-deps-linux.yml@473e56428a2d40c29e260d02f2f89c3c91ab3abd
+    uses: paulsengroup/modle/.github/workflows/build-conan-deps-linux.yml@48afd575ce6e9d72eb396bcdeac0afa430d175eb
 
   build-project:
     name: Build project
@@ -272,7 +272,8 @@ jobs:
         run: |
           cmake --install build
 
-          tar -cf - -C dest/ bin | zstd -T0 -13 -o binaries.tar.zst
+          sha256sum dest/bin/* | tee dest/checksums.sha256
+          tar -cf - -C dest/ bin checksums.sha256 | zstd -T0 -13 -o binaries.tar.zst
 
       - name: Package unit tests
         run: |
@@ -335,6 +336,7 @@ jobs:
       - name: Generate list of stale cache entries
         id: stale-cache
         if: steps.cache-ccache.outputs.cache-matched-key != ''
+        continue-on-error: true
         run: |
           fname='stale-cache-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.generator }}-${{ matrix.build_type }}-${{ matrix.developer_mode }}.txt'
           echo '${{ steps.cache-ccache.outputs.cache-matched-key }}' > "$fname"
@@ -343,6 +345,7 @@ jobs:
 
       - name: Upload stale cache entries
         if: steps.cache-ccache.outputs.cache-matched-key != ''
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.stale-cache.outputs.name }}

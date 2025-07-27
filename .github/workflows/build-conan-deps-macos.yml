@@ -26,6 +26,13 @@ on:
         type: string
         required: true
         description: "OS used to build Conan deps."
+      os-target-version:
+        default: "11.0"
+        type: string
+        required: false
+        description: "Value to assign to MACOSX_DEPLOYMENT_TARGET."
+
+
 
 defaults:
   run:
@@ -43,6 +50,7 @@ jobs:
       CMAKE_POLICY_VERSION_MINIMUM: 3.5
       CONAN_HOME: "${{ github.workspace }}/.conan2"
       HOMEBREW_NO_AUTO_UPDATE: "1"
+      MACOSX_DEPLOYMENT_TARGET: "${{ inputs.os-target-version }}"
 
     outputs:
       conan-key: ${{ steps.generate-cache-key.outputs.conan-key }}
@@ -61,7 +69,7 @@ jobs:
 
           compiler="$(cc --version | head -n 1 | tr -c '[:alnum:]._-' '-' | sed 's/-\+/-/g' | sed 's/-$//')"
 
-          suffix="${{ inputs.os }}-$compiler-c++${{ inputs.cppstd }}-$hash"
+          suffix="${{ inputs.os }}-${{ inputs.os-target-version }}-sdk-$compiler-c++${{ inputs.cppstd }}-$hash"
 
           echo "conan-key=conan-$suffix" | tee -a "$GITHUB_OUTPUT"
 
@@ -114,10 +122,11 @@ jobs:
       - name: Install dependencies (Debug)
         if: steps.lookup-conan-cache.outputs.cache-hit != 'true'
         run: |
-          conan install conanfile.py                  \
-            --build=missing                           \
-            -s build_type=Debug                       \
-            -s compiler.cppstd='${{ inputs.cppstd }}' \
+          conan install conanfile.py                    \
+            --build=missing                             \
+            -s build_type=Debug                         \
+            -s compiler.cppstd='${{ inputs.cppstd }}'   \
+            -s:h os.version="$MACOSX_DEPLOYMENT_TARGET" \
             --output-folder=cmake-prefix-dbg
 
           tar -cf cmake-prefix-dbg.tar cmake-prefix-dbg/
@@ -125,10 +134,11 @@ jobs:
       - name: Install dependencies (Release)
         if: steps.lookup-conan-cache.outputs.cache-hit != 'true'
         run: |
-          conan install conanfile.py                  \
-            --build=missing                           \
-            -s build_type=Release                     \
-            -s compiler.cppstd='${{ inputs.cppstd }}' \
+          conan install conanfile.py                    \
+            --build=missing                             \
+            -s build_type=Release                       \
+            -s compiler.cppstd='${{ inputs.cppstd }}'   \
+            -s:h os.version="$MACOSX_DEPLOYMENT_TARGET" \
             --output-folder=cmake-prefix-rel
 
           tar -cf cmake-prefix-rel.tar cmake-prefix-rel/

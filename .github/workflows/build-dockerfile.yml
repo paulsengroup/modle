@@ -229,6 +229,37 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+      - name: Extract binaries
+        id: extract-binaries
+        run: |
+          arch="$(echo ${{ matrix.platform }} | tr / -)"
+          outdir="modle-$arch"
+          mkdir "$outdir"
+          docker run -v "$PWD/$outdir:/data/" \
+            --entrypoint=bash \
+            ${{ github.repository }} \
+            -c 'cp -r /usr/local/* /data/'
+
+          find "$outdir" -type f -name modle -exec shasum -a256 {} + | tee "$outdir/modle.sha256"
+          find "$outdir" -type f -name modle_tools -exec shasum -a256 {} + | tee "$outdir/modle_tools.sha256"
+
+          tar -cf - \
+            "$outdir/modle.sha256" \
+            "$outdir/modle_tools.sha256" \
+            "$outdir/bin/" \
+            "$outdir/share/licenses/modle" |
+          zstd -T0 -22 --ultra --long -v -o "$outdir.tar.zst"
+
+          echo "name=$outdir" | tee -a $GITHUB_OUTPUT
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.extract-binaries.outputs.name }}
+          path: ${{ steps.extract-binaries.outputs.name }}.tar.zst
+          if-no-files-found: error
+          retention-days: 7
+
   merge-images:
     name: Merge images
     runs-on: ubuntu-latest

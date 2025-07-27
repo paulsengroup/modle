@@ -62,12 +62,14 @@ jobs:
 
             var includes = []
 
-            includes.push({ compiler_name: 'apple-clang', compiler_version: '15', os: 'macos-13', cmake: '4.0.*', build_type: 'Release', developer_mode: 'OFF' })
-            includes.push({ compiler_name: 'apple-clang', compiler_version: '15', os: 'macos-14', cmake: '4.0.*', build_type: 'Release', developer_mode: 'OFF' })
-            includes.push({ compiler_name: 'apple-clang', compiler_version: '16', os: 'macos-15', cmake: '4.0.*', build_type: 'Release', developer_mode: 'OFF' })
-            includes.push({ compiler_name: 'apple-clang', compiler_version: '15', os: 'macos-13', cmake: '4.0.*', build_type: 'Debug',   developer_mode: 'OFF' })
-            includes.push({ compiler_name: 'apple-clang', compiler_version: '15', os: 'macos-14', cmake: '4.0.*', build_type: 'Debug',   developer_mode: 'OFF' })
-            includes.push({ compiler_name: 'apple-clang', compiler_version: '16', os: 'macos-15', cmake: '4.0.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler_name: 'apple-clang', compiler_version: '15', os: 'macos-13', target_os: 'auto', cmake: '4.0.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler_name: 'apple-clang', compiler_version: '15', os: 'macos-14', target_os: 'auto', cmake: '4.0.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler_name: 'apple-clang', compiler_version: '16', os: 'macos-15', target_os: 'auto', cmake: '4.0.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler_name: 'apple-clang', compiler_version: '15', os: 'macos-13', target_os: 'auto', cmake: '4.0.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler_name: 'apple-clang', compiler_version: '15', os: 'macos-14', target_os: 'auto', cmake: '4.0.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler_name: 'apple-clang', compiler_version: '16', os: 'macos-15', target_os: 'auto', cmake: '4.0.*', build_type: 'Debug',   developer_mode: 'OFF' })
+            includes.push({ compiler_name: 'apple-clang', compiler_version: '15', os: 'macos-13', target_os: '11.0', cmake: '4.0.*', build_type: 'Release', developer_mode: 'OFF' })
+            includes.push({ compiler_name: 'apple-clang', compiler_version: '16', os: 'macos-15', target_os: '11.0', cmake: '4.0.*', build_type: 'Release', developer_mode: 'OFF' })
 
             return { include: includes }
 
@@ -77,13 +79,13 @@ jobs:
 
   build-conan-deps-x86:
     name: Build Conan deps
-    uses: paulsengroup/modle/.github/workflows/build-conan-deps-macos.yml@473e56428a2d40c29e260d02f2f89c3c91ab3abd
+    uses: paulsengroup/modle/.github/workflows/build-conan-deps-macos.yml@48afd575ce6e9d72eb396bcdeac0afa430d175eb
     with:
       os: macos-13
 
   build-conan-deps-arm64:
     name: Build Conan deps
-    uses: paulsengroup/modle/.github/workflows/build-conan-deps-macos.yml@473e56428a2d40c29e260d02f2f89c3c91ab3abd
+    uses: paulsengroup/modle/.github/workflows/build-conan-deps-macos.yml@48afd575ce6e9d72eb396bcdeac0afa430d175eb
     with:
       os: macos-14
 
@@ -117,6 +119,17 @@ jobs:
           echo "CMAKE_BUILD_PARALLEL_LEVEL=$ncpus" >> $GITHUB_ENV
           echo "CTEST_PARALLEL_LEVEL=$ncpus" >> $GITHUB_ENV
 
+      - name: Set macOS SDK version
+        run: |
+          if [[ ${{ matrix.target_os }} == 'auto' ]]; then
+            SDK_PATH="$(xcrun --sdk macosx --show-sdk-path)"
+            MACOSX_DEPLOYMENT_TARGET="$(basename "$SDK_PATH" | sed -E 's/^MacOSX(.*)\.sdk$/\1/')"
+          else
+            MACOSX_DEPLOYMENT_TARGET='${{ matrix.target_os }}'
+          fi
+
+          echo "MACOSX_DEPLOYMENT_TARGET=$MACOSX_DEPLOYMENT_TARGET" | tee -a $GITHUB_ENV
+
       - name: Install build deps
         run: |
           pip install -r requirements.txt
@@ -128,6 +141,7 @@ jobs:
           set -u
 
           os="${{ matrix.os }}"
+          target_os="${{ matrix.target_os }}"
           compiler="${{ matrix.compiler_name }}"
           compiler_version="${{ matrix.compiler_version }}"
           build_type="${{ matrix.build_type }}"
@@ -137,7 +151,7 @@ jobs:
           # This can be used by to always update a cache entry (useful e.g. for ccache)
           current_date="$(date '+%s')"
 
-          ccache_key_prefix="ccache-$os-$compiler-$compiler_version-$conanfile_hash-$build_type"
+          ccache_key_prefix="ccache-$os-$target_os-sdk-$compiler-$compiler_version-$conanfile_hash-$build_type"
 
           echo "ccache-key=${ccache_key_prefix}-$GITHUB_REF-${current_date}" | tee -a $GITHUB_OUTPUT
           echo "ccache-restore-key-1=$ccache_key_prefix-$GITHUB_REF" | tee -a $GITHUB_OUTPUT
@@ -208,7 +222,15 @@ jobs:
         run: |
           cmake --install build
 
-          gtar -cf - -C dest/ bin | zstd -T0 -13 -o binaries.tar.zst
+          echo "### MACOSX_DEPLOYMENT_TARGET ###"
+          otool -l dest/bin/modle |
+            awk \
+              '/LC_VERSION_MIN_MACOSX/ { found_version_min = 1; next }
+               /LC_BUILD_VERSION/ { found_build_version = 1; next }
+               found_version_min && /version/ { print $0; exit }
+               found_build_version && /minos/ { print $0; exit }'
+
+          gtar -cf - -C dest/ bin share | zstd -T0 -13 -o binaries.tar.zst
 
       - name: Package unit tests
         run: |
@@ -219,6 +241,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: "unit-tests-${{ matrix.os }}-\
+            ${{ matrix.target_os }}-sdk-\
             ${{ matrix.compiler_name }}-\
             ${{ matrix.compiler_version }}-\
             ${{ matrix.build_type }}-\
@@ -231,6 +254,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: "binaries-${{ matrix.os }}-\
+            ${{ matrix.target_os }}-sdk-\
             ${{ matrix.compiler_name }}-\
             ${{ matrix.compiler_version }}-\
             ${{ matrix.build_type }}-\
@@ -268,14 +292,16 @@ jobs:
       - name: Generate list of stale cache entries
         id: stale-cache
         if: steps.cache-ccache.outputs.cache-matched-key != ''
+        continue-on-error: true
         run: |
-          fname='stale-cache-${{ matrix.os }}-${{ matrix.compiler_name }}-${{ matrix.compiler_version }}-${{ matrix.build_type }}-${{ matrix.developer_mode }}.txt'
+          fname='stale-cache-${{ matrix.os }}-${{ matrix.target_os }}-${{ matrix.compiler_name }}-${{ matrix.compiler_version }}-${{ matrix.build_type }}-${{ matrix.developer_mode }}.txt'
           echo '${{ steps.cache-ccache.outputs.cache-matched-key }}' > "$fname"
 
           echo "name=$fname" | tee -a "$GITHUB_OUTPUT"
 
       - name: Upload stale cache entries
         if: steps.cache-ccache.outputs.cache-matched-key != ''
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.stale-cache.outputs.name }}
@@ -335,6 +361,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: "unit-tests-${{ matrix.os }}-\
+            ${{ matrix.target_os }}-sdk-\
             ${{ matrix.compiler_name }}-\
             ${{ matrix.compiler_version }}-\
             ${{ matrix.build_type }}-\
@@ -383,6 +410,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: "binaries-${{ matrix.os }}-\
+            ${{ matrix.target_os }}-sdk-\
             ${{ matrix.compiler_name }}-\
             ${{ matrix.compiler_version }}-\
             ${{ matrix.build_type }}-\
@@ -438,6 +466,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: "binaries-${{ matrix.os }}-\
+            ${{ matrix.target_os }}-sdk-\
             ${{ matrix.compiler_name }}-\
             ${{ matrix.compiler_version }}-\
             ${{ matrix.build_type }}-\
@@ -480,6 +509,47 @@ jobs:
       - name: Run modle_tools annotate-barriers integration test(s)
         run: test/scripts/modle_tools_annotate_barriers_integration_test.sh bin/modle_tools | head -n 1000
 
+  publish-binaries:
+    name: Publish binaries
+    needs: [matrix-factory, cache-test-dataset, build-project]
+    runs-on: macos-15
+
+    steps:
+      - name: Download binary artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "binaries*11.0-sdk*"
+          merge-multiple: "false"
+
+      - name: Extract binaries
+        run: |
+          for dir in binaries-*/; do
+            tar -C "$dir" -xf "$dir"*.tar.zst
+          done
+
+      - name: Make universal binary
+        run: |
+          mkdir -p modle-macOS-universal/{bin,share}
+
+          lipo binaries-*/bin/modle -create -output modle-macOS-universal/bin/modle
+          lipo binaries-*/bin/modle_tools -create -output modle-macOS-universal/bin/modle_tools
+
+          license_dir=(binaries-*/share)
+          cp -r "${license_dir[0]}" modle-macOS-universal/
+
+          find modle-macOS-universal/ -type f -name modle -exec shasum -a256 {} + | tee modle-macOS-universal/modle.sha256
+          find modle-macOS-universal/ -type f -name modle_tools -exec shasum -a256 {} + | tee modle-macOS-universal/modle_tools.sha256
+
+          gtar -cf - modle-macOS-universal/ | zstd -22 --ultra --long -v -o modle-macOS-universal.tar.zst
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: "modle-macOS-universal-binaries"
+          path: modle-macOS-universal.tar.zst
+          if-no-files-found: error
+          retention-days: 7
+
   macos-ci-status-check:
     name: Status Check (MacOS CI)
     if: ${{ always() }}
@@ -489,6 +559,7 @@ jobs:
       - run-unit-tests
       - run-modle-integration-test
       - run-modle-tools-integration-test
+      - publish-binaries
 
     steps:
       - name: Collect job results
@@ -496,5 +567,6 @@ jobs:
           needs.build-project.result != 'success'                    ||
           needs.run-unit-tests.result != 'success'                   ||
           needs.run-modle-integration-test.result != 'success'       ||
-          needs.run-modle-tools-integration-test.result != 'success'
+          needs.run-modle-tools-integration-test.result != 'success' ||
+          needs.publish-binaries.result != 'success'
         run: exit 1
