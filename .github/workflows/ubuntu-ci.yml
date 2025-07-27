@@ -336,6 +336,7 @@ jobs:
       - name: Generate list of stale cache entries
         id: stale-cache
         if: steps.cache-ccache.outputs.cache-matched-key != ''
+        continue-on-error: true
         run: |
           fname='stale-cache-${{ matrix.os }}-${{ matrix.compiler }}-${{ matrix.generator }}-${{ matrix.build_type }}-${{ matrix.developer_mode }}.txt'
           echo '${{ steps.cache-ccache.outputs.cache-matched-key }}' > "$fname"
@@ -344,6 +345,7 @@ jobs:
 
       - name: Upload stale cache entries
         if: steps.cache-ccache.outputs.cache-matched-key != ''
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.stale-cache.outputs.name }}
