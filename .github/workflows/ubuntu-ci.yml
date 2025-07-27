@@ -272,7 +272,8 @@ jobs:
         run: |
           cmake --install build
 
-          tar -cf - -C dest/ bin | zstd -T0 -13 -o binaries.tar.zst
+          sha256sum dest/bin/* | tee dest/checksums.sha256
+          tar -cf - -C dest/ bin checksums.sha256 | zstd -T0 -13 -o binaries.tar.zst
 
       - name: Package unit tests
         run: |

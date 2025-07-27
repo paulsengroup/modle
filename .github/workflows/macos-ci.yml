@@ -230,7 +230,8 @@ jobs:
                found_version_min && /version/ { print $0; exit }
                found_build_version && /minos/ { print $0; exit }'
 
-          gtar -cf - -C dest/ bin | zstd -T0 -13 -o binaries.tar.zst
+          shasum -a 256 dest/bin/* | tee dest/checksums.sha256
+          gtar -cf - -C dest/ bin checksums.sha256 | zstd -T0 -13 -o binaries.tar.zst
 
       - name: Package unit tests
         run: |
