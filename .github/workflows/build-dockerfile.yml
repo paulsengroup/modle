@@ -244,8 +244,8 @@ jobs:
 
           tar -cf - \
             "$outdir/bin/" \
-            "$outdir/share/licenses" |
-          xz -9 --extreme > "$outdir.tar.xz"
+            "$outdir/share/licenses/modle" |
+          zstd -T0 -22 --ultra --long -v -o "$outdir.tar.zst"
 
           echo "name=$outdir" | tee -a $GITHUB_OUTPUT
 
@@ -253,7 +253,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.extract-binaries.outputs.name }}
-          path: ${{ steps.extract-binaries.outputs.name }}.tar.xz
+          path: ${{ steps.extract-binaries.outputs.name }}.tar.zst
           if-no-files-found: error
           retention-days: 7
 
