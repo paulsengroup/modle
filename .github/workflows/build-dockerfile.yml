@@ -240,9 +240,12 @@ jobs:
             ${{ github.repository }} \
             -c 'cp -r /usr/local/* /data/'
 
-          find "$outdir" -type f
+          find "$outdir" -type f -name modle -exec shasum -a256 {} + | tee "$outdir/modle.sha256"
+          find "$outdir" -type f -name modle_tools -exec shasum -a256 {} + | tee "$outdir/modle_tools.sha256"
 
           tar -cf - \
+            "$outdir/modle.sha256" \
+            "$outdir/modle_tools.sha256" \
             "$outdir/bin/" \
             "$outdir/share/licenses/modle" |
           zstd -T0 -22 --ultra --long -v -o "$outdir.tar.zst"

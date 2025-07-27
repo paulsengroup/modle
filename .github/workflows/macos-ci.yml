@@ -230,8 +230,7 @@ jobs:
                found_version_min && /version/ { print $0; exit }
                found_build_version && /minos/ { print $0; exit }'
 
-          shasum -a 256 dest/bin/* | tee dest/checksums.sha256
-          gtar -cf - -C dest/ bin share checksums.sha256 | zstd -T0 -13 -o binaries.tar.zst
+          gtar -cf - -C dest/ bin share | zstd -T0 -13 -o binaries.tar.zst
 
       - name: Package unit tests
         run: |
@@ -537,6 +536,9 @@ jobs:
 
           license_dir=(binaries-*/share)
           cp -r "${license_dir[0]}" modle-macOS-universal/
+
+          find modle-macOS-universal/ -type f -name modle -exec shasum -a256 {} + | tee modle-macOS-universal/modle.sha256
+          find modle-macOS-universal/ -type f -name modle_tools -exec shasum -a256 {} + | tee modle-macOS-universal/modle_tools.sha256
 
           gtar -cf - modle-macOS-universal/ | zstd -22 --ultra --long -v -o modle-macOS-universal.tar.zst
 
