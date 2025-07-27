@@ -231,7 +231,7 @@ jobs:
                found_build_version && /minos/ { print $0; exit }'
 
           shasum -a 256 dest/bin/* | tee dest/checksums.sha256
-          gtar -cf - -C dest/ bin checksums.sha256 | zstd -T0 -13 -o binaries.tar.zst
+          gtar -cf - -C dest/ bin share checksums.sha256 | zstd -T0 -13 -o binaries.tar.zst
 
       - name: Package unit tests
         run: |
@@ -242,7 +242,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: "unit-tests-${{ matrix.os }}-\
-            ${{ matrix.target_os }}-sdk\
+            ${{ matrix.target_os }}-sdk-\
             ${{ matrix.compiler_name }}-\
             ${{ matrix.compiler_version }}-\
             ${{ matrix.build_type }}-\
@@ -255,14 +255,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: "binaries-${{ matrix.os }}-\
-            ${{ matrix.target_os }}-sdk\
+            ${{ matrix.target_os }}-sdk-\
             ${{ matrix.compiler_name }}-\
             ${{ matrix.compiler_version }}-\
             ${{ matrix.build_type }}-\
             ${{ matrix.developer_mode }}"
           path: binaries.tar.zst
           if-no-files-found: error
-          retention-days: ${{ matrix.target_os == 'auto' && 1 || 7 }}
+          retention-days: 1
 
       - name: Print Ccache statistics (pre-cleanup)
         run: |
@@ -293,14 +293,16 @@ jobs:
       - name: Generate list of stale cache entries
         id: stale-cache
         if: steps.cache-ccache.outputs.cache-matched-key != ''
+        continue-on-error: true
         run: |
-          fname='stale-cache-${{ matrix.os }}-${{ matrix.compiler_name }}-${{ matrix.compiler_version }}-${{ matrix.build_type }}-${{ matrix.developer_mode }}.txt'
+          fname='stale-cache-${{ matrix.os }}-${{ matrix.target_os }}-${{ matrix.compiler_name }}-${{ matrix.compiler_version }}-${{ matrix.build_type }}-${{ matrix.developer_mode }}.txt'
           echo '${{ steps.cache-ccache.outputs.cache-matched-key }}' > "$fname"
 
           echo "name=$fname" | tee -a "$GITHUB_OUTPUT"
 
       - name: Upload stale cache entries
         if: steps.cache-ccache.outputs.cache-matched-key != ''
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.stale-cache.outputs.name }}
@@ -360,7 +362,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: "unit-tests-${{ matrix.os }}-\
-            ${{ matrix.target_os }}-sdk\
+            ${{ matrix.target_os }}-sdk-\
             ${{ matrix.compiler_name }}-\
             ${{ matrix.compiler_version }}-\
             ${{ matrix.build_type }}-\
@@ -409,7 +411,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: "binaries-${{ matrix.os }}-\
-            ${{ matrix.target_os }}-sdk\
+            ${{ matrix.target_os }}-sdk-\
             ${{ matrix.compiler_name }}-\
             ${{ matrix.compiler_version }}-\
             ${{ matrix.build_type }}-\
@@ -465,7 +467,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: "binaries-${{ matrix.os }}-\
-            ${{ matrix.target_os }}-sdk\
+            ${{ matrix.target_os }}-sdk-\
             ${{ matrix.compiler_name }}-\
             ${{ matrix.compiler_version }}-\
             ${{ matrix.build_type }}-\
@@ -508,6 +510,44 @@ jobs:
       - name: Run modle_tools annotate-barriers integration test(s)
         run: test/scripts/modle_tools_annotate_barriers_integration_test.sh bin/modle_tools | head -n 1000
 
+  publish-binaries:
+    name: Publish binaries
+    needs: [matrix-factory, cache-test-dataset, build-project]
+    runs-on: macos-15
+
+    steps:
+      - name: Download binary artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "binaries*11.0-sdk*"
+          merge-multiple: "false"
+
+      - name: Extract binaries
+        run: |
+          for dir in binaries-*/; do
+            tar -C "$dir" -xf "$dir"*.tar.zst
+          done
+
+      - name: Make universal binary
+        run: |
+          mkdir -p modle-macOS-universal/{bin,share}
+
+          lipo binaries-*/bin/modle -create -output modle-macOS-universal/bin/modle
+          lipo binaries-*/bin/modle_tools -create -output modle-macOS-universal/bin/modle_tools
+
+          license_dir=(binaries-*/share)
+          cp -r "${license_dir[0]}" modle-macOS-universal/
+
+          gtar -cf - modle-macOS-universal/ | zstd -22 --ultra --long -v -o modle-macOS-universal.tar.zst
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: "modle-macOS-universal-binaries"
+          path: modle-macOS-universal.tar.zst
+          if-no-files-found: error
+          retention-days: 7
+
   macos-ci-status-check:
     name: Status Check (MacOS CI)
     if: ${{ always() }}
@@ -517,6 +557,7 @@ jobs:
       - run-unit-tests
       - run-modle-integration-test
       - run-modle-tools-integration-test
+      - publish-binaries
 
     steps:
       - name: Collect job results
@@ -524,5 +565,6 @@ jobs:
           needs.build-project.result != 'success'                    ||
           needs.run-unit-tests.result != 'success'                   ||
           needs.run-modle-integration-test.result != 'success'       ||
-          needs.run-modle-tools-integration-test.result != 'success'
+          needs.run-modle-tools-integration-test.result != 'success' ||
+          needs.publish-binaries.result != 'success'
         run: exit 1
