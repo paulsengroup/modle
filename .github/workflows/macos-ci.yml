@@ -428,25 +428,27 @@ jobs:
           zstd -dcf binaries.tar.zst | tar -xf -
           gtar -xf test/data/modle_test_data.tar.zst
 
-      - name: Generate requirements.txt for pip
-        run: |
-          echo 'cooler>=0.10.3' > requirements.txt
-          echo 'pyBigWig>=0.3.24' >> requirements.txt
-          echo 'numpy' >> requirements.txt  # required to avoid errors when importing pyBigWig
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
 
-      - name: Install test deps
-        run: pip install -v -r requirements.txt --no-binary pyBigWig
+      - name: Install test suite
+        run: |
+          python3 -m pip install test/integration \
+            --no-cache-dir
 
       - name: Inspect modle version
         run: bin/modle --version
 
-      - name: Run modle integration test(s)
-        run: test/scripts/modle_integration_test.sh bin/modle | head -n 1000
+      - name: Run modle integration tests
+        run: |
+          NCPUS="$(python -c 'import multiprocessing as mp; print(mp.cpu_count())')"
+
+          modle_integration_suite \
+            --modle-bin bin/modle \
+            --data-dir test/data/integration_tests \
+            --threads="$NCPUS"
 
   run-modle-tools-integration-test:
     name: Run modle_tools integration tests
@@ -484,30 +486,26 @@ jobs:
           zstd -dcf binaries.tar.zst | tar -xf -
           gtar -xf test/data/modle_test_data.tar.zst
 
-      - name: Generate requirements.txt for pip
-        run: |
-          echo 'cooler>=0.10.3' > requirements.txt
-          echo 'pyBigWig>=0.3.24' >> requirements.txt
-          echo 'numpy' >> requirements.txt  # required to avoid errors when importing pyBigWig
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
 
-      - name: Install test dependencies
-        run: pip install -r requirements.txt --no-binary pyBigWig
+      - name: Install test suite
+        run: |
+          python3 -m pip install test/integration \
+            --no-cache-dir
 
       - name: Inspect modle_tools version
         run: bin/modle_tools --version
 
-      - name: Run modle_tools transform integration test(s)
-        run: test/scripts/modle_tools_transform_integration_test.sh bin/modle_tools | head -n 1000
+      - name: Run modle_tools integration tests
+        run: |
+          NCPUS="$(python -c 'import multiprocessing as mp; print(mp.cpu_count())')"
 
-      - name: Run modle_tools evaluate integration test(s)
-        run: test/scripts/modle_tools_eval_integration_test.sh bin/modle_tools | head -n 1000
-
-      - name: Run modle_tools annotate-barriers integration test(s)
-        run: test/scripts/modle_tools_annotate_barriers_integration_test.sh bin/modle_tools | head -n 1000
+          modle_integration_suite \
+            --modle-tools-bin bin/modle_tools \
+            --data-dir test/data/integration_tests \
+            --threads="$NCPUS"
 
   publish-binaries:
     name: Publish binaries
