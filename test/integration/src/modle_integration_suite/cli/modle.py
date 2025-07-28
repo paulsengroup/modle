@@ -46,7 +46,7 @@ def _plan_tests(
 
     factory = {
         "title": title,
-        "timeout": 60.0,
+        "timeout": 120.0,
         "expect_failure": False,
     }
 

@@ -16,7 +16,7 @@ from modle_integration_suite.tests.mt_transform import (
 
 
 def _plan_tests_cli(
-    title: str = "modle-tools-transform-cli",
+    title: str = "modle-tools transform-cli",
 ) -> List[ImmutableOrderedDict]:
     factory = {
         "title": title,
@@ -38,7 +38,7 @@ def _plan_tests(
     data_dir: pathlib.Path,
     out_dir: pathlib.Path,
     threads: int,
-    title: str = "modle-tools-transform",
+    title: str = "modle-tools transform",
 ) -> List[ImmutableOrderedDict]:
     matrix = data_dir / "4DNFI9GMP2J8_chr20_25kbp.cool"
     reference_matrix_gauss = data_dir / "4DNFI9GMP2J8_chr20_25kbp_blurred.cool"

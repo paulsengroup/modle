@@ -15,7 +15,7 @@ from modle_integration_suite.tests.mt_annotate_barriers import (
 
 
 def _plan_tests_cli(
-    title: str = "modle-tools-annotate-barriers-cli",
+    title: str = "modle-tools annotate-barriers-cli",
 ) -> List[ImmutableOrderedDict]:
     factory = {
         "title": title,
@@ -35,7 +35,7 @@ def _plan_tests_cli(
 
 def _plan_tests(
     data_dir: pathlib.Path,
-    title: str = "modle-tools-annotate-barriers",
+    title: str = "modle-tools annotate-barriers",
 ) -> List[ImmutableOrderedDict]:
     candidate_barriers = data_dir / "ENCSR942XQI_candidate_barriers.bed.xz"
     fold_change = data_dir / "ENCSR942XQI_fc.bw"
@@ -43,7 +43,7 @@ def _plan_tests(
 
     factory = {
         "title": title,
-        "timeout": 10.0,
+        "timeout": 5.0,
         "expect_failure": False,
     }
 

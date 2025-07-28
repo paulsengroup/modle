@@ -16,7 +16,7 @@ from modle_integration_suite.tests.mt_evaluate import (
 
 
 def _plan_tests_cli(
-    title: str = "modle-tools-evaluate-cli",
+    title: str = "modle-tools evaluate-cli",
 ) -> List[ImmutableOrderedDict]:
     factory = {
         "title": title,
@@ -38,7 +38,7 @@ def _plan_tests(
     data_dir: pathlib.Path,
     out_dir: pathlib.Path,
     threads: int,
-    title: str = "modle-tools-evaluate",
+    title: str = "modle-tools evaluate",
 ) -> List[ImmutableOrderedDict]:
     matrix1 = data_dir / "4DNFI9GMP2J8_chr20_25kbp_mt_eval.cool"
     matrix2 = data_dir / "4DNFIFJH2524_chr20_25kbp_mt_eval.cool"
@@ -48,7 +48,7 @@ def _plan_tests(
 
     factory = {
         "title": title,
-        "timeout": 30.0,
+        "timeout": 5.0,
         "expect_failure": False,
     }
 
