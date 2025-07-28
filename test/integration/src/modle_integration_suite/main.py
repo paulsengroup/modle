@@ -159,13 +159,13 @@ def run_tests(
     num_pass += res[0]
     num_fail += res[1]
     num_skip += res[2]
-    results |= res[3]
+    results["results"] |= res[3]
 
     res = run_tests_modle_tools(modle_tools_bin, data_dir, threads)
     num_pass += res[0]
     num_fail += res[1]
     num_skip += res[2]
-    results |= res[3]
+    results["results"] |= res[3]
 
     results["results"]["pass"] = num_pass
     results["results"]["fail"] = num_fail
