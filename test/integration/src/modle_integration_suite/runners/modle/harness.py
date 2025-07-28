@@ -68,6 +68,9 @@ class MoDLETestHarness:
                 max_attempts=max_attempts,
             )
 
+    def _run_modle_tools(self, *args, **kwargs):
+        self._run_modle(*args, **kwargs)
+
     def _handle_expected_failure(self):
         if len(self.stderr()) == 0:
             self._failures["missing error message"] = ""

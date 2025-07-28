@@ -6,6 +6,7 @@ from typing import Dict
 
 import numpy as np
 import pandas as pd
+from pandas.testing import assert_frame_equal
 
 
 def compare_bed6(
@@ -43,5 +44,28 @@ def compare_bed6(
     score_differences = (~np.isclose(expected["score"], found["score"], rtol=rtol, equal_nan=True)).sum()
     if score_differences != 0:
         return {"found differences in the scores": f"found {score_differences} differences"}
+
+    return {}
+
+
+def compare_tables(
+    expected: pd.DataFrame,
+    found: pd.DataFrame,
+    rtol: float = 1.0e-5,
+) -> Dict[str, str]:
+    assert 0 <= rtol <= 1.0
+    if expected.columns.tolist() != found.columns.tolist():
+        return {"column name mismatch": f"expected {expected.columns.tolist()}, found {found.columns.tolist()}"}
+
+    if (expected.dtypes != found.dtypes).any():
+        return {"column data type mismatch": f"expected {expected.dtypes}, found {found.dtypes}"}
+
+    if len(expected) != len(found):
+        return {"record number mismatch": f"expected {len(expected)} records, found {len(found)}"}
+
+    try:
+        assert_frame_equal(expected, found, rtol=rtol)
+    except AssertionError as e:
+        return {"tables differ": str(e)}
 
     return {}
