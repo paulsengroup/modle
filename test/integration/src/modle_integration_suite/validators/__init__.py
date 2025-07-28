@@ -6,3 +6,4 @@
 from .bigwig import compare_bigwigs
 from .common import compare_chroms
 from .cooler import compare_coolers
+from .tables import compare_bed6

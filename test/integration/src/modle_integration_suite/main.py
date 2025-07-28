@@ -11,12 +11,13 @@ import pathlib
 import platform
 import sys
 import time
-from typing import Dict
+from typing import Dict, Tuple
 
 import click
 import structlog
 
 import modle_integration_suite.cli.modle as modle
+import modle_integration_suite.cli.mt_annotate_barriers as mt_annotate_barriers
 from modle_integration_suite.cli.logging import setup_logger
 from modle_integration_suite.runners.modle.common import version
 
@@ -39,6 +40,58 @@ def init_results(modle_bin: pathlib.Path) -> Dict:
     }
 
 
+def run_tests_modle(
+    modle_bin: pathlib.Path | None,
+    data_dir: pathlib.Path,
+    threads: int,
+) -> Tuple[int, int, int, Dict]:
+    logger = structlog.get_logger().bind()
+    if modle_bin is None:
+        logger.info("skipping tests for modle as no binary was provided!")
+        return 0, 0, 0, {}
+
+    t0 = time.time()
+    res = modle.run_tests(
+        modle=modle_bin,
+        data_dir=data_dir,
+        threads=threads,
+    )
+    delta = time.time() - t0
+    logger.info(f"running tests for modle took {delta:.2f}s")
+    return res
+
+
+def run_tests_mt_annotate_barriers(
+    modle_tools_bin: pathlib.Path,
+    data_dir: pathlib.Path,
+    threads: int,
+) -> Tuple[int, int, int, Dict]:
+    logger = structlog.get_logger().bind()
+
+    t0 = time.time()
+    res = mt_annotate_barriers.run_tests(
+        modle_tools=modle_tools_bin,
+        data_dir=data_dir,
+    )
+    delta = time.time() - t0
+    logger.info(f"running tests for modle_tools annotate-barriers took {delta:.2f}s")
+    return res
+
+
+def run_tests_modle_tools(
+    modle_tools_bin: pathlib.Path | None,
+    data_dir: pathlib.Path,
+    threads: int,
+) -> Tuple[int, int, int, Dict]:
+    logger = structlog.get_logger().bind()
+    if modle_tools_bin is None:
+        logger.info("skipping tests for modle_tools as no binary was provided!")
+        return 0, 0, 0, {}
+    num_pass, num_fail, num_skip, results = run_tests_mt_annotate_barriers(modle_tools_bin, data_dir, threads)
+
+    return num_pass, num_fail, num_skip, results
+
+
 def run_tests(
     modle_bin: pathlib.Path | None,
     modle_tools_bin: pathlib.Path | None,
@@ -51,29 +104,19 @@ def run_tests(
     num_fail = 0
     num_skip = 0
 
-    results = init_results(modle_bin)
-    logger = structlog.get_logger().bind()
+    results = init_results(modle_bin if modle_bin is not None else modle_tools_bin)
 
-    if modle_bin is None:
-        logger.info("skipping tests for modle as no binary was provided!")
-    else:
-        t0 = time.time()
-        res = modle.run_tests(modle=modle_bin, data_dir=data_dir, threads=threads)
-        delta = time.time() - t0
-        logger.info(f"running tests for modle took {delta:.2f}s")
-        num_pass += res[0]
-        num_fail += res[1]
-        num_skip += res[2]
-        results["results"] |= res[3]
+    res = run_tests_modle(modle_bin, data_dir, threads)
+    num_pass += res[0]
+    num_fail += res[1]
+    num_skip += res[2]
+    results |= res[3]
 
-    if modle_tools_bin is None:
-        logger.info("skipping tests for modle_tools as no binary was provided!")
-    else:
-        pass
-        # num_pass += res[0]
-        # num_fail += res[1]
-        # num_skip += res[2]
-        # results["results"] |= res[3]
+    res = run_tests_modle_tools(modle_tools_bin, data_dir, threads)
+    num_pass += res[0]
+    num_fail += res[1]
+    num_skip += res[2]
+    results |= res[3]
 
     results["results"]["pass"] = num_pass
     results["results"]["fail"] = num_fail
