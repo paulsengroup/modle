@@ -19,6 +19,7 @@ import structlog
 import modle_integration_suite.cli.modle as modle
 import modle_integration_suite.cli.mt_annotate_barriers as mt_annotate_barriers
 import modle_integration_suite.cli.mt_evaluate as mt_evaluate
+import modle_integration_suite.cli.mt_transform as mt_transform
 from modle_integration_suite.cli.logging import setup_logger
 from modle_integration_suite.runners.modle.common import version
 
@@ -96,6 +97,24 @@ def run_tests_mt_evaluate(
     return res
 
 
+def run_tests_mt_transform(
+    modle_tools_bin: pathlib.Path,
+    data_dir: pathlib.Path,
+    threads: int,
+) -> Tuple[int, int, int, Dict]:
+    logger = structlog.get_logger().bind()
+
+    t0 = time.time()
+    res = mt_transform.run_tests(
+        modle_tools=modle_tools_bin,
+        data_dir=data_dir,
+        threads=threads,
+    )
+    delta = time.time() - t0
+    logger.info(f"running tests for modle_tools transform took {delta:.2f}s")
+    return res
+
+
 def run_tests_modle_tools(
     modle_tools_bin: pathlib.Path | None,
     data_dir: pathlib.Path,
@@ -108,6 +127,12 @@ def run_tests_modle_tools(
     num_pass, num_fail, num_skip, results = run_tests_mt_annotate_barriers(modle_tools_bin, data_dir)
 
     res = run_tests_mt_evaluate(modle_tools_bin, data_dir, threads)
+    num_pass += res[0]
+    num_fail += res[1]
+    num_skip += res[2]
+    results |= res[3]
+
+    res = run_tests_mt_transform(modle_tools_bin, data_dir, threads)
     num_pass += res[0]
     num_fail += res[1]
     num_skip += res[2]

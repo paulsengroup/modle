@@ -64,7 +64,7 @@ def _compare_pixels(
     return {}
 
 
-def compare_coolers(expected: pathlib.Path, found: pathlib.Path) -> Dict[str, str]:
+def compare_coolers(expected: pathlib.Path, found: pathlib.Path, count_type=int) -> Dict[str, str]:
     expected = hictkpy.File(expected)
     found = hictkpy.File(found)
 
@@ -77,8 +77,8 @@ def compare_coolers(expected: pathlib.Path, found: pathlib.Path) -> Dict[str, st
     for chrom in expected.chromosomes():
         errors |= _compare_pixels(
             chrom,
-            expected.fetch(chrom).to_df(),
-            found.fetch(chrom).to_df(),
+            expected.fetch(chrom, count_type=count_type).to_df(),
+            found.fetch(chrom, count_type=count_type).to_df(),
         )
 
     return errors
