@@ -9,7 +9,7 @@
 !cmake/**
 !external/**
 !src/**
-!test/scripts/**
+!test/integration/**
 !test/units/**
 
 # Allowed files

@@ -470,15 +470,13 @@ jobs:
           apt-get update
           apt-get install -q -y --no-install-recommends \
             gcc                                         \
-            libdigest-sha-perl                          \
             python3-dev                                 \
             python3-pip                                 \
-            xz-utils                                    \
             zstd
 
-          python3 -m pip install \
-            'cooler>=0.10.3' \
-            'pyBigWig>=0.3.24' \
+      - name: Install test suite
+        run: |
+          python3 -m pip install test/integration \
             --break-system-packages \
             --no-cache-dir
 
@@ -506,8 +504,12 @@ jobs:
       - name: Inspect modle version
         run: bin/modle --version
 
-      - name: Run modle integration test(s)
-        run: test/scripts/modle_integration_test.sh bin/modle | head -n 1000
+      - name: Run modle integration tests
+        run: |
+          modle_integration_suite \
+            --modle-bin bin/modle \
+            --data-dir test/data/integration_tests \
+            --threads="$(nproc)"
 
 
   run-modle-tools-integration-test:
@@ -538,15 +540,13 @@ jobs:
           apt-get update
           apt-get install -q -y --no-install-recommends \
             gcc                                         \
-            libdigest-sha-perl                          \
             python3-dev                                 \
             python3-pip                                 \
-            xz-utils                                    \
             zstd
 
-          python3 -m pip install \
-            'cooler>=0.10.3' \
-            'pyBigWig>=0.3.24' \
+      - name: Install test suite
+        run: |
+          python3 -m pip install test/integration \
             --break-system-packages \
             --no-cache-dir
 
@@ -574,14 +574,12 @@ jobs:
       - name: Inspect modle_tools version
         run: bin/modle_tools --version
 
-      - name: Run modle_tools transform integration test(s)
-        run: test/scripts/modle_tools_transform_integration_test.sh bin/modle_tools | head -n 1000
-
-      - name: Run modle_tools evaluate integration test(s)
-        run: test/scripts/modle_tools_eval_integration_test.sh bin/modle_tools | head -n 1000
-
-      - name: Run modle_tools annotate-barriers integration test(s)
-        run: test/scripts/modle_tools_annotate_barriers_integration_test.sh bin/modle_tools | head -n 1000
+      - name: Run modle_tools integration tests
+        run: |
+          modle_integration_suite \
+            --modle-tools-bin bin/modle_tools \
+            --data-dir test/data/integration_tests \
+            --threads="$(nproc)"
 
 
   ubuntu-ci-status-check:

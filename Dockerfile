@@ -119,29 +119,28 @@ ARG install_dir='/usr/local'
 RUN apt-get update \
 && apt-get install -q -y --no-install-recommends \
                    gcc                           \
-                   libdigest-sha-perl            \
                    python3-dev                   \
                    python3-pip                   \
                    python3-venv                  \
-                   xz-utils                      \
                    zstd
 
+COPY test/integration/ /tmp/integration
+
 RUN python3 -m venv /tmp/venv --upgrade \
-&& /tmp/venv/bin/pip install 'cooler>=0.10.3' 'pyBigWig>=0.3.24'
+&& /tmp/venv/bin/pip install /tmp/integration
 
 COPY --from=unit-testing "$staging_dir" "$staging_dir"
 COPY test/data/modle_test_data.tar.zst "$src_dir/test/data/"
-COPY test/scripts/modle*integration_test.sh "$src_dir/test/scripts/"
-COPY test/scripts/compare_bwigs.py "$src_dir/test/scripts/"
 
 RUN tar -xf "$src_dir/test/data/modle_test_data.tar.zst" -C "$src_dir/"
 
 ARG PATH="/tmp/venv/bin:$PATH"
 
-RUN "$src_dir/test/scripts/modle_integration_test.sh" "$staging_dir/bin/modle"
-RUN "$src_dir/test/scripts/modle_tools_transform_integration_test.sh" "$staging_dir/bin/modle_tools"
-RUN "$src_dir/test/scripts/modle_tools_eval_integration_test.sh" "$staging_dir/bin/modle_tools"
-RUN "$src_dir/test/scripts/modle_tools_annotate_barriers_integration_test.sh" "$staging_dir/bin/modle_tools"
+RUN modle_integration_suite \
+      --modle-bin "$staging_dir/bin/modle" \
+      --modle-tools-bin "$staging_dir/bin/modle_tools" \
+      --data-dir "$src_dir/test/data/integration_tests" \
+      --threads=4
 
 ARG FINAL_BASE_IMAGE=ubuntu
 

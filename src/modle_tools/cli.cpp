@@ -641,7 +641,7 @@ modle::tools::modle_tools_config Cli::parse_arguments() {
   return _config;
 }
 
-int Cli::exit(const CLI::ParseError& e) const { return _cli.exit(e); }
+int Cli::exit(const CLI::ParseError& e) const { return _cli.exit(e) != 0; }  // NOLINT
 
 std::string Cli::to_json() const {
   const auto prefix = std::string{get_printable_subcommand()} + ".";

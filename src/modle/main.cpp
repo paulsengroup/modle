@@ -128,21 +128,19 @@ std::tuple<int, modle::Cli::subcommand, modle::Config> parse_cli_and_setup_logge
     cli->log_warnings();
 
     return std::make_tuple(0, subcmd, config);
-    // NOTE: GCC7 crashes if using modle::Config{} instead of modle::Config() in the catch blocks
-    // below
   } catch (const CLI::ParseError& e) {
     assert(cli);
     //  This takes care of formatting and printing error messages (if any)
-    return std::make_tuple(cli->exit(e), modle::Cli::subcommand::help, modle::Config());
+    return std::make_tuple(cli->exit(e), modle::Cli::subcommand::help, modle::Config{});
 
   } catch (const std::filesystem::filesystem_error& e) {
     SPDLOG_ERROR("FAILURE! {}", modle::str_strip_suffix(e.what(), ": File exists"));
-    return std::make_tuple(1, modle::Cli::subcommand::help, modle::Config());
+    return std::make_tuple(1, modle::Cli::subcommand::help, modle::Config{});
   } catch (const spdlog::spdlog_ex& e) {
     fmt::println(stderr,
                  "FAILURE! An error occurred while setting up the main application logger: {}.",
                  e.what());
-    return std::make_tuple(1, modle::Cli::subcommand::help, modle::Config());
+    return std::make_tuple(1, modle::Cli::subcommand::help, modle::Config{});
   }
 }
 

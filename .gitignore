@@ -18,6 +18,7 @@ test/Testing
 test/data
 test/settings
 venv/
+**/__pycache__
 
 # Ignored files
 Dockerfile*
