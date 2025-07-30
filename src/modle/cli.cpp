@@ -697,7 +697,7 @@ std::vector<std::string> Cli::detect_path_collisions(modle::Config& c) const {
   return collisions;
 }
 
-int Cli::exit(const CLI::ParseError& e) const { return _cli.exit(e); }
+int Cli::exit(const CLI::ParseError& e) const { return _cli.exit(e) != 0; }  // NOLINT
 
 static void detect_deprecated_option_usage(const CLI::App& subcmd,
                                            std::vector<std::string>& warnings_buff) {

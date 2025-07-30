@@ -40,13 +40,6 @@ int main(int argc, char** argv) {
     cli = std::make_unique<Cli>(argc, argv);
     const auto config = cli->parse_arguments();
 
-    // TODO: move this inside the subcommands
-    /*
-    if (!config.output_prefix.empty()) {
-      std::filesystem::create_directories(config.output_prefix.parent_path());
-    }
-     */
-
     {
       using subcmd = Cli::subcommand;
       switch (cli->get_subcommand()) {
