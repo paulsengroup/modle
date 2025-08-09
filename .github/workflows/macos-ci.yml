@@ -75,17 +75,17 @@ jobs:
 
   cache-test-dataset:
     name: Cache test dataset
-    uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@75f936a00588191e1c59c66b789f6a8dc1f1beb9
+    uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@ee4292096650b460eb278f1502e1e4486521bb12
 
   build-conan-deps-x86:
     name: Build Conan deps
-    uses: paulsengroup/modle/.github/workflows/build-conan-deps-macos.yml@48afd575ce6e9d72eb396bcdeac0afa430d175eb
+    uses: paulsengroup/modle/.github/workflows/build-conan-deps-macos.yml@ee4292096650b460eb278f1502e1e4486521bb12
     with:
       os: macos-13
 
   build-conan-deps-arm64:
     name: Build Conan deps
-    uses: paulsengroup/modle/.github/workflows/build-conan-deps-macos.yml@48afd575ce6e9d72eb396bcdeac0afa430d175eb
+    uses: paulsengroup/modle/.github/workflows/build-conan-deps-macos.yml@ee4292096650b460eb278f1502e1e4486521bb12
     with:
       os: macos-14
 
