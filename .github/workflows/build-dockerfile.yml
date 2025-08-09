@@ -5,7 +5,7 @@ name: Build Docker image
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
       - ".github/workflows/build-dockerfile.yml"
       - "cmake/**"
@@ -19,7 +19,7 @@ on:
       - "Dockerfile"
       - "conanfile.py"
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
 
   pull_request:
     paths:
@@ -218,7 +218,7 @@ jobs:
         run: |
           echo 'name=${{ matrix.platform }}' |
             sed 's|[^[:alnum:]=-]\+|-|g' |
-            tee -a $GITHUB_OUTPUT
+            tee -a "$GITHUB_OUTPUT"
 
       - name: Upload digest
         if: github.event_name != 'pull_request'
@@ -250,7 +250,7 @@ jobs:
             "$outdir/share/licenses/modle" |
           zstd -T0 -22 --ultra --long -v -o "$outdir.tar.zst"
 
-          echo "name=$outdir" | tee -a $GITHUB_OUTPUT
+          echo "name=$outdir" | tee -a "$GITHUB_OUTPUT"
 
       - name: Upload binaries
         uses: actions/upload-artifact@v4
@@ -310,6 +310,7 @@ jobs:
       - name: Create manifest list and push (DockerHub)
         working-directory: ${{ runner.temp }}/digests
         run: |
+          # shellcheck disable=SC2046
           # https://docs.docker.com/build/ci/github-actions/multi-platform/#distribute-build-across-multiple-runners
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
             $(printf '  ${{ github.repository }}@sha256:%s ' *)
@@ -320,6 +321,7 @@ jobs:
       - name: Create manifest list and push (GHRC.io)
         working-directory: ${{ runner.temp }}/digests
         run: |
+          # shellcheck disable=SC2046
           # https://docs.docker.com/build/ci/github-actions/multi-platform/#distribute-build-across-multiple-runners
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
             $(printf '  ghcr.io/${{ github.repository }}@sha256:%s ' *)

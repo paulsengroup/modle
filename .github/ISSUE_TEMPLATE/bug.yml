@@ -4,7 +4,7 @@
 name: Bug Report
 description: Report a bug, something does not work as it's supposed to
 title: "[bug] SHORT DESCRIPTION"
-labels: [ "bug" ]
+labels: ["bug"]
 body:
   - type: markdown
     attributes:

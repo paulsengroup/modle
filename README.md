@@ -12,7 +12,10 @@ SPDX-License-Identifier: MIT
 [![Build Docker image](https://github.com/paulsengroup/modle/actions/workflows/build-docker-image.yml/badge.svg)](https://github.com/paulsengroup/modle/actions/workflows/build-docker-image.yml)
 [![Download from Bioconda](https://img.shields.io/conda/vn/bioconda/modle?label=bioconda&logo=Anaconda)](https://anaconda.org/bioconda/modle)
 
+<!-- prettier-ignore-start -->
 [![MoDLE paper - Genome Biology 2022](https://img.shields.io/badge/CITE-Genome%20Biology%20(2022)-blue)](https://doi.org/10.1186/s13059-022-02815-7)
+<!-- prettier-ignore-end -->
+
 [![Zenodo DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6424697.svg)](https://doi.org/10.5281/zenodo.6424697)
 
 ---
@@ -105,8 +108,7 @@ The above will print MoDLE's help message, and is equivalent to running `modle -
 
 <!-- TODO: Should this section be moved elsewhere? -->
 
-<!-- markdownlint-disable-next-line MD036 -->
-__Errors regarding missing input file(s)__
+**Errors regarding missing input file(s)** <!-- markdownlint-disable-line MD036 -->
 
 Assuming you have placed the required input files inside a folder named `mydata`
 
@@ -201,7 +203,7 @@ drwxrwxrwt 20 user group  560 Jan  5 12:20 ..
 -rw-r--r--  1 root root   14K Jan  5 12:05 output.log
 ```
 
-__Troubleshooting problems inside the container is a bit tedious. Any tips?__
+**Troubleshooting problems inside the container is a bit tedious. Any tips?**
 
 Yes! For troubleshooting we recommend using an interactive shell running inside the container.
 
@@ -292,6 +294,7 @@ Extract the archive and copy `modle` and/or `modle_tools` to a location in your 
 <summary> click to expand </summary>
 
 <!-- TODO make sure the link is correct once the release goes live -->
+
 ```console
 user@dev:/tmp$ curl -LO 'https://github.com/paulsengroup/modle/releases/download/v1.1.0/modle-1.1.0-x86_64-linux.tar.xz'
 
@@ -341,7 +344,7 @@ Folder `examples/data/` from this repository contains the input files used throu
 <summary> Data provenance </summary>
 
 - `examples/data/hg38.chrom.sizes` was generated from the [hg38.chrom.sizes](https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.chrom.sizes) released by UCSC.
-Chromosmes were filtered and sorted using `grep -E 'chr[0-9XY]+[[:space:]]' hg38.chrom.sizes | sort -V`
+  Chromosmes were filtered and sorted using `grep -E 'chr[0-9XY]+[[:space:]]' hg38.chrom.sizes | sort -V`
 - `examples/data/hg38_extrusion_barriers.bed.xz`
   was generated as described the Methods of MoDLE's [paper](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-022-02815-7) (third paragraph of section "MoDLE simulations").
   Refer to code hosted on [github.com/paulsengroup/2021-modle-paper-001-data-analysis](https://github.com/paulsengroup/2021-modle-paper-001-data-analysis) for more details
@@ -368,11 +371,11 @@ score and strand. See [bedtools docs](https://bedtools.readthedocs.io/en/latest/
 
 Some remarks:
 
-- ___chrom___ should contain the name of one of the chromosome defined in the `.chrom.sizes`
-- The ___start___ and ___end___ fields are used to position barriers along chromosomes. MoDLE models extrusion barriers as 1bp entities.
+- **_chrom_** should contain the name of one of the chromosome defined in the `.chrom.sizes`
+- The **_start_** and **_end_** fields are used to position barriers along chromosomes. MoDLE models extrusion barriers as 1bp entities.
   Thus, when $end - start \gt 1$ the extrusion barrier will be placed in the middle of interval $[start, end)$.
-- The ___name___ field is required but ignored, and can be safely set to `.`
-- ___score___ is required and should be set to a number between 0 and 1. This number expresses the average occupancy of the extrusion barrier site defined by the current line.
+- The **_name_** field is required but ignored, and can be safely set to `.`
+- **_score_** is required and should be set to a number between 0 and 1. This number expresses the average occupancy of the extrusion barrier site defined by the current line.
   Occupancies between 0.7-0.9 can be used as a starting point.
 
   Check out [this](https://github.com/paulsengroup/modle/wiki/%5BTutorial%5D---Generating-a-list-of-extrusion-barrier-from-ChIP-seq-data)
@@ -380,7 +383,8 @@ Some remarks:
   More information regarding how extrusion barriers are modeled canm be found in
   [MoDLE's paper](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-022-02815-7) and
   [suppl. text](https://static-content.springer.com/esm/art%3A10.1186%2Fs13059-022-02815-7/MediaObjects/13059_2022_2815_MOESM1_ESM.pdf).
-- ___strand___ is required and is used to define the extrusion barrier direction (should be one of `-`, `+` or `.`).
+
+- **_strand_** is required and is used to define the extrusion barrier direction (should be one of `-`, `+` or `.`).
   As of MoDLE v1.1.0, extrusion barriers are modeled after CTCF barriers.
   Thus, the strand field should be populated with the direction of the CTCF binding site that is being defined.
   Barriers without strand information (i.e. with strand `.`) are ignored.
@@ -436,8 +440,7 @@ examples/out
 └── hg38_default.log
 ```
 
-<!-- markdownlint-disable-next-line MD059 -->
-Output files produced by the above command are available [here](https://doi.org/10.5281/zenodo.7924253).
+Output files produced by the above command are available [here](https://doi.org/10.5281/zenodo.7924253). <!-- markdownlint-disable-line MD059 -->
 
 Simulated interactions are written to file `hg38_default.cool`. More information about the .cool format is available at [open2c/cooler](https://github.com/open2c/cooler).
 
@@ -663,6 +666,7 @@ is a config file that can be used to repeat simulations using the same set of pa
 Information found in config files is also embedded in the `.cool` file as a JSON string, and can be extracted using `cooler info`:
 
 <!-- TODO: Update once https://github.com/paulsengroup/modle/issues/75 is implemented -->
+
 ```console
 user@dev:/tmp/modle$ cooler info --metadata examples/out/hg38_default.cool
 {
@@ -699,8 +703,7 @@ modle simulate \
     --output-prefix examples/out/hg38_deep
 ```
 
-<!-- markdownlint-disable-next-line MD059 -->
-Output files produced by the above command are available [here](https://doi.org/10.5281/zenodo.7924253).
+Output files produced by the above command are available [here](https://doi.org/10.5281/zenodo.7924253). <!-- markdownlint-disable-line MD059 -->
 
 ![Simulation w/ high contact density](examples/images/higlass_003.avif)
 
@@ -749,7 +752,7 @@ Options:
 
 If you use MoDLE in your research, please cite the following paper:
 
-Rossini, R., Kumar, V., Mathelier, A. _et al._ MoDLE: high-performance stochastic modeling of DNA loop extrusion interactions. _Genome Biol_ __23__, 247 (2022). [https://doi.org/10.1186/s13059-022-02815-7](https://doi.org/10.1186/s13059-022-02815-7)
+Rossini, R., Kumar, V., Mathelier, A. _et al._ MoDLE: high-performance stochastic modeling of DNA loop extrusion interactions. _Genome Biol_ **23**, 247 (2022). [https://doi.org/10.1186/s13059-022-02815-7](https://doi.org/10.1186/s13059-022-02815-7)
 
 <details>
 <summary>BibTex</summary>

@@ -65,5 +65,5 @@ repos:
         entry: prettier
         language: node
         additional_dependencies: [prettier@3.6.2]
-        types: [json, markdown, yaml]
+        types_or: [json, markdown, yaml]
         args: ["--write", "--ignore-unknown"]

@@ -4,7 +4,7 @@
 name: Bug Report (Building from source)
 description: Report a bug encountered while building MoDLE from source
 title: "[bug] SHORT DESCRIPTION"
-labels: [ "bug", "build-from-source" ]
+labels: ["bug", "build-from-source"]
 body:
   - type: markdown
     attributes:

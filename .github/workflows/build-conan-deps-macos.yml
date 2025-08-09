@@ -32,8 +32,6 @@ on:
         required: false
         description: "Value to assign to MACOSX_DEPLOYMENT_TARGET."
 
-
-
 defaults:
   run:
     shell: bash

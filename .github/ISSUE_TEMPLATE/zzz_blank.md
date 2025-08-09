@@ -7,8 +7,10 @@ SPDX-License-Identifier: MIT
 <!-- markdownlint-disable -->
 
 ---
+
 name: Other
 about: Report other issues or requests
+
 ---
 
 <!--

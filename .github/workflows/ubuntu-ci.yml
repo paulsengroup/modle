@@ -5,7 +5,7 @@ name: Ubuntu CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
       - ".github/workflows/ubuntu-ci.yml"
       - "cmake/**"
@@ -166,8 +166,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Fix permissions
-        run: |
-          chown -R $(id -u):$(id -g) $PWD
+        run: chown -R "$(id -u):$(id -g)" "$PWD"
 
       - name: Check build deps are up-to-date
         id: build-deps-outdated
@@ -175,7 +174,7 @@ jobs:
           pattern='[[:digit:]]\+\.[[:digit:]]\+\.[[:digit:]]\+$'
           flag=false
 
-          if [[ $(cmake --version | grep -o "$pattern") != ${{ matrix.cmake }} ]]; then
+          if [[ "$(cmake --version | grep -o "$pattern")" != '${{ matrix.cmake }}' ]]; then
             flag=true
           fi
 
@@ -207,9 +206,11 @@ jobs:
 
           ccache_key_prefix="ccache-$os-$compiler-$conanfile_hash-$build_type-$generator-$dev_mode"
 
-          echo "ccache-key=${ccache_key_prefix}-$GITHUB_REF-${current_date}" | tee -a $GITHUB_OUTPUT
-          echo "ccache-restore-key-1=$ccache_key_prefix-$GITHUB_REF" | tee -a $GITHUB_OUTPUT
-          echo "ccache-restore-key-2=$ccache_key_prefix" | tee -a $GITHUB_OUTPUT
+          {
+            echo "ccache-key=${ccache_key_prefix}-$GITHUB_REF-${current_date}"
+            echo "ccache-restore-key-1=$ccache_key_prefix-$GITHUB_REF"
+            echo "ccache-restore-key-2=$ccache_key_prefix"
+          } | tee -a "$GITHUB_OUTPUT"
 
       - name: Restore Conan cache
         uses: actions/cache/restore@v4
@@ -266,7 +267,7 @@ jobs:
                 -B ./build/
 
       - name: Build project
-        run: cmake --build build -j $(nproc)
+        run: cmake --build build -j "$(nproc)"
 
       - name: Package binaries
         run: |
@@ -372,14 +373,13 @@ jobs:
         continue-on-error: true
         run: |
           set -x
-          while read entry; do
+          while read -r entry; do
             if ! grep -q '/heads/main' <(echo "$entry"); then
               gh cache delete --repo '${{ github.repository }}' "$entry"
             fi
           done < <(cat stale-cache*.txt | grep -v '^$')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
 
   run-unit-tests:
     name: Run unit tests
@@ -440,7 +440,7 @@ jobs:
                 --output-on-failure         \
                 --no-tests=error            \
                 --timeout 300               \
-                -j $(nproc)
+                -j "$(nproc)"
 
   run-modle-integration-test:
     name: Run modle integration tests
@@ -462,8 +462,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Fix permissions
-        run: |
-          chown -R $(id -u):$(id -g) $PWD
+        run: chown -R "$(id -u):$(id -g)" "$PWD"
 
       - name: Setup test dependencies
         run: |
@@ -511,7 +510,6 @@ jobs:
             --data-dir test/data/integration_tests \
             --threads="$(nproc)"
 
-
   run-modle-tools-integration-test:
     name: Run modle_tools integration tests
     needs: [matrix-factory, cache-test-dataset, build-project]
@@ -532,8 +530,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Fix permissions
-        run: |
-          chown -R $(id -u):$(id -g) $PWD
+        run: chown -R "$(id -u):$(id -g)" "$PWD"
 
       - name: Setup test dependencies
         run: |
@@ -580,7 +577,6 @@ jobs:
             --modle-tools-bin bin/modle_tools \
             --data-dir test/data/integration_tests \
             --threads="$(nproc)"
-
 
   ubuntu-ci-status-check:
     name: Status Check (Ubuntu CI)

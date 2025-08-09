@@ -5,7 +5,7 @@ name: MacOS CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
       - ".github/workflows/macos-ci.yml"
       - "cmake/**"
@@ -115,9 +115,11 @@ jobs:
         run: |
           ncpus=$(python -c 'import multiprocessing as mp; print(mp.cpu_count())')
 
-          echo "NPROC=$ncpus" >> $GITHUB_ENV
-          echo "CMAKE_BUILD_PARALLEL_LEVEL=$ncpus" >> $GITHUB_ENV
-          echo "CTEST_PARALLEL_LEVEL=$ncpus" >> $GITHUB_ENV
+          {
+            echo "NPROC=$ncpus";
+            echo "CMAKE_BUILD_PARALLEL_LEVEL=$ncpus";
+            echo "CTEST_PARALLEL_LEVEL=$ncpus";
+          } | tee -a "$GITHUB_ENV"
 
       - name: Set macOS SDK version
         run: |
@@ -128,7 +130,7 @@ jobs:
             MACOSX_DEPLOYMENT_TARGET='${{ matrix.target_os }}'
           fi
 
-          echo "MACOSX_DEPLOYMENT_TARGET=$MACOSX_DEPLOYMENT_TARGET" | tee -a $GITHUB_ENV
+          echo "MACOSX_DEPLOYMENT_TARGET=$MACOSX_DEPLOYMENT_TARGET" | tee -a "$GITHUB_ENV"
 
       - name: Install build deps
         run: |
@@ -153,9 +155,11 @@ jobs:
 
           ccache_key_prefix="ccache-$os-$target_os-sdk-$compiler-$compiler_version-$conanfile_hash-$build_type"
 
-          echo "ccache-key=${ccache_key_prefix}-$GITHUB_REF-${current_date}" | tee -a $GITHUB_OUTPUT
-          echo "ccache-restore-key-1=$ccache_key_prefix-$GITHUB_REF" | tee -a $GITHUB_OUTPUT
-          echo "ccache-restore-key-2=$ccache_key_prefix" | tee -a $GITHUB_OUTPUT
+          {
+            echo "ccache-key=${ccache_key_prefix}-$GITHUB_REF-${current_date}"
+            echo "ccache-restore-key-1=$ccache_key_prefix-$GITHUB_REF"
+            echo "ccache-restore-key-2=$ccache_key_prefix"
+          } | tee -a "$GITHUB_OUTPUT"
 
       - name: Restore Conan cache (x86)
         if: matrix.os == 'macos-13'
@@ -328,7 +332,7 @@ jobs:
         continue-on-error: true
         run: |
           set -x
-          while read entry; do
+          while read -r entry; do
             if ! grep -q '/heads/main' <(echo "$entry"); then
               gh cache delete --repo '${{ github.repository }}' "$entry"
             fi
@@ -431,7 +435,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: "3.13"
 
       - name: Install test suite
         run: |
@@ -452,7 +456,7 @@ jobs:
 
   run-modle-tools-integration-test:
     name: Run modle_tools integration tests
-    needs: [ matrix-factory, cache-test-dataset, build-project ]
+    needs: [matrix-factory, cache-test-dataset, build-project]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
