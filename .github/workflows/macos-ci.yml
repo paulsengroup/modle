@@ -52,7 +52,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-result.outputs.result }}
     steps:
-      - uses: actions/github-script@v7
+      - uses: actions/github-script@v8
         id: set-result
         with:
           script: |
@@ -101,12 +101,12 @@ jobs:
       matrix: ${{ fromJSON(needs.matrix-factory.outputs.matrix) }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Generate requirements.txt for pip
         run: echo 'cmake==${{ matrix.cmake }}' > requirements.txt
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
           cache: "pip"
@@ -322,7 +322,7 @@ jobs:
 
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         continue-on-error: true
         with:
           pattern: stale-cache-*
@@ -352,7 +352,7 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Restore test dataset
         uses: actions/cache/restore@v4
@@ -362,7 +362,7 @@ jobs:
           fail-on-cache-miss: true
 
       - name: Download unit tests artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: "unit-tests-${{ matrix.os }}-\
             ${{ matrix.target_os }}-sdk-\
@@ -380,7 +380,7 @@ jobs:
         run: |
           echo 'cmake==${{ matrix.cmake }}' > requirements.txt
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
           cache: "pip"
@@ -408,10 +408,10 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download binary artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: "binaries-${{ matrix.os }}-\
             ${{ matrix.target_os }}-sdk-\
@@ -433,7 +433,7 @@ jobs:
           gtar -xf test/data/modle_test_data.tar.zst
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.13"
 
@@ -466,10 +466,10 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download binary artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: "binaries-${{ matrix.os }}-\
             ${{ matrix.target_os }}-sdk-\
@@ -490,7 +490,7 @@ jobs:
           zstd -dcf binaries.tar.zst | tar -xf -
           gtar -xf test/data/modle_test_data.tar.zst
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
 
@@ -518,7 +518,7 @@ jobs:
 
     steps:
       - name: Download binary artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           pattern: "binaries*11.0-sdk*"
           merge-multiple: "false"
