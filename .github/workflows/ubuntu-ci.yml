@@ -56,7 +56,7 @@ jobs:
       ci-type: ${{ steps.ci-type.outputs.type }}
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           ref: ${{ github.event.after }}
@@ -73,7 +73,7 @@ jobs:
           fi
 
       - name: Generate matrix
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         id: set-result
         with:
           script: |
@@ -134,11 +134,11 @@ jobs:
 
   cache-test-dataset:
     name: Cache test dataset
-    uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@ee4292096650b460eb278f1502e1e4486521bb12
+    uses: paulsengroup/modle/.github/workflows/cache-test-datasets.yml@2315dcf677e6c6b59c53a94d46ca498f8d01e10c
 
   build-conan-deps:
     name: Build Conan deps
-    uses: paulsengroup/modle/.github/workflows/build-conan-deps-linux.yml@ee4292096650b460eb278f1502e1e4486521bb12
+    uses: paulsengroup/modle/.github/workflows/build-conan-deps-linux.yml@2315dcf677e6c6b59c53a94d46ca498f8d01e10c
 
   build-project:
     name: Build project
@@ -163,7 +163,7 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Fix permissions
         run: chown -R "$(id -u):$(id -g)" "$PWD"
@@ -282,7 +282,7 @@ jobs:
           tar --exclude='*.o' -cf - build/ | zstd -T0 -13 -o unit-tests.tar.zst
 
       - name: Upload unit tests
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: "unit-tests-${{ matrix.os }}-\
             ${{ matrix.compiler }}-\
@@ -294,7 +294,7 @@ jobs:
           retention-days: 1
 
       - name: Upload binaries
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: "binaries-${{ matrix.os }}-\
             ${{ matrix.compiler }}-\
@@ -347,7 +347,7 @@ jobs:
       - name: Upload stale cache entries
         if: steps.cache-ccache.outputs.cache-matched-key != ''
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ steps.stale-cache.outputs.name }}
           path: "${{ steps.stale-cache.outputs.name }}"
@@ -363,7 +363,7 @@ jobs:
 
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         continue-on-error: true
         with:
           pattern: stale-cache-*
@@ -398,7 +398,7 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Restore test dataset
         uses: actions/cache/restore@v4
@@ -408,7 +408,7 @@ jobs:
           fail-on-cache-miss: true
 
       - name: Download unit tests artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: "unit-tests-${{ matrix.os }}-\
             ${{ matrix.compiler }}-\
@@ -459,7 +459,7 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Fix permissions
         run: chown -R "$(id -u):$(id -g)" "$PWD"
@@ -480,7 +480,7 @@ jobs:
             --no-cache-dir
 
       - name: Download binary artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: "binaries-${{ matrix.os }}-\
             ${{ matrix.compiler }}-\
@@ -527,7 +527,7 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Fix permissions
         run: chown -R "$(id -u):$(id -g)" "$PWD"
@@ -548,7 +548,7 @@ jobs:
             --no-cache-dir
 
       - name: Download binary artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: "binaries-${{ matrix.os }}-\
             ${{ matrix.compiler }}-\
