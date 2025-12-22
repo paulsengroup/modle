@@ -31,7 +31,7 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Generate cache key
         id: generate-cache-key
@@ -51,7 +51,7 @@ jobs:
 
       - name: Cache test datasets
         id: cache-dataset
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           key: ${{ steps.generate-cache-key.outputs.key }}
           path: ${{ env.TEST_DATASET_PATH }}
@@ -71,7 +71,7 @@ jobs:
           shasum -c checksum.sha256
 
       - name: Upload test dataset
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ steps.generate-cache-key.outputs.key }}
           path: ${{ env.TEST_DATASET_PATH }}
