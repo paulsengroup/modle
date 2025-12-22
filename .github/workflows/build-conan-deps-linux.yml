@@ -54,7 +54,7 @@ jobs:
 
     steps:
       - name: Checkout conanfile.py
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Update build deps
         run: pip install "conan==${{ inputs.conan-version }}"
@@ -77,7 +77,7 @@ jobs:
 
       - name: Lookup package cache
         id: lookup-conan-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           key: ${{ steps.generate-cache-key.outputs.conan-key }}
           path: |
@@ -87,7 +87,7 @@ jobs:
           lookup-only: true
 
       - name: Restore package cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         if: steps.lookup-conan-cache.outputs.cache-hit != 'true'
         with:
           key: ${{ steps.generate-cache-key.outputs.conan-key }}
@@ -164,7 +164,7 @@ jobs:
           conan cache clean "*" --source
 
       - name: Save Conan cache
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         if: steps.lookup-conan-cache.outputs.cache-hit != 'true'
         with:
           key: ${{ steps.generate-cache-key.outputs.conan-key }}
